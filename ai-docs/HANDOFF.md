@@ -10,7 +10,7 @@ Session 2 (2026-10-24) built askwright 0.1.0 and proved it on a real set. Not ta
 - The real set lives in the owner's private notes (the askwright sidecar), with the generator that rebuilt it.
 
 ## In progress
-Nothing half-done. See the session log for the push status of the public repository.
+Nothing half-done. Public at https://github.com/m4bwav/askwright since 2026-10-24 (fresh single-commit history, see the public-scrub decision); the first CI run passed all 7 jobs.
 
 ## Decisions made this session
 - [decisions/2026-10-24-session2-build-calls.md](decisions/2026-10-24-session2-build-calls.md): B1 to B11 (compare sides shown as Left/Right until the pick, `new`/`stop`/`--detach`, the media URL scheme, token on every API route, wider video, install size accepted at 132 KB).

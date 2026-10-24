@@ -22,3 +22,4 @@ Append-only. One line per operation: `## [YYYY-MM-DD] op | title` where op is on
 ## [2026-10-24] verify | real 22-question film review set: lint clean, served, Range 206, generic page tests 4/4
 ## [2026-10-24] handoff | session 2
 ## [2026-10-24] index | rebuilt (9 entries)
+## [2026-10-24] add | public repository m4bwav/askwright created and pushed (fresh history); CI 7/7 green

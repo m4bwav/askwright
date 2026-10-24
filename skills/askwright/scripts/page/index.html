@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="ask-token" content="__ASK_TOKEN__">
+<title>Questions for you</title>
+<link rel="stylesheet" href="/app.css">
+<script src="/app.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to the question</a>
+<header class="top">
+  <div class="bar">
+    <p class="set-title" id="set-title">Loading the questions…</p>
+    <p class="progress" id="progress"></p>
+    <nav class="top-links" aria-label="Views">
+      <button type="button" class="link" id="btn-answered" aria-pressed="false" hidden>Show answered</button>
+      <button type="button" class="link" id="btn-overview">All questions <kbd>o</kbd></button>
+      <button type="button" class="link" id="btn-keys">Keys <kbd>?</kbd></button>
+    </nav>
+  </div>
+</header>
+<div class="wrap">
+  <div id="banner" class="banner" role="alert" hidden></div>
+  <div id="notice" class="notice" role="status" hidden></div>
+  <main id="main" tabindex="-1"><p>Loading…</p></main>
+</div>
+<footer class="bottom">
+  <div class="bar">
+    <button type="button" class="btn" id="btn-back">Back</button>
+    <span class="save" id="save-status" aria-live="polite"></span>
+    <button type="button" class="btn primary" id="btn-next">Next</button>
+  </div>
+</footer>
+<dialog id="keys" aria-labelledby="keys-h">
+  <h2 id="keys-h">Keys</h2>
+  <dl class="keys">
+    <dt><kbd>1</kbd> to <kbd>9</kbd></dt><dd>Pick that option</dd>
+    <dt><kbd>n</kbd> or <kbd>→</kbd></dt><dd>Next question</dd>
+    <dt><kbd>p</kbd> or <kbd>←</kbd></dt><dd>Back</dd>
+    <dt><kbd>u</kbd></dt><dd>Not sure, ask me later</dd>
+    <dt><kbd>/</kbd></dt><dd>Write a note (paste images into it)</dd>
+    <dt><kbd>Space</kbd></dt><dd>Play or pause</dd>
+    <dt><kbd>j</kbd> / <kbd>l</kbd></dt><dd>Back or forward one second</dd>
+    <dt><kbd>[</kbd> / <kbd>]</kbd></dt><dd>Jump to the times in "What to look for"</dd>
+    <dt><kbd>o</kbd></dt><dd>All questions</dd>
+    <dt><kbd>Esc</kbd></dt><dd>Leave the note box (keys work again)</dd>
+  </dl>
+  <button type="button" class="btn" id="keys-close">Close</button>
+</dialog>
+<noscript><p class="banner">This page needs JavaScript to save your answers.</p></noscript>
+</body>
+</html>

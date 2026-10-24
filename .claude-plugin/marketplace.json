@@ -1,0 +1,8 @@
+{
+  "name": "askwright",
+  "owner": { "name": "Mark Rogers" },
+  "metadata": { "description": "A skill that puts an AI agent's questions on a local page, one per screen, and reads the answers back from disk" },
+  "plugins": [
+    { "name": "askwright", "source": "./", "description": "Question sets as data, a lint, a local one-question-per-screen page with media, guesses, notes and pasted images, and ask.py to read the answers back" }
+  ]
+}

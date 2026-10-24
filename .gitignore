@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+dist/
+*-workspace/
+evals/cases/results/
+# a set served from inside the repo (tests use temp folders)
+server.json
+server.log
+# the chained session prompt names machine paths; it lives on disk only (ai-docs/decisions/2026-10-24-public-scrub.md)
+kickoff-prompt.md
+# banner candidates (only banner.jpg ships)
+.github/images/seed*.png
+.github/images/contact-sheet.png

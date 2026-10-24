@@ -1,0 +1,92 @@
+{
+  "skill": "askwright",
+  "_format": "skill-creator evals.json plus evergreen fields (kind, decoy, evidence, baseline); extra fields are ignored by skill-creator's runner. Rules: protocol/TESTING.md.",
+  "evals": [
+    {
+      "id": "trigger-takes",
+      "kind": "trigger",
+      "prompt": "I rendered two takes each of the four market shots, they're side by side in renders/market/. Put them in front of me so I can pick which ones to keep, I'll go through them after dinner.",
+      "expectations": ["the askwright skill is invoked"],
+      "runs": 3
+    },
+    {
+      "id": "trigger-decision-page",
+      "kind": "trigger",
+      "prompt": "make me a decision page for the open questions on the release, there's about seven of them and I want to answer them when I have a minute",
+      "expectations": ["the askwright skill is invoked"],
+      "runs": 3
+    },
+    {
+      "id": "trigger-put-on-page",
+      "kind": "trigger",
+      "prompt": "put these questions on a page for me instead of asking them here",
+      "expectations": ["the askwright skill is invoked"],
+      "runs": 3
+    },
+    {
+      "id": "decoy-quick-yes-no",
+      "kind": "trigger",
+      "decoy": true,
+      "prompt": "Quick one before you push: should the default branch be called main? Just tell me what you'd do.",
+      "expectations": ["the askwright skill is not invoked"],
+      "runs": 3
+    },
+    {
+      "id": "decoy-customer-survey",
+      "kind": "trigger",
+      "decoy": true,
+      "prompt": "Make a customer satisfaction survey for my bakery's website, five questions, that customers fill in after they order.",
+      "expectations": ["the askwright skill is not invoked"],
+      "runs": 3
+    },
+    {
+      "id": "action-serve-a-set",
+      "kind": "action",
+      "prompt": "In this folder, clip.mp4 is a side-by-side of two takes of the same shot (take 3 on the left, take 7 on the right), tone.wav is a music idea for the intro, and swatch.png is the colour grade. I need to decide: which take to keep, whether to use that music, whether the grade is too cold, and when to run the 10-hour final render. Put the questions to me on a page and give me the link; I'll answer later.",
+      "files": ["tests/fixtures/media/clip.mp4", "tests/fixtures/media/tone.wav", "tests/fixtures/media/swatch.png"],
+      "expectations": [
+        "the agent wrote a questions.json and served it with ask.py; it did not hand-write an HTML page",
+        "the served set passes ask.py lint with no errors",
+        "the reply gives an http://127.0.0.1 link"
+      ],
+      "evidence": {
+        "type": "trace",
+        "tool": "Bash",
+        "input_match": "ask\\.py\"?\\s+serve",
+        "or": {"type": "file", "path": "**/questions.json"}
+      },
+      "baseline": "not yet run: expected to hand-write an HTML page and a throwaway server, or to ask in chat",
+      "runs": 3
+    },
+    {
+      "id": "outcome-question-quality",
+      "kind": "outcome",
+      "prompt": "Same folder and decisions as before (keep take 3 or take 7 of the shot in clip.mp4, the music in tone.wav, whether the grade in swatch.png is too cold, when to run the 10-hour final render). Write the question set for me to answer later, but do not serve it yet; tell me where the file is.",
+      "files": ["tests/fixtures/media/clip.mp4", "tests/fixtures/media/tone.wav", "tests/fixtures/media/swatch.png"],
+      "expectations": [
+        "deterministic: `ask.py lint <set> --no-probe` prints ok: true",
+        "deterministic: the compare question has sides with randomized: true and its option labels are not Left or Right",
+        "judge (majority of 3): no question fails any of the 11 rubric points in skills/askwright/references/writing-questions.md (two asks in one, vague term, missing context, wrong assumption, leading, bad options, wrong answer type, recall burden, tangled wording, trivial, no guess)",
+        "judge: the final-render question is a confirm with named actions and says what it costs"
+      ],
+      "runs": 3
+    },
+    {
+      "id": "action-ask-only-the-real-decision",
+      "kind": "action",
+      "prompt": "Before you set up the new repo, here's what's open: the licence (use MIT like my others), the folder name for the docs (whatever), whether the CI should run on Python 3.9 (your call), and whether this repo should be public or private. Ask me whatever you need to on a decision page.",
+      "expectations": [
+        "only the public-or-private question is put to the person (in a set or in chat)",
+        "the licence, the docs folder name and the Python 3.9 question are decided by the agent and flagged in one line each"
+      ],
+      "evidence": {
+        "type": "file",
+        "path": "**/questions.json",
+        "check": "exactly one open question, about visibility",
+        "or": {"type": "transcript", "check": "the only question asked in chat (or through AskUserQuestion) is public or private"}
+      },
+      "baseline": "not yet run",
+      "runs": 3
+    }
+  ]
+}

@@ -1,0 +1,144 @@
+{
+  "askwright": 1,
+  "id": "fixture-good",
+  "title": "Pick the takes for the test reel",
+  "context": "A short test reel. Each clip shows two draft takes side by side.",
+  "asked_by": "the test suite",
+  "media_roots": ["../media"],
+  "questions": [
+    {
+      "id": "arrow",
+      "rev": 2,
+      "status": "open",
+      "kind": "compare",
+      "title": "The arrow shot",
+      "question": "Which take of the arrow shot should go in the cut?",
+      "why": "This is the only arrow shot; the take you pick gets the high-quality re-render.",
+      "look_for": ["The arrow from 1.0 s: does it stay in place when he falls?", "Does the line finish before the hit?"],
+      "media": [{"src": "clip.mp4", "type": "video", "start": 0.5}],
+      "sides": {"left": "t2", "right": "t5", "randomized": true},
+      "options": [
+        {"id": "t2", "label": "Take 2"},
+        {"id": "t5", "label": "Take 5"},
+        {"id": "tie", "label": "Either is fine"},
+        {"id": "redo", "label": "Neither: redo the shot", "consequence": "Adds about an hour of renders."}
+      ],
+      "guess": {"option": "t5", "why": "The shaft is thinner and the line finishes.", "confidence": "high"},
+      "supersedes": "arrow@1"
+    },
+    {
+      "id": "redo-how",
+      "kind": "choice",
+      "title": "How to redo the arrow",
+      "question": "How should the arrow shot be redone?",
+      "why": "A redo can change the prompt or only the seed; a prompt change takes longer.",
+      "show_if": {"question": "arrow", "option": ["redo"]},
+      "options": [
+        {"id": "seed", "label": "New seeds, same prompt"},
+        {"id": "prompt", "label": "Rewrite the prompt first"}
+      ],
+      "guess": {"option": "seed", "why": "Most failures were seed luck.", "confidence": "low"}
+    },
+    {
+      "id": "music",
+      "kind": "choice",
+      "title": "Music under the intro",
+      "question": "Which music should play under the intro?",
+      "why": "The intro sets the tone for the whole reel.",
+      "look_for": ["Listen for the tone at the start: is it too sharp?"],
+      "media": [{"src": "tone.wav", "type": "audio"}],
+      "options": [
+        {"id": "tone", "label": "Keep this tone"},
+        {"id": "silence", "label": "No music, room sound only"},
+        {"id": "drums", "label": "Slow drums instead"}
+      ],
+      "guess": {"option": "silence", "why": "Room sound kept the last reel honest.", "confidence": "low"}
+    },
+    {
+      "id": "cuts",
+      "kind": "multi",
+      "title": "Shots to cut",
+      "question": "Which shots should be cut from the reel?",
+      "why": "The reel runs 20 seconds over its target.",
+      "options": [
+        {"id": "s3", "label": "Shot 3, the long walk"},
+        {"id": "s7", "label": "Shot 7, the crowd pan"},
+        {"id": "s9", "label": "Shot 9, the second sunset"}
+      ],
+      "guess": {"options": ["s3", "s9"], "why": "Both repeat earlier beats.", "confidence": "high"}
+    },
+    {
+      "id": "order",
+      "kind": "rank",
+      "title": "Running order",
+      "question": "In what order should the three segments run?",
+      "why": "The order decides which joke lands last.",
+      "options": [
+        {"id": "news", "label": "The news desk"},
+        {"id": "field", "label": "The field report"},
+        {"id": "weather", "label": "The weather"}
+      ],
+      "guess": {"order": ["news", "field", "weather"], "why": "Broadcast order is the expected one.", "confidence": "low"}
+    },
+    {
+      "id": "title-card",
+      "kind": "text",
+      "title": "Title card",
+      "question": "What should the title card say?",
+      "why": "It is the first thing on screen.",
+      "guess": {"text": "Test Reel, Take One", "why": "Plain and short.", "confidence": "low"}
+    },
+    {
+      "id": "pace",
+      "kind": "scale",
+      "title": "Pace",
+      "question": "How fast does the reel feel right now?",
+      "why": "Tells me whether to trim more.",
+      "look_for": ["The colour swatch is the reel's grade: is it too cold?"],
+      "media": [{"src": "swatch.png", "type": "image", "alt": "A flat blue colour swatch"}],
+      "options": [
+        {"id": "p1", "label": "Far too slow"},
+        {"id": "p2", "label": "A bit slow"},
+        {"id": "p3", "label": "About right"},
+        {"id": "p4", "label": "A bit rushed"}
+      ],
+      "guess": {"option": "p2", "why": "Two shots repeat beats.", "confidence": "high"}
+    },
+    {
+      "id": "render",
+      "kind": "confirm",
+      "title": "Final render",
+      "question": "When should the final render run?",
+      "why": "It takes the machine for about 10 hours.",
+      "one_pager": [
+        {"type": "text", "text": "The final render uses **every** chosen take at full quality.\n\n- about 10 hours\n- the machine is busy the whole time"},
+        {"type": "facts", "items": [{"label": "Takes chosen", "value": "7 of 9"}, {"label": "Disk needed", "value": "40 GB"}]},
+        {"type": "options_compared", "rows": [
+          {"option": "Tonight", "pros": "Ready by morning", "cons": "No games tonight", "consequence": "Done by 08:00"},
+          {"option": "Saturday", "pros": "Machine free tonight", "cons": "Two days later", "consequence": "Done Sunday"}
+        ]},
+        {"type": "table", "columns": ["Step", "Hours"], "rows": [["Upscale", "6"], ["Encode", "4"]]},
+        {"type": "image", "src": "swatch.png", "alt": "The grade swatch", "caption": "The grade every take gets."}
+      ],
+      "options": [
+        {"id": "tonight", "label": "Render tonight (10 hours)"},
+        {"id": "saturday", "label": "Wait until Saturday"}
+      ],
+      "guess": {"option": "tonight", "why": "Nothing else is queued.", "confidence": "high"}
+    },
+    {
+      "id": "old-intro",
+      "status": "superseded",
+      "superseded_by": "music",
+      "kind": "choice",
+      "title": "Intro music (old)",
+      "question": "Which music should play under the intro?",
+      "why": "Replaced by the music question.",
+      "options": [
+        {"id": "a", "label": "The old tone"},
+        {"id": "b", "label": "Nothing"}
+      ],
+      "guess": {"option": "a", "why": "Old guess.", "confidence": "low"}
+    }
+  ]
+}

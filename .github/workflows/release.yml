@@ -1,0 +1,48 @@
+# Official releases. Push a tag `vX.Y.Z` (matching .claude-plugin/plugin.json) and this job runs the
+# structure checks and the ask.py tests, zips the skill folder and publishes them as a GitHub release.
+name: release
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+      - name: version in plugin.json must match the tag
+        run: |
+          v=$(python -c "import json;print(json.load(open('.claude-plugin/plugin.json'))['version'])")
+          test "v$v" = "${GITHUB_REF_NAME}" || { echo "plugin.json says $v, tag is ${GITHUB_REF_NAME}"; exit 1; }
+      - name: structure checks and size budget
+        run: |
+          python tests/check_skills.py
+          python tests/test_ask.py
+          python scripts/budget.py
+      - name: pack the skills
+        run: |
+          mkdir dist
+          python - <<'EOF'
+          import os, zipfile
+          v = os.environ["GITHUB_REF_NAME"].lstrip("v")
+          with zipfile.ZipFile(f"dist/askwright-{v}.zip", "w", zipfile.ZIP_DEFLATED) as z:
+              for root, dirs, files in os.walk("skills"):
+                  dirs[:] = [d for d in dirs if d != "__pycache__"]
+                  for f in files:
+                      p = os.path.join(root, f)
+                      z.write(p, os.path.relpath(p, "."))
+              for extra in ("README.md", "LICENSE", "SECURITY.md"):
+                  z.write(extra, extra)
+          EOF
+      - name: publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" dist/* \
+            --title "askwright ${GITHUB_REF_NAME#v}" \
+            --generate-notes \
+            --notes "Install: add this repository as a Claude Code marketplace, or unzip and link skills/askwright into your agent skills folder (~/.claude/skills, ~/.agents/skills, ~/.copilot/skills or .cursor/skills). Reasoned changes: CHANGELOG.md."

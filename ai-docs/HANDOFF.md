@@ -1,7 +1,7 @@
 # Handoff
 
 ## Current state
-Session 3 (2026-10-24) ran the eval suite and wired the first review workflow. 0.1.0 is still untagged.
+Session 3 (2026-10-24) ran the eval suite, wired the first review workflow and released v0.1.0 on the owner's go (https://github.com/m4bwav/askwright/releases/tag/v0.1.0, askwright-0.1.0.zip).
 - Skill: [../skills/askwright/SKILL.md](../skills/askwright/SKILL.md) with `references/schema.md` and `references/writing-questions.md`. One tune this session: `randomized` is a fact about the clip (L-005, C-20261024-3).
 - CLI: `skills/askwright/scripts/ask.py` (new, lint, serve, status, read, close, add, inline, stop). Page: `scripts/page/`.
 - Repository tests: `tests/test_ask.py` 48/48 (1 skip on Windows), `tests/test_page.py` 15/15 (T-20261024-1). CI 7/7 on the first push.
@@ -9,7 +9,7 @@ Session 3 (2026-10-24) ran the eval suite and wired the first review workflow. 0
 - D5 wired in the owner's private image-generation skill: its pair tool takes `--ask <set>` (adds a compare question through `ask.py add`) and `picks <set>` (reads answers back into the side log). That PR is merged. cinewright has no person-facing review page, so nothing changed there (decision S5).
 
 ## In progress
-Nothing half-done. Waiting on the owner for the v0.1.0 tag and the wiki question.
+Nothing half-done. Owner rulings at the end of session 3: wiki not yet; closed PR #2's old commit left as is.
 
 ## Decisions made this session
 - [decisions/2026-10-24-session3-calls.md](decisions/2026-10-24-session3-calls.md): S1 to S5 (fixture folder, checker script, standalone outcome prompt, the hold-out, D5 wired in the pair tool rather than cinewright).
@@ -21,4 +21,4 @@ Nothing half-done. Waiting on the owner for the v0.1.0 tag and the wiki question
 - `evals/results/` from `claude plugin eval` holds machine paths and is git-ignored. Delete it before `tests/check_skills.py`, or the guard fails on it.
 
 ## Next single action
-Ask the owner for the go to tag v0.1.0 (and whether to write the wiki), then tag. The release workflow checks the tag against `.claude-plugin/plugin.json`.
+Use `pair --ask` on the next real film review, serve it, read it back with `picks`, and record what the page could not show.

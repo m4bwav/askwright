@@ -67,7 +67,7 @@
           "run": "python evals/check_set.py serve"
         }
       },
-      "baseline": "not yet run: expected to hand-write an HTML page and a throwaway server, or to ask in chat",
+      "baseline": "2026-10-24 T-20261024-2: failed 0/3 without the skill (hand-wrote an HTML page in the scratchpad or offered to publish to claude.ai; no lintable set)",
       "runs": 3,
       "fixture": "media-review"
     },
@@ -93,7 +93,8 @@
         "PowerShell(python *)",
         "Edit"
       ],
-      "max_turns": 30
+      "max_turns": 30,
+      "baseline": "2026-10-24 T-20261024-2: failed 0/3 without the skill (an HTML checklist page or markdown, no question set)"
     },
     {
       "id": "action-ask-only-the-real-decision",
@@ -109,7 +110,7 @@
         "type": "command",
         "run": "python evals/check_set.py only-asked"
       },
-      "baseline": "not yet run",
+      "baseline": "2026-10-24 T-20261024-2: passed 3/3 without the skill (asked visibility in chat, decided the rest); kept as a guard that the skill does not make the agent over-ask",
       "runs": 3,
       "holdout": true
     }

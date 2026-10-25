@@ -4,6 +4,11 @@ Every change to [README.md](README.md) and its companions, newest first, each wi
 
 Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (IDs or "user request"), `files:` (file and section), and a sentence on what changed. Cite section headings, not line numbers.
 
+### C-20261024-3 · 2026-10-24 · `randomized` is a fact about the clip, not a field to fill
+- because: T-20261024-2 (outcome-question-quality failed 1 of 3 with the skill), L-005 `randomized-is-a-fact`
+- files: skills/askwright/SKILL.md "Step 1: write the set" (Kinds), references/schema.md "A question" (`sides` row)
+- The compare kind now says `randomized: true` only when the sides were drawn at random, and that a fixed-order clip gets `false` with the lint warning kept (or the pair remade). The eval cases changed with it: evals/check_set.py checks the sides match the clip instead of demanding `true`.
+
 ### C-20261024-2 · 2026-10-24 · Built askwright 0.1.0: ask.py, the page, the skill and both test suites
 - because: user request (kickoff session 2), R-20261024-2 to R-20261024-6, the post-mortem's F1 to F12
 - files: skills/askwright/SKILL.md, references/schema.md, references/writing-questions.md, scripts/ask.py, scripts/page/ (index.html, app.js, app.css), tests/test_ask.py, tests/test_page.py, tests/fixtures/, README.md, RESEARCH.md, evals/evals.json

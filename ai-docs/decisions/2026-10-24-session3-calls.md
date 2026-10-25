@@ -1,3 +1,10 @@
+---
+kind: decision
+title: Small calls made in session 3 (eval cases, D5 wiring)
+date: 2026-10-24
+tags: [evals, tests, wiring, d5]
+---
+
 # Session 3 calls (2026-10-24)
 
 Small rulings made without asking, per the owner's standing rule to decide small calls and flag them.

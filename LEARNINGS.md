@@ -54,6 +54,14 @@ Write an entry the moment a real signal happens: a user correction, the same err
 - Scope: repo:askwright
 - Status: active · helpful 1 · harmful 0 · last_confirmed 2026-10-24
 
+### L-007 · 2026-10-24 · `caller-ids-must-pass-lint`: an id a caller derives from a filename must pass the id rule
+- Trigger: the first real film review through a caller's pair tool: the output named `_pair_r7.mp4` became question id `_pair_r7`, the lint refused it (ids start with a letter or digit), and the set came up empty
+- Hypothesis: callers build ids from file stems, and underscore-prefixed scratch names are common
+- Rule: callers that derive ids strip leading `_`, `-` and `.`; the failure printed the rule, so keep error messages naming the id pattern
+- Evidence: caller fix merged the same day; set served and self-checked after it
+- Scope: skill
+- Status: active · helpful 1 · harmful 0 · last_confirmed 2026-10-24
+
 <!-- Example (delete once you have a real entry):
 ### L-001 · 2026-10-24 · One-line lesson in plain words
 - Trigger: what happened, with dates or counts

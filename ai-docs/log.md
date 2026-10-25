@@ -27,3 +27,5 @@ Append-only. One line per operation: `## [YYYY-MM-DD] op | title` where op is on
 ## [2026-10-24] build | D5 wired: the private image-generation skill's pair tool gets `pair --ask <set>` and `picks <set>` (its PR merged); cinewright has no person-facing review page, so nothing changed there (S5).
 ## [2026-10-24] index | rebuilt (10 entries)
 ## [2026-10-24] release | v0.1.0 tagged on the owner's go ("tag it"); wiki not yet; PR #2 left as is (owner: "cool")
+## [2026-10-24] test | session 4 over-ask probe for action-ask-only-the-real-decision: a handoff prompt with four settled items and three open ones (two with obvious defaults), baseline without the skill, 2 runs. Both re-asked nothing settled and asked the three open ones each with a pre-selected guess, which is what the prompt asked for. No over-ask found; the case stays a redundant guard. Next probe idea: a prompt that does not say "all", where the defaults are strong enough to just decide.
+## [2026-10-24] blocked | session 4 step 2 (first real `pair --ask` film review) waits for a film session; the live comfyui-gen clone is still on another session's branch with uncommitted LEARNINGS.md.

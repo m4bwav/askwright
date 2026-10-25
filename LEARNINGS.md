@@ -78,6 +78,14 @@ Write an entry the moment a real signal happens: a user correction, the same err
 - Scope: repo:askwright
 - Status: active · helpful 0 · harmful 0 · last_confirmed 2026-10-24
 
+### L-010 · 2026-10-25 · `double-ask-or-is-either-or`: the double-ask lint flags a one-choice "keep A, or cut B?" question
+- Trigger: a film review set (6 questions, a 2G shot's end point). "Should 2G keep the whole fall and him lying on the floor, or cut as he lands?" got the `double-ask` warning. It is one decision between two exclusive end points, and its two options were exactly those two. It was reworded to "Where should 2G end?", which passed
+- Hypothesis: `DOUBLE_ASK` matches "or" before a verb ("or cut"), as it does "and" before a verb. "And" joins two asks; "or" usually offers the alternatives of one ask, which the options then list
+- Rule: when the warning hits an either/or between the question's own options, reword it as an open question ("Where should it end?", "Which ...?") and let the options carry the alternatives; that wording is clearer anyway. Whether the lint should stop flagging "or" when the two sides match the options is an open decision for the owner, not a default
+- Evidence: the set's questions.json before and after the rewording, lint output (1 warning, then 0), kept with the film's files
+- Scope: skill
+- Status: active · helpful 1 · harmful 0 · last_confirmed 2026-10-25
+
 <!-- Example (delete once you have a real entry):
 ### L-001 · 2026-10-24 · One-line lesson in plain words
 - Trigger: what happened, with dates or counts

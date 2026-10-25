@@ -38,18 +38,25 @@
     "learnings": 0,
     "changes": 0,
     "research": 0,
-    "tests": 0
+    "tests": 1
   },
   "consolidate_every": 25,
   "tests": {
-    "last_run": null,
-    "harness": null,
-    "env": null,
-    "cases": 0,
-    "passed": 0,
-    "failed": 0,
-    "failing": [],
-    "last_failure": null,
+    "last_run": "2026-10-24T19:53",
+    "harness": "claude plugin eval (triggers, decoys) + worth --ab (value cases, re-graded)",
+    "env": "Windows 11, Claude Code 2.1.281",
+    "cases": 8,
+    "passed": 6,
+    "failed": 2,
+    "failing": [
+      "outcome-question-quality"
+    ],
+    "last_failure": {
+      "date": "2026-10-24",
+      "case": "outcome-question-quality",
+      "class": "wrong-outcome",
+      "note": "1 of 3 runs set sides.randomized: true for a clip whose order the prompt says is fixed"
+    },
     "research_after_days": null
   }
 }

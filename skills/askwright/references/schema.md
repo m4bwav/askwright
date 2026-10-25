@@ -30,7 +30,7 @@ A set is one folder holding `questions.json`. The server writes `answers.json`, 
 | `media` | no | List of media items (below), shown under "What to look for". |
 | `options` | all kinds but `text` | At least two `{id, label, consequence?, media?}`. Ids `unsure` and `other` are reserved. |
 | `guess` | yes | Your answer: see "Guesses". |
-| `sides` | `compare` | `{"left": "<option id>", "right": "<option id>", "randomized": true}`: which take sits where in the side-by-side media. |
+| `sides` | `compare` | `{"left": "<option id>", "right": "<option id>", "randomized": true}`: which take sits where in the side-by-side media. `randomized` is `true` only when the sides were drawn at random; a fixed order is `false` (the lint warns). |
 | `one_pager` | no | Background blocks shown above the question (below). |
 | `show_if` | no | `{"question": "<id>", "option": ["<option id>", ...]}`: the question joins the line only after that answer. |
 | `status` | no | `open` (default), `closed`, `superseded` (needs `superseded_by`) or `withdrawn` (needs `reason`). Only open questions are on the page. |

@@ -2,7 +2,8 @@
 """Checks for the askwright eval cases, run in an eval's run folder: `python evals/check_set.py <mode>`, exit 0 on pass.
 
   serve       some questions.json under the folder lints with no errors
-  quality     that, and a compare question with randomized sides whose option labels are not Left/Right/A/B
+  quality     that, and a compare question whose sides match the clip (take 3 left, take 7 right, not claimed random)
+              and whose option labels are not Left/Right/A/B
   only-asked  no questions.json at all (the agent asked in chat), or one whose only open question is about visibility
 """
 
@@ -35,9 +36,14 @@ def load(qfile):
 
 
 def good_compare(q):
-    labels = [str(o.get("label", "")).strip().lower() for o in q.get("options") or []]
-    return (q.get("kind") == "compare" and (q.get("sides") or {}).get("randomized") is True
-            and labels and not any(lab in SIDE_WORDS for lab in labels))
+    """The case's clip has take 3 on the left and take 7 on the right in a fixed order: the sides must say so, and
+    must not claim the order was drawn at random."""
+    opts = {o.get("id"): str(o.get("label", "")) for o in q.get("options") or []}
+    labels = [lab.strip().lower() for lab in opts.values()]
+    sides = q.get("sides") or {}
+    return (q.get("kind") == "compare" and labels and not any(lab in SIDE_WORDS for lab in labels)
+            and "3" in opts.get(sides.get("left"), "") and "7" in opts.get(sides.get("right"), "")
+            and sides.get("randomized") is not True)
 
 
 def main(mode):

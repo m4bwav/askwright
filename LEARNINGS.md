@@ -70,6 +70,14 @@ Write an entry the moment a real signal happens: a user correction, the same err
 - Scope: skill
 - Status: active · helpful 0 · harmful 0 · last_confirmed 2026-10-24
 
+### L-009 · 2026-10-24 · `checks-watch-too-early`: `gh pr checks --watch` right after `gh pr create` returns before CI exists
+- Trigger: the 0.1.1 pull request (#10) was created, watched and merged in one command; the watch printed "no checks reported" at once and the merge went through before CI started. CI passed afterwards (7/7 on main, and the release workflow runs the same checks before it publishes), so nothing broke
+- Hypothesis: GitHub registers the workflow runs a few seconds after the push; `--watch` with no runs yet exits instead of waiting
+- Rule: after creating a pull request, wait until `gh pr checks` lists the jobs (poll for a non-empty list) before `--watch`, and never chain the merge after a watch that printed "no checks reported"
+- Evidence: PR #10, runs on 2026-10-25T03:03Z (UTC)
+- Scope: repo:askwright
+- Status: active · helpful 0 · harmful 0 · last_confirmed 2026-10-24
+
 <!-- Example (delete once you have a real entry):
 ### L-001 · 2026-10-24 · One-line lesson in plain words
 - Trigger: what happened, with dates or counts

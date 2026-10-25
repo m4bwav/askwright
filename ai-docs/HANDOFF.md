@@ -1,6 +1,8 @@
 # Handoff
 
 ## Current state
+Session 6 (2026-10-24): v0.1.1 released on the owner's go ("do the wiki now and tag"; README links the wiki, no behaviour change), and the GitHub wiki written for it: https://github.com/m4bwav/askwright/wiki, ten pages, every output from [notes/2026-10-24-wiki-verify.py](notes/2026-10-24-wiki-verify.py) run against the release zip. How to update it: [notes/2026-10-24-github-wiki.md](notes/2026-10-24-github-wiki.md), which also lists four inaccuracies in the shipped README, CHANGELOG and schema.md for the next release. The first real film review was answered earlier in the session (L-008 `pick-without-reason`).
+
 Session 3 (2026-10-24) ran the eval suite, wired the first review workflow and released v0.1.0 on the owner's go (https://github.com/m4bwav/askwright/releases/tag/v0.1.0, askwright-0.1.0.zip).
 - Skill: [../skills/askwright/SKILL.md](../skills/askwright/SKILL.md) with `references/schema.md` and `references/writing-questions.md`. One tune this session: `randomized` is a fact about the clip (L-005, C-20261024-3).
 - CLI: `skills/askwright/scripts/ask.py` (new, lint, serve, status, read, close, add, inline, stop). Page: `scripts/page/`.
@@ -9,7 +11,7 @@ Session 3 (2026-10-24) ran the eval suite, wired the first review workflow and r
 - D5 wired in the owner's private image-generation skill: its pair tool takes `--ask <set>` (adds a compare question through `ask.py add`) and `picks <set>` (reads answers back into the side log). That PR is merged. cinewright has no person-facing review page, so nothing changed there (decision S5).
 
 ## In progress
-Nothing half-done. Owner rulings at the end of session 3: wiki not yet; closed PR #2's old commit left as is.
+Nothing half-done. Closed PR #2's old commit stays as is (owner ruling, session 3). The wiki inaccuracies wait for the next release.
 
 ## Decisions made this session
 - [decisions/2026-10-24-session3-calls.md](decisions/2026-10-24-session3-calls.md): S1 to S5 (fixture folder, checker script, standalone outcome prompt, the hold-out, D5 wired in the pair tool rather than cinewright).
@@ -21,4 +23,4 @@ Nothing half-done. Owner rulings at the end of session 3: wiki not yet; closed P
 - `evals/results/` from `claude plugin eval` holds machine paths and is git-ignored. Delete it before `tests/check_skills.py`, or the guard fails on it.
 
 ## Next single action
-Use `pair --ask` on the next real film review, serve it, read it back with `picks`, and record what the page could not show.
+Over-ask probe 3 with a clean baseline (outside the owner's profile), or fix the four documented inaccuracies in the next release and update the wiki with its update procedure.

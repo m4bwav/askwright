@@ -1,0 +1,71 @@
+---
+title: GitHub wiki written and published for 0.1.1
+kind: note
+date: 2026-10-24
+verified: 2026-10-24
+stale_after: 2027-04-24
+tags: [wiki, docs, 0.1.1, github]
+summary: "the wiki's pages, where their git working copy is, how every example was verified against the 0.1.1 release zip, the facts found on the way, the inaccuracies in the shipped docs, and how to update the wiki; read before touching the wiki or the README sentences listed under inaccuracies"
+---
+
+# GitHub wiki for 0.1.1
+
+## Summary
+
+The owner asked for the wiki and a tag on 2026-10-24 ("do the wiki now and tag"). 0.1.1 was released first (README link to the wiki, version strings; no behaviour change), and the wiki was written against its release zip with the wikiwright skill: ten pages plus sidebar and footer, from the README, schema.md, ask.py, the tests, CI and the release workflow. Every output on the pages was printed by the verification program beside this note. Wiki commit `6dcb942`; `live`: 10 pages, 0 failures, sidebar and footer render, 13 anchor links to 4 pages, 0 broken. Prose checker: 0 strong findings.
+
+Pages: Home, Getting-Started, Commands, Question-Set-Format, Lint-Rules-and-Errors, Server-and-Security, Recipes, Versions-and-Upgrading, FAQ, Development, `_Sidebar`, `_Footer`.
+
+The repository is a command-line tool shipped as a skill, with no package registry. The page set was the command-line tool set (Commands, plus the library set's behaviour page, edge cases and errors) with one extra page for the server, since the HTTP surface is half of what the tool does. The "published package" was the GitHub release zip.
+
+## Where the pages are
+
+`../askwright.wiki` (a sibling of this clone, outside this repository), branch `master`, remote `origin` = `https://github.com/m4bwav/askwright.wiki.git`. Plain markdown links between pages, no wikilinks, LF line endings.
+
+## How it was published
+
+Preflight state `no-wiki-repo`; the owner saved the first page in the web UI while the pages were written; preflight then said `placeholder`; the pages were committed over it and pushed with a plain `git push` (no force). `live`: 10 pages, 0 failures.
+
+## Updating the wiki later
+
+1. `git -C ../askwright.wiki pull --ff-only`, then edit the pages.
+2. Re-verify: download and unzip the new release zip into a scratch folder, then run `python 2026-10-24-wiki-verify.py <unzipped>/skills/askwright/scripts/ask.py > new.txt` on Linux (the pages show that run; WSL works), and on Windows with the newest Python and with 3.9. `python <wikiwright>/scripts/wikiwright.py diffout 2026-10-24-wiki-verify.out.txt new.txt` lists every changed section; every difference is a page to fix. Linux and Windows differ only in relative paths inside error messages (`new` on an existing set, `lint` on a missing folder); 3.9 and 3.14 differ only in the version line. `diffout ... --save 2026-10-24-wiki-verify.out.txt` saves the Linux output over the old one.
+3. `wikiwright.py outputs ../askwright.wiki 2026-10-24-wiki-verify.out.txt --address ''`, `wikiwright.py snippets ../askwright.wiki 2026-10-24-wiki-verify.py`, `wikiwright.py check ../askwright.wiki --version <new>`, and the everwrite checker.
+4. Commit, `git push`, then `wikiwright.py live m4bwav/askwright ../askwright.wiki`. The pages that name the version: `_Footer` (version, date, download link), Home (the run line and "The current version"), Getting-Started (the zip name and size, `--version` output), Versions-and-Upgrading (a new row and section).
+
+## How the examples were verified
+
+[2026-10-24-wiki-verify.py](2026-10-24-wiki-verify.py) builds every set in a fresh temporary folder, runs the unzipped 0.1.1 `ask.py` as a child process and prints transcripts with exit codes. It talks to the served page's API with the token from `server.json`, posting what the page posts, and stops each server with `ask.py stop`. Times, PIDs, ports and the scratch path are masked. Saved output: [2026-10-24-wiki-verify.out.txt](2026-10-24-wiki-verify.out.txt) (the Linux run).
+
+Runs: Linux (Ubuntu under WSL, Python 3.14.4), Windows (Python 3.14.6 and CPython 3.9.25). macOS was not run (CI covers it). `ffprobe` was not installed, so every media case passed `--no-probe` and the codec warning is described from the source. Not run: the plugin install and uninstall, the clone-and-link route, the foreground `serve`, a 416 Range reply, two servers at once. Each is marked on its page.
+
+`outputs`: 10 pages, 75 outputs checked, 0 missing, 1 skipped (the usage synopsis). `snippets`: 1 block checked, 3 skipped (install links and Claude Code slash commands), 4 commands. The repository's tests on Windows 3.14: `check_skills.py` 0 problems, `test_ask.py` 48 tests OK (1 skipped).
+
+## Facts verified while writing (not in the README)
+
+- A stale answer (given to an older `rev`) is listed under both `answered` and `stale` in `status`.
+- `read` returns answers to superseded and withdrawn questions, with that `status`.
+- `ask.py add` writes an "added" mark, so `done` turns false after "All done" when a round is added.
+- `status --wait-done` exits 0 when it times out; test `timed_out`.
+- `inline` cuts the AskUserQuestion `header` to 12 characters mid-word ("Credits musi") and prints the guess only when its confidence is `high`.
+- `media_roots` resolve against the set folder, not the working folder.
+- A `.vtt` beside a video is served as its captions without being named in the set.
+- Error messages echo the path as given, with the platform's separator.
+- A question id starting with `_` fails (`id`), as do ids over 64 characters.
+- Limits: 10 MB per upload, 1 MB JSON bodies, 20 attachments, 50 timecodes and 20,000 characters of note per answer.
+
+## Inaccuracies found in the shipped docs
+
+1. README "ask.py": "Every command prints one JSON object." `--version` prints plain text, and a usage mistake prints argparse text on standard error with exit code 2 (wiki-verify `version` and `load-errors` sections). Waits for the next release.
+2. README "Security": "Every API call needs a per-run token from the page and a matching Host header and Origin." The Origin is checked only on POST, and a POST without an Origin header is accepted (ask.py `origin_ok`, `do_GET`). Waits for the next release.
+3. CHANGELOG release notes for 0.1.0: "Windows and macOS". CI also runs Linux, and the wiki's Linux run passed. Historical; leave or amend at the next release.
+4. schema.md "What comes back" lists the states `answered`, `unsure`, `note_only`; `read --all` also returns `unanswered` (wiki-verify `add` section). Waits for the next release.
+
+## Gotchas
+
+- A Python program holding a page snippet in a triple-quoted string must start the snippet on its own line (`RECIPE = '''` then a newline): `snippets` compares whole lines, so a first line glued to the assignment is not found.
+- `pathlib.Path.write_text(newline=...)` exists only from Python 3.10; the program writes with `open(..., newline="\n")` so it runs on 3.9.
+- `tests/check_skills.py` refuses anything that looks like a home folder (`/home/<name>/`) or a drive path, so the scratch mask is `/work/proj`, and the program's timestamp regex is written with `[0-9]` (`\d\d:\d` reads as a drive letter to the guard).
+- An output block that is part of a longer output line (one message inside a JSON line) fails `outputs`; quote it in prose instead.
+
+Related: see also [../HANDOFF.md](../HANDOFF.md), [../log.md](../log.md).

@@ -1113,6 +1113,8 @@ def cmd_add(a):
         new = json.loads(Path(a.file).read_text(encoding="utf-8"))
     except (OSError, ValueError) as e:
         return emit({"ok": False, "error": f"cannot read {a.file}: {e}"})
+    if isinstance(new, dict) and isinstance(new.get("questions"), list):  # a questions.json-shaped file (L-011)
+        new = new["questions"]
     new = new if isinstance(new, list) else [new]
     qs = data.setdefault("questions", [])
     by_id = {q.get("id"): q for q in qs if isinstance(q, dict)}

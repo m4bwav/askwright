@@ -86,6 +86,14 @@ Write an entry the moment a real signal happens: a user correction, the same err
 - Scope: skill
 - Status: active · helpful 1 · harmful 0 · last_confirmed 2026-10-25
 
+### L-011 · 2026-10-25 · `add-takes-questions-wrapper`: `ask.py add` read a `{"questions": [...]}` file as one blank question
+- Trigger: a film review round (one new question with two clips). The file was written in the shape of questions.json, `{"questions": [ {...} ]}`, as SKILL.md's `ask.py add <set> <questions.json>` suggests; add linted the wrapper itself as a question and failed with seven errors (id None, no kind, no title ...), none of which named the cause
+- Hypothesis: cmd_add accepted a list or a single question object only
+- Rule: add now also takes an object whose `questions` is a list; when an error lists every field as missing at once, suspect the file's shape before the question
+- Evidence: test_ask.py add test (wrapped file adds `music4`); the round was added as a bare list before the fix
+- Scope: skill
+- Status: active · helpful 1 · harmful 0 · last_confirmed 2026-10-25
+
 <!-- Example (delete once you have a real entry):
 ### L-001 · 2026-10-24 · One-line lesson in plain words
 - Trigger: what happened, with dates or counts

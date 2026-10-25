@@ -62,6 +62,14 @@ Write an entry the moment a real signal happens: a user correction, the same err
 - Scope: skill
 - Status: active · helpful 1 · harmful 0 · last_confirmed 2026-10-24
 
+### L-008 · 2026-10-24 · `pick-without-reason`: a pick against the guess with an empty note teaches the agent nothing
+- Trigger: the first real film review (one compare question, two takes, guess hidden at low confidence). The owner visited, answered 53 s later and left: he picked the take the guess advised against (the one with a lens-look), with no note, no timecode, guess never revealed
+- Hypothesis: the pick was unbiased and quick, which is what the page is for, but the page gives no nudge toward a reason, so the agent cannot tell whether lens-looks are acceptable in a wide battle shot or the other take's flaw (spearmen falling, not running) was simply worse
+- Rule: when a guess is wrong and the note is empty, record the pick as a fact and do not invent a reason; do not turn a review criterion into a rule from one silent pick. A possible page change (an optional one-line "why?" shown only when the pick differs from the hidden guess) is an open decision for the owner, not a default
+- Evidence: the set's answers.json and events.jsonl (visit 21:25:16, answer 21:26:09), kept in the private sidecar
+- Scope: skill
+- Status: active · helpful 0 · harmful 0 · last_confirmed 2026-10-24
+
 <!-- Example (delete once you have a real entry):
 ### L-001 · 2026-10-24 · One-line lesson in plain words
 - Trigger: what happened, with dates or counts

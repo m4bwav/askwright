@@ -38,6 +38,14 @@ Write an entry the moment a real signal happens: a user correction, the same err
 - Scope: env:windows
 - Status: active · helpful 1 · harmful 0 · last_confirmed 2026-10-24
 
+### L-005 · 2026-10-24 · `randomized` states a fact about the clip; never set it to quiet the lint `randomized-is-a-fact`
+- Trigger: on a clip the prompt said had take 3 always on the left, 1 of 3 eval runs wrote `sides.randomized: true` (the other two wrote false and kept the lint warning). The session-2 eval case demanded `true` too.
+- Hypothesis: SKILL.md said "give `sides` with `randomized: true`", which reads as a field to fill, and the lint warns when it is false.
+- Rule: `randomized: true` only when the sides were drawn at random (a pair tool did it); a clip with a known fixed order gets `false`, and the warning stays or the pair is remade in random order.
+- Evidence: T-20261024-2 (outcome-question-quality, with run 1), C-20261024-3
+- Scope: skill
+- Status: active · helpful 1 · harmful 0 · last_confirmed 2026-10-24
+
 <!-- Example (delete once you have a real entry):
 ### L-001 · 2026-10-24 · One-line lesson in plain words
 - Trigger: what happened, with dates or counts

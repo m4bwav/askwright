@@ -43,8 +43,9 @@ Every question has:
   a "Show my guess" button, and the read-back tells you whether it was opened before the pick. The guess is
   never pre-selected. Vary which option it is; do not always list your pick first.
 
-Kinds: `choice`, `multi`, `compare` (takes side by side: give `sides` with `randomized: true`; the page shows
-"Left"/"Right" until the pick and stores the option id), `rank`, `text`, `scale`, `confirm`. A question that only
+Kinds: `choice`, `multi`, `compare` (takes side by side: `sides` says which take is on which side; the page shows
+"Left"/"Right" until the pick and stores the option id; `randomized: true` only if the sides were drawn at random,
+and a clip with a known fixed order gets `false`: keep the lint warning or remake the pair in random order), `rank`, `text`, `scale`, `confirm`. A question that only
 matters after another answer gets `show_if`. A major decision gets a `one_pager` (text, facts, a pros and cons
 table, images, a chart) above it. Keep a set to 12 open questions or fewer.
 

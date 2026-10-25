@@ -70,6 +70,12 @@ installed it will write a set and serve it. By hand:
     python skills/askwright/scripts/ask.py read ask/first
     python skills/askwright/scripts/ask.py stop ask/first
 
+## Documentation
+
+The [wiki](https://github.com/m4bwav/askwright/wiki) has every command with its real output, the question-set
+format, every lint rule with its message, recipes and an FAQ. [skills/askwright/references/schema.md](skills/askwright/references/schema.md)
+lists every field.
+
 ## ask.py
 
 | Command | What it does |

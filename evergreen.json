@@ -38,18 +38,46 @@
     "learnings": 0,
     "changes": 0,
     "research": 0,
-    "tests": 0
+    "tests": 2
   },
   "consolidate_every": 25,
   "tests": {
-    "last_run": null,
-    "harness": null,
-    "env": null,
-    "cases": 0,
-    "passed": 0,
+    "last_run": "2026-10-24T19:59",
+    "harness": "claude plugin eval (triggers, decoys) + worth --ab (value cases)",
+    "env": "Windows 11, Claude Code 2.1.281",
+    "cases": 8,
+    "passed": 8,
     "failed": 0,
     "failing": [],
-    "last_failure": null,
+    "last_failure": {
+      "date": "2026-10-24",
+      "case": "outcome-question-quality",
+      "class": "wrong-outcome",
+      "note": "1 of 3 runs set sides.randomized: true for a clip whose order the prompt says is fixed"
+    },
     "research_after_days": null
+  },
+  "worth": {
+    "checked": "2026-10-24",
+    "skills": {
+      "askwright": {
+        "verdict": "KEEP",
+        "why": "a real gain: +67 points (noise margin 31) at 0.64x the cost",
+        "body_tokens": 1888,
+        "listing_tokens": 168,
+        "specific_share": 0.75,
+        "delta": 0.67,
+        "cost_ratio": 0.64,
+        "modes": [],
+        "gaps": 0,
+        "checked": "2026-10-24",
+        "uses": {
+          "days": 60,
+          "interactive": 0,
+          "subagent": 0,
+          "headless": 0
+        }
+      }
+    }
   }
 }

@@ -488,6 +488,11 @@ class CliTests(unittest.TestCase):
         self.assertEqual((old["status"], old["superseded_by"]), ("superseded", "music2"))
         code, d = run_cli("add", self.s.dir, qf, "--no-probe")
         self.assertEqual(code, 1)  # id exists
+        wrapped = self.s.tmp / "wrapped.json"  # the questions.json shape: {"questions": [...]}
+        wrapped.write_text(json.dumps({"questions": [dict(new, id="music4", supersedes=None, title="Outro music",
+                                                                   question="Which music cue fits the outro?")]}), encoding="utf-8")
+        code, d = run_cli("add", self.s.dir, wrapped, "--no-probe")
+        self.assertEqual((code, d.get("added")), (0, ["music4"]), d)
         bad = dict(new, id="music3", question="no mark")
         qf.write_text(json.dumps(bad), encoding="utf-8")
         before = (self.s.dir / "questions.json").read_text(encoding="utf-8")

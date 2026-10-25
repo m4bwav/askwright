@@ -4,6 +4,11 @@ Every change to [README.md](README.md) and its companions, newest first, each wi
 
 Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (IDs or "user request"), `files:` (file and section), and a sentence on what changed. Cite section headings, not line numbers.
 
+### C-20261025-1 · 2026-10-25 · `ask.py add` takes a questions.json-shaped file
+- because: L-011 `add-takes-questions-wrapper`
+- files: skills/askwright/scripts/ask.py `cmd_add`, tests/test_ask.py `test_close_and_add`
+- `add` now accepts `{"questions": [...]}` as well as a list or one question; before, the wrapper was linted as one blank question with seven errors that did not name the cause.
+
 ### C-20261024-4 · 2026-10-24 · 0.1.1: a link to the new wiki
 - because: user request ("do the wiki now and tag")
 - files: README.md "Documentation" (new), .claude-plugin/plugin.json and scripts/ask.py `VERSION`

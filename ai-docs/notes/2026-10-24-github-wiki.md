@@ -65,7 +65,7 @@ Runs: Linux (Ubuntu under WSL, Python 3.14.4), Windows (Python 3.14.6 and CPytho
 
 - A Python program holding a page snippet in a triple-quoted string must start the snippet on its own line (`RECIPE = '''` then a newline): `snippets` compares whole lines, so a first line glued to the assignment is not found.
 - `pathlib.Path.write_text(newline=...)` exists only from Python 3.10; the program writes with `open(..., newline="\n")` so it runs on 3.9.
-- `tests/check_skills.py` refuses anything that looks like a home folder (`/home/<name>/`) or a drive path, so the scratch mask is `/work/proj`, and the program's timestamp regex is written with `[0-9]` (`\d\d:\d` reads as a drive letter to the guard).
+- `tests/check_skills.py` refuses anything that looks like a home folder (`/home/<name>/`) or a drive path, so the scratch mask is `/work/proj`, and the program's timestamp regex is written with `[0-9]`: a digit escape after a colon reads as a drive letter to the guard.
 - An output block that is part of a longer output line (one message inside a JSON line) fails `outputs`; quote it in prose instead.
 
 Related: see also [../HANDOFF.md](../HANDOFF.md), [../log.md](../log.md).

@@ -16,7 +16,7 @@ Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (ID
 
 ## Release notes
 
-### 0.1.0 (unreleased)
+### 0.1.0 (2026-10-24)
 - First version: question sets as data, the lint, the local page and the read-back. Windows and macOS, served to the local machine only.
 
 ### C-20261024-1 · 2026-10-24 · Created as an evergreen unit

@@ -26,6 +26,16 @@ every question page is as good as the best one, instead of whatever the agent im
   for the clip, `?` for the list.
 - Every change saves at once to the set folder. Light and dark themes, WCAG 2.2 AA, no network access.
 
+## Study mode: quizzes that teach
+
+Set `"mode": "study"` and the same page becomes a quiz. Each multiple-choice question has one right option and a
+`why` on every option, so the review after "Submit" shows the score, a score per topic ("Net force 2 / 3 · practice
+this"), and for every question your answer, the right one and why each option is right or wrong. Written
+questions wait for the agent to grade them (`ask.py grade`). "Try again" reshuffles the options and keeps earlier
+attempts in `results.json`. The answer key and the real option ids never reach the browser before submitting.
+Graphs, force diagrams and simple drawings can be drawn from a few lines of JSON (`"figure"` media), in either mode.
+How to write good wrong answers and explanations: [references/study-mode.md](skills/askwright/references/study-mode.md).
+
 ## What the agent gets back
 
 ```
@@ -88,6 +98,8 @@ lists every field.
 | `close <set> <qid>...` | Closes questions, or marks them `--superseded-by X` or `--withdrawn "reason"`. |
 | `add <set> <file>` | Adds questions (a new round); a question with `supersedes` retires the old one. Refuses anything that fails the lint. |
 | `inline <set>` | A chat version of a small set (4 or fewer plain questions), plus an AskUserQuestion mapping. |
+| `grade <set>` | Study sets: lists written answers with their rubric; `--apply <file>` writes grades back. |
+| `figure <spec> <out.svg>` | Draws a figure spec (graph, forces, shapes) to an SVG file to look at. |
 | `stop <set>` | Stops the set's server by its PID, after the server answers a ping proving it owns that PID. |
 
 Every command prints one JSON object.

@@ -10,7 +10,10 @@
     set: null, questions: [], answers: {}, view: "question", current: null, history: [],
     showAnswered: false, editing: {}, dirty: new Set(), timers: {}, sig: "", leftPrompt: null,
     lookTimes: [], lookIdx: -1, keyInputs: [], tcOffer: null, firstLoad: true, serverTime: null,
+    study: false, studyInfo: null, review: null, studySig: "", missedOnly: false,
   };
+  // Study (quiz) mode: the server holds the answer key and sends it only in `review`, after the attempt is submitted.
+  const submitted = () => S.study && !!(S.studyInfo && S.studyInfo.submitted);
 
   // ------------------------------------------------------------ small helpers
   function h(tag, props, ...kids) {
@@ -116,17 +119,28 @@
     S.serverTime = Date.parse(d.server_time);
     S.questions = d.questions;
     for (const [qid, a] of Object.entries(d.answers || {})) if (!S.dirty.has(qid)) S.answers[qid] = a;
+    S.study = d.mode === "study";
+    S.studyInfo = d.study || null;
+    S.review = d.review || null;
+    const studySig = S.study ? JSON.stringify([d.study, d.review && d.review.score]) : "";
+    const studyChanged = S.studySig && studySig !== S.studySig;
+    S.studySig = studySig;
     if (d.note) showBanner(d.note);
     $("#set-title").textContent = d.set.title || "Questions for you";
     document.title = (d.set.title || "Questions") + " · askwright";
     if (S.firstLoad) {
       S.firstLoad = false;
+      if (submitted()) { S.view = "review"; render(false); return; }
       welcome(d);
       const first = shown().find((q) => !done(q));
       if (first) { S.current = first.id; S.view = "question"; S.editing[first.id] = true; }
       else S.view = "finish";
       api("/api/event", post({ type: "visit" })).catch(() => {});
       render(false);
+      return;
+    }
+    if (studyChanged) {  // graded, or submitted in another tab: the review is the screen to show
+      if (submitted()) { S.view = "review"; if (!typing()) render(false); }
       return;
     }
     if (changed) {
@@ -301,6 +315,14 @@
 
   // ------------------------------------------------------------ render
   function topbar() {
+    if (S.view === "review") {
+      $("#progress").textContent = "Attempt " + S.studyInfo.attempt + " · submitted";
+      $("#btn-answered").hidden = true;
+      $("#btn-back").disabled = true;
+      $("#btn-next").textContent = "Next";
+      $("#btn-next").disabled = true;
+      return;
+    }
     const list = shown();
     const answered = list.filter(done).length;
     const left = list.length - answered;
@@ -331,7 +353,9 @@
     S.lookTimes = [];
     S.lookIdx = -1;
     S.tcOffer = null;
-    if (S.view === "overview") renderOverview();
+    if (submitted()) S.view = "review";  // a submitted attempt is read-only: its review is the only screen
+    if (S.view === "review") renderReview();
+    else if (S.view === "overview") renderOverview();
     else if (S.view === "finish") renderFinish();
     else renderQuestion(byId(S.current));
     topbar();
@@ -409,10 +433,11 @@
     const editing = !!S.editing[q.id];
     const art = h("article", { class: "q", "data-q": q.id });
     if ((q.one_pager || []).length) art.append(onePager(q.one_pager));
-    art.append(h("p", { class: "caption", text: q.title + (q.reversible === false ? " · hard to undo" : "") }),
-      h("h1", { tabindex: "-1", id: "q-h" }, q.question));
+    const caption = S.study ? [q.topic, q.title].filter(Boolean).join(" · ") + (q.bonus ? " · bonus" : "")
+      : q.title + (q.reversible === false ? " · hard to undo" : "");
+    art.append(h("p", { class: "caption", text: caption }), h("h1", { tabindex: "-1", id: "q-h" }, q.question));
     if (q.hint) art.append(h("p", { class: "hint", text: q.hint }));
-    art.append(h("section", { class: "why", "aria-labelledby": "why-h" }, h("h2", { id: "why-h", text: "Why this matters" }), h("p", { text: q.why })));
+    if (q.why) art.append(h("section", { class: "why", "aria-labelledby": "why-h" }, h("h2", { id: "why-h", text: "Why this matters" }), h("p", { text: q.why })));
     if ((q.look_for || []).length) {
       const items = q.look_for.map((t) => {
         const times = [...t.matchAll(/(\d+(?:\.\d+)?)\s*s\b/g)].map((m) => parseFloat(m[1]));
@@ -428,8 +453,7 @@
         h("button", { type: "button", class: "btn small", text: "Change", onclick: () => { S.editing[q.id] = true; render(false); $("#ans input, #ans textarea, #ans button", main)?.focus(); } })));
     }
     art.append(answerArea(q, a, editing));
-    art.append(guessArea(q, a));
-    art.append(noteArea(q, a, editing));
+    if (!S.study) art.append(guessArea(q, a), noteArea(q, a, editing));
     art.append(h("div", { id: "leave-prompt" }));
     main.replaceChildren(art);
   }
@@ -475,8 +499,8 @@
       ta.addEventListener("input", () => { const d = draft(q.id); d.text = ta.value; if (ta.value.trim() && d.choice === "unsure") { d.choice = null; unsure.checked = false; } changed(q.id); });
       const unsure = h("input", { type: "checkbox", value: "unsure", checked: a.choice === "unsure" });
       unsure.addEventListener("change", () => { draft(q.id).choice = unsure.checked ? "unsure" : null; changed(q.id, true); });
-      fs.append(h("div", { class: "answer-text" }, h("label", { for: "ans-text", class: "visually-hidden", text: "Your answer" }), ta),
-        h("div", { class: "opts" }, h("label", { class: "opt extra" }, unsure, h("span", { class: "label", text: "Not sure, ask me later" }))));
+      fs.append(h("div", { class: "answer-text" }, h("label", { for: "ans-text", class: "visually-hidden", text: "Your answer" }), ta));
+      if (!S.study) fs.append(h("div", { class: "opts" }, h("label", { class: "opt extra" }, unsure, h("span", { class: "label", text: "Not sure, ask me later" }))));
       return fs;
     }
     const multi = q.kind === "multi";
@@ -488,9 +512,11 @@
       if ((o.media || []).length) row.querySelector(".txt").append(...o.media.map((m) => mediaEl(m)));
       box.append(row);
     }
-    if (q.kind !== "scale") box.append(h("hr", { class: "sep" }));
-    box.append(optRow(multi ? "checkbox" : "radio", name, "unsure", "Not sure, ask me later", null, a.choice === "unsure", n++, true));
-    box.append(optRow(multi ? "checkbox" : "radio", name, "other", "Something else", "Say what in the note below", chosen.includes("other"), n++, true));
+    if (!S.study) {  // a quiz has no "not sure" or "something else": the review teaches what was missed
+      if (q.kind !== "scale") box.append(h("hr", { class: "sep" }));
+      box.append(optRow(multi ? "checkbox" : "radio", name, "unsure", "Not sure, ask me later", null, a.choice === "unsure", n++, true));
+      box.append(optRow(multi ? "checkbox" : "radio", name, "other", "Something else", "Say what in the note below", chosen.includes("other"), n++, true));
+    }
     box.addEventListener("change", (e) => {
       const v = e.target.value;
       const d = draft(q.id);
@@ -657,6 +683,7 @@
     if (counts.note_only) lead.push(counts.note_only + " with a note but no choice");
     if (counts.unanswered) lead.push(counts.unanswered + " not answered");
     const msg = h("p", { class: "done-msg", role: "status" });
+    if (S.study) return renderStudyFinish(list, counts, msg);
     const finish = (type) => async () => {
       await flush();
       try {
@@ -677,6 +704,104 @@
         h("button", { type: "button", class: "btn", text: "I'm done for now", onclick: finish("pause") }),
         h("button", { type: "button", class: "btn primary", text: "All done", onclick: finish("done") })),
       msg);
+  }
+
+  // ------------------------------------------------------------ study mode: submit, review, try again
+  function renderStudyFinish(list, counts, msg) {
+    const submit = h("button", { type: "button", class: "btn primary", text: "Submit my answers", onclick: async () => {
+      submit.disabled = true;
+      if (!(await flush())) { submit.disabled = false; return; }
+      try {
+        const d = await api("/api/submit", post({}));
+        S.review = d.review;
+        S.studyInfo = Object.assign({}, S.studyInfo, { submitted: true });
+        S.view = "review";
+        render(true);
+        load().catch(() => {});
+      } catch (e) { submit.disabled = false; showBanner("Your answers were not submitted: " + e.message + "."); }
+    } });
+    main.replaceChildren(h("h1", { tabindex: "-1", text: "Check your answers" }),
+      h("p", { text: counts.answered + " of " + list.length + " answered." }),
+      h("dl", { class: "check" }, list.map((q) => h("div", null, h("dt", { text: q.title }), h("dd", { text: answerText(q) }),
+        h("dd", null, h("a", { href: "#", onclick: (e) => { e.preventDefault(); goTo(q.id); }, text: done(q) ? "Change" : "Answer", "aria-label": (done(q) ? "Change " : "Answer ") + q.title }))))),
+      counts.unanswered + counts.note_only
+        ? h("p", { class: "hint", text: "Questions you leave blank count as not right. You can still go back and answer them." })
+        : null,
+      h("p", { class: "hint", text: "After you submit you see your score and why each answer is right or wrong. You cannot change answers after that, but you can try the quiz again." }),
+      h("div", { class: "finish-actions" },
+        h("button", { type: "button", class: "btn", text: "I'm done for now", onclick: async () => {
+          await flush();
+          try { await api("/api/event", post({ type: "pause" })); msg.textContent = "Saved. Come back to this page any time; it opens where you left off."; }
+          catch (e) { showBanner("Could not record that: " + e.message + "."); }
+        } }),
+        submit),
+      msg);
+  }
+
+  const VERDICT = { right: "Right", wrong: "Not right", partial: "Part right", unanswered: "Not answered", pending: "Waiting for grading" };
+  const pts = (n) => (Math.round(n * 10) / 10) + (n === 1 ? " point" : " points");
+  function renderReview() {
+    const rv = S.review;
+    if (!rv) { main.replaceChildren(h("p", { text: "Loading your results…" })); return; }
+    const sc = rv.score;
+    const pct = sc.max ? Math.round((sc.earned / sc.max) * 100) : 0;
+    const kids = [h("h1", { tabindex: "-1", text: "Your score" }),
+      h("p", { class: "score-big" }, h("strong", { text: sc.earned + " / " + sc.max }), " (" + pct + "%)")];
+    if (sc.pending_points) kids.push(h("p", { class: "notice-line", text: "Written answers worth " + pts(sc.pending_points) + " are waiting for grading. The score goes up when they are graded right." }));
+    if (sc.bonus_max) kids.push(h("p", { text: "Bonus: " + sc.bonus_earned + " of " + sc.bonus_max + (rv.questions.some((q) => q.bonus && q.status === "pending") ? " (waiting for grading)" : "") }));
+    const topics = Object.entries(sc.by_topic);
+    if (topics.length > 1) {
+      kids.push(h("h2", { text: "By topic" }), h("table", { class: "topics" },
+        h("thead", null, h("tr", null, h("th", { scope: "col", text: "Topic" }), h("th", { scope: "col", text: "Score" }))),
+        h("tbody", null, topics.map(([name, t]) => h("tr", null,
+          h("th", { scope: "row" }, name, t.earned < t.max - t.pending ? h("span", { class: "weak", text: " · practice this" }) : null),
+          h("td", null, t.earned + " / " + t.max + (t.pending ? " (" + t.pending + " waiting)" : ""),
+            h("span", { class: "bar", "aria-hidden": "true" }, h("span", { style: null, "data-w": t.max ? Math.round((t.earned / t.max) * 100) : 0 }))))))));
+    }
+    const past = (S.studyInfo.attempts || []).filter((a) => a.n !== rv.n);
+    if (past.length) kids.push(h("p", { class: "hint", text: "Earlier tries: " + past.map((a) => "attempt " + a.n + ": " + a.earned + " / " + a.max).join(", ") + "." }));
+    const again = h("button", { type: "button", class: "btn primary", text: "Try again", onclick: async () => {
+      again.disabled = true;
+      try {
+        await api("/api/retake", post({}));
+        S.answers = {}; S.dirty.clear(); S.editing = {}; S.history = []; S.current = null; S.firstLoad = true; S.review = null;
+        await load();
+        render(true);
+      } catch (e) { again.disabled = false; showBanner("Could not start a new try: " + e.message + "."); }
+    } });
+    const missed = rv.questions.filter((q) => q.status !== "right");
+    const toggle = h("button", { type: "button", class: "btn", "aria-pressed": String(S.missedOnly), text: S.missedOnly ? "Show every question" : "Show only the ones to fix (" + missed.length + ")",
+      onclick: () => { S.missedOnly = !S.missedOnly; render(false); } });
+    kids.push(h("div", { class: "finish-actions" }, again, missed.length && missed.length < rv.questions.length ? toggle : null));
+    kids.push(h("h2", { text: "Every question" }));
+    const list = S.missedOnly ? missed : rv.questions;
+    kids.push(h("ol", { class: "review" }, list.map((q) => reviewItem(q, rv.questions.indexOf(q) + 1))));
+    main.replaceChildren(...kids);
+    main.querySelectorAll(".bar > span").forEach((s) => { s.style.width = s.dataset.w + "%"; });  // CSP allows no inline style attribute
+  }
+  function reviewItem(q, num) {
+    const li = h("li", { class: "rv " + q.status, "data-rq": q.qid });
+    li.append(h("p", { class: "caption", text: num + " · " + [q.topic, q.title].filter(Boolean).join(" · ") + (q.bonus ? " · bonus" : "") }),
+      h("h3", { text: q.question }),
+      h("p", { class: "verdict " + q.status, text: (q.status === "right" ? "✓ " : q.status === "pending" ? "… " : "✗ ") + VERDICT[q.status] +
+        (q.kind === "text" && q.grade ? ": " + pts(q.grade.points) + " of " + q.points : "") }));
+    if (q.kind === "text") {
+      li.append(h("p", { class: "lbl", text: "Your answer" }), h("blockquote", { text: q.text || "(blank)" }));
+      if (q.grade && q.grade.feedback) li.append(h("p", { class: "lbl", text: "Feedback" }), h("p", { text: q.grade.feedback }));
+      if (q.model_answer) li.append(h("p", { class: "lbl", text: "A good answer" }), h("p", { text: q.model_answer }));
+      return li;
+    }
+    const right = q.options.find((o) => o.correct);
+    const picked = q.options.find((o) => o.id === q.picked);
+    if (picked && !picked.correct) li.append(h("div", { class: "opt-rv mine" }, h("p", { class: "lbl", text: "Your answer" }), h("p", { class: "ans", text: picked.label }), h("p", { text: picked.why })));
+    li.append(h("div", { class: "opt-rv right" }, h("p", { class: "lbl", text: picked && picked.correct ? "Your answer, and the right one" : "Right answer" }),
+      h("p", { class: "ans", text: right.label }), h("p", { text: right.why })));
+    const others = q.options.filter((o) => !o.correct && o.id !== q.picked);
+    if (others.length) {
+      li.append(h("details", { class: "others", open: q.status !== "right" }, h("summary", { text: "Why the other answers are wrong" }),
+        h("ul", null, others.map((o) => h("li", null, h("strong", { text: o.label + ": " }), o.why)))));
+    }
+    return li;
   }
 
   // ------------------------------------------------------------ controls and keys

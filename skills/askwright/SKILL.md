@@ -1,6 +1,6 @@
 ---
 name: askwright
-description: "Use whenever you need the user to decide things you cannot settle yourself and a chat question is not enough: several decisions at once, takes, clips or images to compare, video or audio to review, a major call that needs a one-pager, or answers that will come in over hours ('ask me about these takes', 'make me a decision page', 'put these questions on a page', 'I'll answer when I have a minute'). Writes the questions as data, lints them, serves one question per screen on 127.0.0.1 with your guess, notes and pasted images, then reads the answers back from disk (ask.py). Not for one quick yes/no (ask in chat) or surveys of other people. Also 'refresh askwright'."
+description: "Use whenever you need the user to decide things you cannot settle yourself and a chat question is not enough: several decisions at once, takes, clips or images to compare, video or audio to review, a major call that needs a one-pager, or answers that come in over hours ('ask me about these takes', 'make me a decision page', 'put these questions on a page'). Also quizzes that grade and explain ('quiz my kid on this homework', 'make a review quiz'). Writes questions as data, lints them, serves one per screen on 127.0.0.1, reads answers back from disk (ask.py). Not for one quick yes/no (ask in chat) or surveys of other people. Also 'refresh askwright'."
 ---
 
 # askwright
@@ -26,11 +26,21 @@ Then pick the channel:
 - Anything with clips, images or audio, more than 4 questions, a major decision that needs background, or answers
   that will arrive over hours: the page.
 
+## A quiz instead: study mode
+
+When someone wants to practise or test what they know (a quiz on homework, a review before a test), write a study
+set: `"mode": "study"`, multiple-choice questions with one `correct` option and a `why` on every option (each wrong
+option stands for a real mistake), a `topic` on each, and optional written questions with a `rubric`. The page
+scores it on submit and shows a review per question and per topic; `ask.py grade` lists written answers for you to
+grade. No guesses, no "not sure". Read [references/study-mode.md](references/study-mode.md) before writing one;
+steps 1 and 2 below are for decision sets.
+
 ## Step 1: write the set
 
 One folder per set, `<project>/ask/<set-id>/` unless the project already keeps review files somewhere (then put
 it beside them). Start it with `ask.py new <folder> --title "<what this round decides>"`, then add questions.
-Media stays where it is: list its folders in `media_roots` and refer to files by name.
+Media stays where it is: list its folders in `media_roots` and refer to files by name. A graph, a force diagram or a
+simple drawing needs no file: a media item `{"figure": {...}, "alt": "..."}` is drawn by ask.py (schema.md, Media).
 
 Every question has:
 - `question`: one real question that ends in `?`. The short label goes in `title` ("The arrow shot").

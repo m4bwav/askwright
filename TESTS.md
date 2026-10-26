@@ -8,6 +8,13 @@ Entry shape: `### T-YYYYMMDD-n · date · harness · env · passed/total`, then 
 
 ## Runs
 
+### T-20261025-3 · 2026-10-25 · repository suites + claude plugin eval (triggers, decoys) · Windows 11, Python 3.14, Playwright, Chrome · all passed
+- tests/test_ask.py 67/67 (1 skip, the Windows symlink test): the 48 earlier tests unchanged, plus StudyLintTests, StudyScoreTests, StudyServerTests (key hidden until submit, neutral option ids, submit, 409 after submit, retake keeps attempts, grade round trip, read/status, decision sets refuse study routes) and FigureTests.
+- tests/test_page.py 20/20: the 15 earlier plus StudyPageTests (no key, extras, guess or note before submit; real ids never in the DOM; submit, review, missed-only filter, axe light and dark on the review, reload keeps the review, a grade written to results.json shows at the next poll, try again; review fits a 375 px phone; figure draws under the real CSP; no console errors). `ASKW_SET=tests/fixtures/study` GenericPageTests 3/3 + 1 skip (no video; the media test now skips instead of looping when a set has none).
+- Real set: the owner's 22-question forces quiz lints clean and served; figures load under the real CSP on laptop and phone with no horizontal scroll. Two cold takes by fresh agents found no question with two defensible answers after fixes (findings: option ids leaking the key, L-015; giveaways by length, form and "only" wording; loose physics wording), all fixed.
+- Eval: trigger-study-quiz 3/3 with the skill, 0/3 without; decoy-explain-mistakes quiet 3/3 in both arms; the five earlier trigger and decoy cases 3/3 each with the new description. Value cases (action, outcome) not re-run: they concern decision sets, whose behaviour did not change.
+- led to: L-015, L-016, C-20261025-5
+
 ### T-20261024-2 · 2026-10-24 · claude plugin eval (triggers, decoys) + evergreen `worth --ab` (value cases, `claude -p`) · Windows 11, Claude Code 2.1.281, default model, no judge used · 8/8 after one tune (6/8 before)
 - First eval-suite run, baseline arm included. Triggers 3/3 on each of three prompts with the plugin (0/3 without); decoys 0/3 on both, either arm. These are headless runs, a proxy for the main loop.
 - Before the tune, re-graded after fixing two case defects (below): action-serve-a-set 3/3 with, 0/3 without (the baseline hand-wrote an HTML page or offered a claude.ai publish); outcome-question-quality 2/3 with, 0/3 without; action-ask-only-the-real-decision 2/3 with, 3/3 without.

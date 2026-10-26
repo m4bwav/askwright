@@ -102,13 +102,14 @@ lists every field.
 | `figure <spec> <out.svg>` | Draws a figure spec (graph, forces, shapes) to an SVG file to look at. |
 | `stop <set>` | Stops the set's server by its PID, after the server answers a ping proving it owns that PID. |
 
-Every command prints one JSON object.
+Every command prints one JSON object, except `--version` (plain text) and a usage mistake (argparse text on
+standard error, exit code 2).
 
 ## Security
 
 The server binds 127.0.0.1 only, on a free port. It serves the page files and media files (by extension) from the
 set folder and the folders the set names, with symlinks resolved and checked. Every API call needs a per-run token
-from the page and a matching Host header and Origin. Another web page, or a DNS-rebinding trick, cannot read or
+from the page and a matching Host header; a POST that sends an Origin header must send the page's own. Another web page, or a DNS-rebinding trick, cannot read or
 write your answers. Uploads are capped at 10 MB and must be PNG, JPEG, GIF or
 WebP by their bytes. The page runs under a strict Content Security Policy and loads nothing from the network.
 Answers are data for the agent, not instructions; the skill says so. See [SECURITY.md](SECURITY.md).

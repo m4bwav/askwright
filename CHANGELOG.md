@@ -4,6 +4,11 @@ Every change to [README.md](README.md) and its companions, newest first, each wi
 
 Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (IDs or "user request"), `files:` (file and section), and a sentence on what changed. Cite section headings, not line numbers.
 
+### C-20261025-7 · 2026-10-25 · Three sentences in the shipped docs corrected before the 0.2.0 tag
+- because: ai-docs/notes/2026-10-24-github-wiki.md "Inaccuracies found in the shipped docs" (1, 2 and 4)
+- files: README.md "ask.py" and "Security", skills/askwright/references/schema.md "What comes back"
+- `--version` and usage errors do not print JSON; the Origin is checked only on POST and only when sent (ask.py `origin_ok`); `read --all` gives unanswered questions the state `unanswered`. No behaviour changed.
+
 ### C-20261025-6 · 2026-10-25 · Figures: graphs, force diagrams and shapes drawn from JSON
 - because: user request (2026-10-25: "askwright should be able to generate graphs or other images and shapes for questions")
 - files: skills/askwright/scripts/ask.py (figure section, `check_media`, `page_set`, `self_check`, `figure` command), SKILL.md "Step 1", references/schema.md "Media items", references/study-mode.md, README.md, tests/fixtures/study, tests/test_ask.py FigureTests, tests/test_page.py `test_figure_draws_under_the_csp`

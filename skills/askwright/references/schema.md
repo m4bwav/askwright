@@ -153,5 +153,5 @@ the chosen attempt's `score` with `by_topic`, and per question `status` (`right`
 `label` (or `choices`, `order`, `text`), `side` for compare takes, `note`, `attachments` (absolute paths),
 `timecodes` (`[{"t": 6.4}]`, seconds into the first video), `matched_guess`, `guess_revealed_before_pick`,
 `q_rev`, `current_rev`, `stale` and the answer `rev`. `--since <rev>` returns only newer answers; `--all` adds the
-unanswered ones. `ask.py status <set>` lists `answered`, `unsure`, `note_only`, `unanswered`, `waiting` (behind a
+unanswered ones, with state `unanswered`. `ask.py status <set>` lists `answered`, `unsure`, `note_only`, `unanswered`, `waiting` (behind a
 `show_if`), `not_applicable`, `stale`, and `done` / `paused` from the page's finish buttons.

@@ -56,10 +56,10 @@ Runs: Linux (Ubuntu under WSL, Python 3.14.4), Windows (Python 3.14.6 and CPytho
 
 ## Inaccuracies found in the shipped docs
 
-1. README "ask.py": "Every command prints one JSON object." `--version` prints plain text, and a usage mistake prints argparse text on standard error with exit code 2 (wiki-verify `version` and `load-errors` sections). Waits for the next release.
-2. README "Security": "Every API call needs a per-run token from the page and a matching Host header and Origin." The Origin is checked only on POST, and a POST without an Origin header is accepted (ask.py `origin_ok`, `do_GET`). Waits for the next release.
+1. README "ask.py": "Every command prints one JSON object." `--version` prints plain text, and a usage mistake prints argparse text on standard error with exit code 2 (wiki-verify `version` and `load-errors` sections). Fixed before the 0.2.0 tag (C-20261025-7).
+2. README "Security": "Every API call needs a per-run token from the page and a matching Host header and Origin." The Origin is checked only on POST, and a POST without an Origin header is accepted (ask.py `origin_ok`, `do_GET`). Fixed before the 0.2.0 tag (C-20261025-7).
 3. CHANGELOG release notes for 0.1.0: "Windows and macOS". CI also runs Linux, and the wiki's Linux run passed. Historical; leave or amend at the next release.
-4. schema.md "What comes back" lists the states `answered`, `unsure`, `note_only`; `read --all` also returns `unanswered` (wiki-verify `add` section). Waits for the next release.
+4. schema.md "What comes back" lists the states `answered`, `unsure`, `note_only`; `read --all` also returns `unanswered` (wiki-verify `add` section). Fixed before the 0.2.0 tag (C-20261025-7).
 
 ## Gotchas
 

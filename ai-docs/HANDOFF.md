@@ -1,7 +1,7 @@
 # Handoff
 
 ## Current state
-2026-10-25 (study-mode session): 0.2.0 study mode and figures merged to main via PR (see log), not tagged. `"mode": "study"` makes a quiz (key kept on the server until submit, neutral option ids `o1`.., per-attempt shuffle, results.json attempts, review page with per-topic scores, `ask.py grade` for written answers); `figure` media draws graphs, force diagrams and shapes. Design: [decisions/2026-10-25-study-mode.md](decisions/2026-10-25-study-mode.md). Tests: T-20261025-3. Guide for authors: skills/askwright/references/study-mode.md.
+2026-10-25 (study-mode session): 0.2.0 study mode and figures merged to main via PR (see log), tagged v0.2.0 on the owner's go, wiki updated. `"mode": "study"` makes a quiz (key kept on the server until submit, neutral option ids `o1`.., per-attempt shuffle, results.json attempts, review page with per-topic scores, `ask.py grade` for written answers); `figure` media draws graphs, force diagrams and shapes. Design: [decisions/2026-10-25-study-mode.md](decisions/2026-10-25-study-mode.md). Tests: T-20261025-3. Guide for authors: skills/askwright/references/study-mode.md.
 
 Collision to resolve: another session's uncommitted 0.2.0 work (compact image review: `media_layout`, galleries, L-012 to L-014, C-20261025-2/-3, T-20261025-1/-2) sits in the main clone on `feat/compact-image-review`. This session used L-015/L-016, C-20261025-4 to -6 and T-20261025-3 so the ids do not clash. That branch must rebase onto main (conflicts expected in ask.py, app.js, app.css, CHANGELOG, TESTS, HANDOFF, log, schema.md, SKILL.md) and either join the 0.2.0 release notes (nothing is tagged yet) or become 0.3.0.
 
@@ -27,6 +27,4 @@ Nothing half-done. Closed PR #2's old commit stays as is (owner ruling, session 
 - `evals/results/` from `claude plugin eval` holds machine paths and is git-ignored. Delete it before `tests/check_skills.py`, or the guard fails on it.
 
 ## Next single action
-The first real study set was graded and closed (see log). Next: rebase the compact-image-review branch onto main (see above), and ask the owner before tagging 0.2.0 and updating the wiki (pages owed listed in notes/2026-10-24-github-wiki.md, "Owed for 0.2.0").
-
-Older next action, still open: Over-ask probe 3 with a clean baseline (outside the owner's profile), or fix the four documented inaccuracies in the next release and update the wiki with its update procedure.
+v0.2.0 is released (2026-10-25, askwright-0.2.0.zip 61,076 bytes) and the wiki updated for it (notes/2026-10-24-github-wiki.md, "0.2.0 update"). Next: settle the compact-image-review branch (rebase onto main as 0.3.0 work), and fix inaccuracy 5 (forces arrow scale per axis) in the next release.

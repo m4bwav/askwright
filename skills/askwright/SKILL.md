@@ -29,7 +29,8 @@ Then pick the channel:
 ## Step 1: write the set
 
 One folder per set, `<project>/ask/<set-id>/` unless the project already keeps review files somewhere (then put
-it beside them). Start it with `ask.py new <folder> --title "<what this round decides>"`, then add questions.
+it beside them). Start it with `ask.py new <folder> --title "<what this round decides>" --product "<your agent product>" --session "<session name or id>" --asked-by "<your role>"`, then add questions.
+Use the actual product and session, never invent them; omit unknown metadata.
 Media stays where it is: list its folders in `media_roots` and refer to files by name.
 
 Every question has:
@@ -48,6 +49,21 @@ Kinds: `choice`, `multi`, `compare` (takes side by side: `sides` says which take
 and a clip with a known fixed order gets `false`: keep the lint warning or remake the pair in random order), `rank`, `text`, `scale`, `confirm`. A question that only
 matters after another answer gets `show_if`. A major decision gets a `one_pager` (text, facts, a pros and cons
 table, images, a chart) above it. Keep a set to 12 open questions or fewer.
+
+### Keep long reviews compact
+
+Choose the unit of judgment before the layout. For evaluating frames, takes or edits, ask one comparison per
+case first; do not start with "should this model replace the default?" and hide the evidence in a gallery.
+Each case states the requested result, shows the comparison, and supplies visible **Good / Keep / Reject**
+checks: what success looks like, what must remain unchanged, and specific disqualifying defects with locations.
+Make source references available. Allow "Both meet the request" and "Neither meets the request"; uncertainty
+is different from a tie or two failures. Collect these picks and notes, then recommend an overall answer.
+Use a gallery for supporting views of one case, or when the user explicitly wants one overall judgment without
+case-level picks. Three or more images use it automatically; `media_layout: "gallery"` handles two tall images.
+Keep both candidates of a comparison together. Independent picks get separate questions and rounds of at most 12.
+Put optional detail in the collapsed `one_pager`, and use a short table for facts shared by all cases.
+Use `media_layout: "stack"` only when seeing the images together matters more than page length.
+Check the real page at desktop and phone widths: cases must remain readable and answers easy to reach.
 
 ## Step 2: review, then lint
 
@@ -73,6 +89,13 @@ URL with one line on what the set decides and how many questions it has. If a se
 `serve` returns its URL instead of starting another. Add `--open` to open their browser. The server only ever
 listens on 127.0.0.1; serving to another machine is not supported.
 
+`new` and `serve` register the set in the shared local inbox across agent products and project folders.
+The returned `dashboard_url` and the page's "All sessions" link show every registered set. For an independent
+master page, run `ask.py dashboard --detach` and share its URL; repeated calls reuse it. Counts refresh from disk,
+with unanswered sessions first and an All sessions view. Stopped sets reopen from that page.
+Register older sets with `ask.py register <set>`. The registry is in `~/.askwright`; `ASKWRIGHT_HOME` overrides it.
+All products must use the same home. `ask.py dashboard --stop` stops only the master page.
+
 ## Step 4: wait without guessing
 
 Silence is never an answer. Either ask the person to say "done" in chat when they have answered, or wait in the
@@ -93,6 +116,8 @@ python <this folder>/scripts/ask.py read <set>        # every answer
 ```
 
 Report in one or two lines before acting: "6 answered, 1 note only (g08-arrow), 2 not answered (q11, q12)".
+- For a review round, summarize the per-case picks, failures and notes before recommending a model or workflow.
+  Wins alone do not prove brief fit. Ask for a separate policy approval only after explaining what the cases show.
 - `note_only`: they wrote a note but picked nothing. It is not a choice; act on the note only if it clearly
   decides the question, otherwise ask again.
 - `unsure` and unanswered questions stay open. Never fill them with your guess.

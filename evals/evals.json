@@ -3,6 +3,44 @@
   "_format": "skill-creator evals.json plus evergreen fields (kind, decoy, evidence, baseline); extra fields are ignored by skill-creator's runner. Rules: protocol/TESTING.md.",
   "evals": [
     {
+      "id": "outcome-per-frame-review",
+      "kind": "outcome",
+      "prompt": "I have six edits to compare before deciding whether to change our image workflow: lower raised arms, remove a foreground microphone, keep short braids, preserve a ladder backpack, keep two people airborne, and add a person at the right scale. Use swatch.png as a stand-in for each source and comparison. Ask me about each frame separately, explain what a good result looks like and what makes it fail, and let me reject both versions. Use those picks to recommend a workflow afterward. Write the questions but do not serve yet.",
+      "expectations": [
+        "six frame-level questions, not one question asking which model should replace the default",
+        "each question names its requested change and has specific Good / Keep / Reject checks",
+        "each comparison offers both-usable and neither-usable outcomes, distinct from uncertainty",
+        "deterministic: the generated set lints and passes evals/check_set.py frame-review"
+      ],
+      "evidence": {
+        "type": "command",
+        "run": "python evals/check_set.py frame-review"
+      },
+      "runs": 3,
+      "fixture": "media-review",
+      "baseline": "Observed failure in use: a gallery of ten case sheets still asked one model-policy question, with only general inspection guidance. Fresh-context baseline remains unrun.",
+      "reference": "Six independent case picks with concrete success, invariants and failure criteria. Aggregate model advice follows the answers."
+    },
+    {
+      "id": "outcome-compact-media-review",
+      "kind": "outcome",
+      "prompt": "I need one overall decision on whether to keep the current image workflow or try a new one, not six separate picks. Use swatch.png in this folder as a stand-in for each of six separately captioned comparison cases. Put these cases on a review page without making me scroll through every full image before answering. Keep each comparison together, and put detailed background somewhere I can open when needed. Write the question set but do not serve it yet.",
+      "expectations": [
+        "the set uses one decision with six image cases in media, with media_layout gallery or the automatic gallery default; it does not explicitly stack all images",
+        "the background is in one_pager and critical consequences remain in why",
+        "deterministic: the generated set lints and contains one decision, six captioned image cases, gallery or auto layout, and background (evals/check_set.py compact-media)",
+        "judge: independent decisions would be split instead of collecting unrelated picks in a slideshow"
+      ],
+      "evidence": {
+        "type": "command",
+        "run": "python evals/check_set.py compact-media"
+      },
+      "runs": 3,
+      "fixture": "media-review",
+      "baseline": "Before 0.2.0, the page stacked question media and opened background by default, even with one overall decision.",
+      "reference": "One short decision with six labelled image cases, gallery or auto layout, shared background in one_pager, and no answer per slide."
+    },
+    {
       "id": "trigger-takes",
       "kind": "trigger",
       "prompt": "I rendered two takes each of the four market shots, they're side by side in renders/market/. Put them in front of me so I can pick which ones to keep, I'll go through them after dinner.",

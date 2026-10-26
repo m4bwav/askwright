@@ -15,6 +15,7 @@ import tempfile
 import threading
 import time
 import unittest
+from unittest import mock
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -23,6 +24,21 @@ ASK = SCRIPTS / "ask.py"
 FIX = ROOT / "tests" / "fixtures"
 sys.path.insert(0, str(SCRIPTS))
 import ask  # noqa: E402
+
+_home = None
+_env = None
+
+
+def setUpModule():
+    global _home, _env
+    _home = tempfile.TemporaryDirectory(prefix="askw-registry-")
+    _env = mock.patch.dict(os.environ, {"ASKWRIGHT_HOME": _home.name})
+    _env.start()
+
+
+def tearDownModule():
+    _env.stop()
+    _home.cleanup()
 
 
 def good():
@@ -78,11 +94,94 @@ def qmod(qid, fn):
     return m
 
 
+class EvalCheckTests(unittest.TestCase):
+    def test_frame_review_requires_individual_judgments(self):
+        fixture = TempSet()
+        try:
+            base = fixture.data["questions"][0]
+            questions = []
+            for i in range(6):
+                q = copy.deepcopy(base)
+                q.update(id="frame-%d" % i, title="Frame %d" % i,
+                         question="Which version removes prop %d correctly?" % i,
+                         media=[{"src": "../media/swatch.png", "alt": "Two frame versions"}],
+                         look_for=["Good: prop %d is removed." % i, "Keep: the same room.",
+                                   "Reject: prop %d remains." % i],
+                         options=[{"id": "t2", "label": "Use take 2"}, {"id": "t5", "label": "Use take 5"},
+                                  {"id": "both", "label": "Both meet the request"},
+                                  {"id": "neither", "label": "Neither meets the request"}])
+                questions.append(q)
+            fixture.data["questions"] = questions
+            checker = ROOT / "evals" / "check_set.py"
+
+            def check():
+                fixture.write(fixture.data)
+                return subprocess.run([sys.executable, str(checker), "frame-review"],
+                                      cwd=fixture.dir, capture_output=True).returncode
+
+            self.assertEqual(check(), 0)
+            questions[-1]["look_for"] = ["Check identity and quality."]
+            self.assertEqual(check(), 1)
+            fixture.data["questions"] = questions[:1]
+            self.assertEqual(check(), 1)
+        finally:
+            fixture.cleanup()
+
+    def test_compact_media_checks_generated_data(self):
+        fixture = TempSet()
+        try:
+            q = fixture.data["questions"][0]
+            q.update(kind="choice", media=[
+                {"src": "../media/swatch.png", "type": "image", "alt": "Case %d" % i,
+                 "caption": "Comparison %d" % i} for i in range(6)
+            ], one_pager=[{"type": "text", "text": "Details about the workflow."}])
+            fixture.data["questions"] = [q]
+            checker = ROOT / "evals" / "check_set.py"
+
+            def check():
+                fixture.write(fixture.data)
+                return subprocess.run([sys.executable, str(checker), "compact-media"],
+                                      cwd=fixture.dir, capture_output=True).returncode
+
+            self.assertEqual(check(), 0)
+            q["media_layout"] = "stack"
+            self.assertEqual(check(), 1)
+            q["media_layout"] = "gallery"
+            extra = copy.deepcopy(q)
+            extra.update(id="second", title="Another workflow", question="Which other workflow should be used?")
+            fixture.data["questions"].append(extra)
+            self.assertEqual(check(), 1)
+        finally:
+            fixture.cleanup()
+
+
 class LintTests(unittest.TestCase):
     def test_good_set_is_clean(self):
         errs, warns = lint(None)
         self.assertEqual(errs, set())
         self.assertEqual(warns, set())
+
+    def test_media_layout_values(self):
+        for layout in ("auto", "stack"):
+            with self.subTest(layout=layout):
+                errs, _ = lint(qmod("arrow", lambda q: q.update(media_layout=layout)))
+                self.assertEqual(errs, set())
+        self.assertError(qmod("arrow", lambda q: q.update(media_layout="slides")), "media-layout")
+        self.assertError(qmod("arrow", lambda q: q.update(media_layout="gallery")), "media-layout")
+
+    def test_image_gallery_and_long_stack(self):
+        images = [{"src": "../media/swatch.png", "alt": "Case %d" % i} for i in range(4)]
+        for layout in ("auto", "gallery"):
+            with self.subTest(layout=layout):
+                errs, warns = lint(qmod("arrow", lambda q: q.update(media=images, media_layout=layout)))
+                self.assertEqual(errs, set())
+                self.assertNotIn("long-media", warns)
+        self.assertWarning(qmod("arrow", lambda q: q.update(media=images, media_layout="stack")),
+                           "long-media")
+        errs, warns = lint(qmod("arrow", lambda q: q.update(
+            media=images, media_layout="stack", status="closed")))
+        self.assertEqual(errs, set())
+        self.assertNotIn("long-media", warns)
 
     def assertError(self, mutate, rule):
         errs, _ = lint(mutate)
@@ -205,6 +304,8 @@ class LintTests(unittest.TestCase):
         self.assertError(lambda d: d.update(askwright=2), "version")
         self.assertError(lambda d: d.update(questions=[]), "no-questions")
         self.assertError(lambda d: d.update(id=""), "set-id")
+        self.assertError(lambda d: d.update(product=[]), "session-metadata")
+        self.assertError(lambda d: d.update(session=123), "session-metadata")
 
 
 class ServerCase(unittest.TestCase):
@@ -248,6 +349,24 @@ class ServerCase(unittest.TestCase):
 
 
 class ServerTests(ServerCase):
+    def test_dashboard_from_question_page(self):
+        st, headers, html = self.req("GET", "/sessions")
+        self.assertEqual(st, 200)
+        self.assertIn(b"Questions for you", html)
+        self.assertIn(self.srv.token.encode(), html)
+        self.assertIn("script-src 'self'", headers["content-security-policy"])
+        self.assertEqual(self.req("GET", "/dashboard.js")[0], 200)
+        self.assertEqual(self.req("GET", "/dashboard.css")[0], 200)
+        self.assertEqual(self.api("/api/sessions", token=False)[0], 403)
+        self.assertEqual(self.api("/api/sessions", extra={"Origin": "http://evil.example"})[0], 403)
+        self.assertEqual(self.api("/api/open", {"id": "../questions"})[0], 400)
+        self.assertEqual(self.api("/api/open", {"id": "0" * 64}, token=False)[0], 403)
+        self.assertEqual(self.api("/api/open", {"id": "0" * 64}, extra={"Origin": "http://evil.example"})[0], 403)
+        sid = ask.register_set(self.s.dir)
+        self.assertEqual(self.api("/api/session-state", {"id": sid, "action": "archive"})[0], 200)
+        self.assertEqual(ask.session_state(sid)["state"], "archived")
+        self.assertEqual(self.api("/api/session-state", {"id": sid, "action": "restore"})[0], 200)
+
     def test_binds_loopback_only(self):
         self.assertEqual(self.srv.server_address[0], "127.0.0.1")
 
@@ -382,6 +501,210 @@ class ServerTests(ServerCase):
         c = ask.self_check(self.srv)
         self.assertTrue(c["ok"], c)
         self.assertEqual(c["media"], 206)
+
+
+class DashboardTests(ServerCase):
+    def setUp(self):
+        super().setUp()
+        self.srv.shutdown()
+        self.srv.server_close()
+        self.home = tempfile.TemporaryDirectory(prefix="askw-dashboard-")
+        self.env = mock.patch.dict(os.environ, {"ASKWRIGHT_HOME": self.home.name})
+        self.env.start()
+        self.srv = ask.make_dashboard_server()
+        self.port = self.srv.server_address[1]
+        threading.Thread(target=self.srv.serve_forever, daemon=True).start()
+
+    def tearDown(self):
+        super().tearDown()
+        self.env.stop()
+        self.home.cleanup()
+
+    def test_standalone_routes_and_checks(self):
+        self.assertEqual(self.srv.server_address[0], "127.0.0.1")
+        self.assertTrue(ask.self_check(self.srv)["ok"])
+        self.assertEqual(self.req("GET", "/", host="evil.example")[0], 403)
+        self.assertEqual(self.api("/api/sessions", token=False)[0], 403)
+        self.assertEqual(self.api("/api/set")[0], 404)
+        self.assertEqual(self.req("GET", "/m/0/server.json")[0], 404)
+        self.assertEqual(self.api("/api/answer", {"qid": "music", "choice": "tone"})[0], 404)
+        self.assertEqual(self.api("/api/open", {"id": "../server"})[0], 400)
+        self.assertEqual(self.api("/api/open", {"id": []})[0], 400)
+        self.assertEqual(self.api("/api/open", {"id": "f" * 64})[0], 400)
+
+    def test_preview_is_next_five_visible_pending_questions_in_set_order(self):
+        ask.register_set(self.s.dir)
+        ask.write_json_atomic(self.s.dir / "answers.json", {"rev": 1, "answers": {
+            "arrow": {"choice": "t5", "q_rev": 1},  # stale, so still shown in preview
+            "music": {"choice": "tone", "q_rev": 1},
+            "cuts": {"choice": "unsure"},
+            "pace": {"note": "Still considering"}}})
+        row = self.api("/api/sessions")[1]["sessions"][0]
+        summary = ask.summarize(self.s.dir)
+        pending = set().union(*(summary[k] for k in ("unanswered", "unsure", "note_only", "stale")))
+        expected = [q for q in self.s.data["questions"] if q["id"] in pending][:5]
+        self.assertEqual(row["next_questions"], [{"id": q["id"], "question": q["question"]} for q in expected])
+        self.assertEqual(len(row["next_questions"]), 5)
+        self.assertNotIn("music", [q["id"] for q in row["next_questions"]])
+        self.assertNotIn("redo-how", [q["id"] for q in row["next_questions"]])
+        self.assertEqual(row["next_questions"][0]["id"], "arrow")
+
+    def test_snooze_durations_expire_at_exact_deadline_and_preserve_data(self):
+        sid = ask.register_set(self.s.dir)
+        ask.write_json_atomic(self.s.dir / "answers.json", {"rev": 1, "answers": {
+            "music": {"choice": "tone", "q_rev": 1}}})
+        before = {name: (self.s.dir / name).read_bytes() for name in ("questions.json", "answers.json")}
+        for seconds in ask.SNOOZE_SECONDS:
+            with self.subTest(seconds=seconds):
+                with mock.patch.object(ask.time, "time", return_value=1000000):
+                    code, state = self.api("/api/session-state", {"id": sid, "action": "snooze", "seconds": seconds})
+                    self.assertEqual(code, 200, state)
+                    self.assertEqual(state["snoozed_until"], 1000000 + seconds)
+                    row = self.api("/api/sessions")[1]["sessions"][0]
+                    self.assertEqual(row["state"], "snoozed")
+                    self.assertEqual(ask.register_set(self.s.dir), sid)
+                    self.assertEqual(ask.session_state(sid)["state"], "snoozed")
+                with mock.patch.object(ask.time, "time", return_value=1000000 + seconds - .001):
+                    self.assertEqual(ask.session_state(sid)["state"], "snoozed")
+                with mock.patch.object(ask.time, "time", return_value=1000000 + seconds):
+                    self.assertEqual(ask.session_state(sid), {"state": "inbox", "snoozed_until": None})
+        self.assertEqual(before, {name: (self.s.dir / name).read_bytes() for name in before})
+
+    def test_archive_restore_and_state_survives_registration_and_server_restart(self):
+        sid = ask.register_set(self.s.dir)
+        code, result = self.api("/api/session-state", {"id": sid, "action": "archive"})
+        self.assertEqual((code, result["state"]), (200, "archived"))
+        ask.register_set(self.s.dir)
+        self.srv.shutdown()
+        self.srv.server_close()
+        self.srv = ask.make_dashboard_server()
+        self.port = self.srv.server_address[1]
+        threading.Thread(target=self.srv.serve_forever, daemon=True).start()
+        row = self.api("/api/sessions")[1]["sessions"][0]
+        self.assertEqual(row["state"], "archived")
+        (self.s.dir / "questions.json").unlink()
+        row = self.api("/api/sessions")[1]["sessions"][0]
+        self.assertEqual(row["state"], "archived")
+        self.assertIn("error", row)
+        code, result = self.api("/api/session-state", {"id": sid, "action": "restore"})
+        self.assertEqual((code, result["state"], result["snoozed_until"]), (200, "inbox", None))
+
+    def test_session_state_validation_auth_and_write_errors(self):
+        sid = ask.register_set(self.s.dir)
+        payload = {"id": sid, "action": "snooze", "seconds": 3600}
+        self.assertEqual(self.api("/api/session-state", payload, token=False)[0], 403)
+        self.assertEqual(self.api("/api/session-state", payload, extra={"Origin": "http://evil.example"})[0], 403)
+        for invalid in (dict(payload, id="../bad"), dict(payload, id="f" * 64),
+                        dict(payload, action="delete"), dict(payload, seconds=True),
+                        dict(payload, seconds=3600.0), dict(payload, seconds=0),
+                        dict(payload, seconds=-1), dict(payload, seconds="3600"),
+                        dict(payload, seconds=604801)):
+            self.assertEqual(self.api("/api/session-state", invalid)[0], 400, invalid)
+        self.assertFalse((ask.state_dir() / "session-state").exists())
+        with mock.patch.object(ask, "write_json_atomic", side_effect=PermissionError("read-only state")):
+            code, result = self.api("/api/session-state", payload)
+            self.assertEqual(code, 500)
+            self.assertIn("cannot save session state", result["error"])
+        folder = ask.state_dir() / "session-state"
+        (folder / (sid + ".json")).write_text("{", encoding="utf-8")
+        self.assertIn("cannot read session state", self.api("/api/sessions")[1]["sessions"][0]["error"])
+        self.assertEqual(self.api("/api/session-state", {"id": sid, "action": "restore"})[0], 200)
+
+    def test_registration_deduplicates_and_keeps_products(self):
+        self.s.data.update(product="Copilot", session="session-a", asked_by="Review agent")
+        self.s.write(self.s.data)
+        sid = ask.register_set(self.s.dir)
+        self.assertEqual(sid, ask.register_set(self.s.dir / "questions.json"))
+        other = TempSet()
+        try:
+            other.data.update(product="Codex", session="session-b")
+            other.write(other.data)
+            processes = [subprocess.Popen([sys.executable, str(ASK), "register", str(d)],
+                                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                         for d in (self.s.dir, other.dir)]
+            for process in processes:
+                stdout, stderr = process.communicate(timeout=30)
+                self.assertEqual(process.returncode, 0, stderr)
+                self.assertTrue(json.loads(stdout)["ok"])
+            st, data = self.api("/api/sessions")
+            self.assertEqual(st, 200)
+            self.assertEqual({row["product"] for row in data["sessions"]}, {"Copilot", "Codex"})
+            self.assertEqual(len(data["sessions"]), 2)
+            self.assertNotIn("token", json.dumps(data))
+        finally:
+            other.cleanup()
+
+    def test_live_counts_notes_unsure_stale_closed_and_missing(self):
+        sid = ask.register_set(self.s.dir)
+        initial = self.api("/api/sessions")[1]["sessions"][0]
+        self.assertGreater(initial["pending"], 0)
+        ask.write_json_atomic(self.s.dir / "answers.json", {"rev": 1, "answers": {
+            "arrow": {"choice": "t5", "q_rev": 1},
+            "music": {"note": "Needs work"},
+            "cuts": {"choice": "unsure"}}})
+        row = self.api("/api/sessions")[1]["sessions"][0]
+        self.assertEqual((row["note_only"], row["unsure"], row["stale"]), (1, 1, 1))
+        self.assertEqual(row["pending"], initial["pending"])  # stale answers still need attention
+        for q in self.s.data["questions"]:
+            q["status"] = "closed"
+        self.s.write(self.s.data)
+        self.assertEqual(self.api("/api/sessions")[1]["sessions"][0]["pending"], 0)
+        (self.s.dir / "questions.json").unlink()
+        row = self.api("/api/sessions")[1]["sessions"][0]
+        self.assertEqual(row["id"], sid)
+        self.assertIn("no questions.json", row["error"])
+
+    def test_bad_registry_is_visible(self):
+        folder = ask.state_dir() / "sessions"
+        folder.mkdir()
+        (folder / ("a" * 64 + ".json")).write_text("{", encoding="utf-8")
+        self.assertIn("error", self.api("/api/sessions")[1]["sessions"][0])
+
+    def test_open_restarts_stopped_set_and_reuses_live_server(self):
+        sid = ask.register_set(self.s.dir)
+        answers = {"askwright": 1, "rev": 1, "answers": {"music": {"choice": "tone", "q_rev": 1}}}
+        ask.write_json_atomic(self.s.dir / "answers.json", answers)
+        try:
+            status, opened = self.api("/api/open", {"id": sid})
+            self.assertEqual(status, 200, opened)
+            first = ask.server_info(self.s.dir)
+            self.assertTrue(first["alive"])
+            self.assertEqual(opened["url"], first["url"])
+            self.assertEqual(self.api("/api/open", {"id": sid})[1]["url"], opened["url"])
+            self.assertEqual(ask.server_info(self.s.dir)["pid"], first["pid"])
+            self.assertEqual(run_cli("stop", self.s.dir)[0], 0)
+            status, opened = self.api("/api/open", {"id": sid})
+            self.assertEqual(status, 200, opened)
+            self.assertNotEqual(ask.server_info(self.s.dir)["pid"], first["pid"])
+            self.assertEqual(ask.load_answers(self.s.dir), answers)
+        finally:
+            run_cli("stop", self.s.dir)
+
+    def test_open_lint_failure_is_explicit(self):
+        sid = ask.register_set(self.s.dir)
+        self.s.q("music").pop("why")
+        self.s.write(self.s.data)
+        status, result = self.api("/api/open", {"id": sid})
+        self.assertEqual(status, 400)
+        self.assertIn("lint", result["error"])
+        self.assertFalse((self.s.dir / "server.json").exists())
+
+    def test_dashboard_detach_reuse_stop_and_bookmark(self):
+        try:
+            code, started = run_cli("dashboard", "--detach")
+            self.assertEqual(code, 0, started)
+            info = ask.server_info(ask.state_dir() / "dashboard")
+            self.assertTrue(info["alive"])
+            self.assertTrue(ask.ping(info)["dashboard"])
+            code, again = run_cli("dashboard", "--detach")
+            self.assertEqual((code, again["pid"]), (0, started["pid"]))
+            self.assertTrue(again["already_running"])
+            self.assertEqual(run_cli("dashboard", "--stop")[0], 0)
+            code, restarted = run_cli("dashboard", "--detach")
+            self.assertEqual(code, 0, restarted)
+            self.assertEqual(restarted["url"], started["url"])
+        finally:
+            run_cli("dashboard", "--stop")
 
 
 class StateTests(unittest.TestCase):

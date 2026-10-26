@@ -52,6 +52,23 @@ the question-evaluation research (QAS-99 adapted, R-T11); models under-flag poin
 
 ## Media and review questions
 
+- Choose the unit of judgment first. A batch evaluation normally needs one question per frame, take or edit,
+  followed by an agent-written synthesis. Do not ask the person to select a model or default before collecting
+  their judgments on the examples.
+- For each case, explain the requested change and write Good / Keep / Reject checks. Name the thing and region:
+  "Good: both arms hang beside the torso. Keep: the other actor's dagger grip. Reject: a hand still touches the
+  head, or a new arm appears." "Check identity and quality" is too vague. Show source references when available.
+- Include both-usable and neither-usable outcomes. A relative winner may still fail the brief; "not sure" means
+  the reader cannot judge, not that the two versions work equally well.
+- Use galleries for supporting views of one judgment, or an explicitly requested aggregate judgment. A
+  slideshow does not replace collecting separate case-level picks. Keep each round short and synthesize the
+  answers before asking for any overall policy change.
+- Keep both sides of a comparison in the same case. Caption the difference, use `media_layout: "gallery"` for
+  two tall images (three or more image-only items use a gallery automatically), and leave shared background
+  in the collapsed one-pager. A short table can replace repeated detail. Avoid forcing a slideshow where the
+  reader needs several images visible together; `media_layout: "stack"` is available.
+- Preview real media at desktop and phone widths. Cases should fit the viewing area, with a full-size link for
+  details; the reader should not scroll past a wall of images to answer.
 - Use H.264/AAC `.mp4` side-by-side pairs for takes; put the takes on random sides and record them in `sides`.
 - `look_for` names the moment and the test: "The arrow from 6.0 s: does it stay in his neck when he falls?".
   Each time becomes a jump button; `[` and `]` step through them.

@@ -12,6 +12,8 @@ A set is one folder holding `questions.json`. The server writes `answers.json`, 
 | `title` | yes | What this round decides; shown in the top bar. |
 | `context` | no | One or two sentences on the project, for the record. |
 | `asked_by` | no | Who is asking and when ("the film session, 2026-10-24"). |
+| `product` | no | Agent product name, as text (for example, "Copilot" or "Codex"). Used to filter the shared dashboard. |
+| `session` | no | Session name or id, as text, so separate sessions of one product are distinguishable. |
 | `media_roots` | no | Folders that hold media, relative to the set folder or absolute. Media outside the set folder and these roots is refused. |
 | `questions` | yes | The questions in the order the page walks them. |
 
@@ -28,6 +30,7 @@ A set is one folder holding `questions.json`. The server writes `answers.json`, 
 | `hint` | no | One extra line under the question. |
 | `reversible` | no | `false` marks a decision that is hard to undo ("· hard to undo" beside the title); give such questions a `one_pager`. |
 | `media` | no | List of media items (below), shown under "What to look for". |
+| `media_layout` | no | `auto` (default), `gallery` or `stack`. Auto shows three or more image-only items as one case at a time; one or two remain stacked. Gallery explicitly enables case navigation, including for two tall images, and supports images only. Stack keeps every item visible together; four or more images produce a long-page warning. |
 | `options` | all kinds but `text` | At least two `{id, label, consequence?, media?}`. Ids `unsure` and `other` are reserved. |
 | `guess` | yes | Your answer: see "Guesses". |
 | `sides` | `compare` | `{"left": "<option id>", "right": "<option id>", "randomized": true}`: which take sits where in the side-by-side media. `randomized` is `true` only when the sides were drawn at random; a fixed order is `false` (the lint warns). |
@@ -43,6 +46,11 @@ A set is one folder holding `questions.json`. The server writes `answers.json`, 
 `type` is inferred from the extension (video: mp4, m4v, webm, mov; audio: mp3, m4a, wav, ogg, opus, flac; image:
 png, jpg, gif, webp, svg, avif). `start` (seconds) cues a video when it loads. Images need `alt`. `src` is looked
 up in the set folder first, then in each media root.
+
+A gallery item is one complete case. Keep a side-by-side comparison in one image so changing cases does not
+hide one of its candidates. `label` names a case in the selector; `caption` explains what to compare.
+Navigation, a case counter and a full-size link appear around the active image. Galleries do not auto-advance
+or record choices. Left/Right arrows inside the gallery change cases, not questions.
 
 ### Kinds
 
@@ -71,6 +79,9 @@ note); `text` gets "Not sure".
 `guess_revealed_before_pick`. Choose `high` only when you would act on the guess without asking.
 
 ### One-pager blocks
+
+Background starts collapsed. The reader can expand or collapse it using its summary; the choice is remembered
+while navigating the current page session. Critical consequences still belong in the question's `why`.
 
 | `type` | Fields |
 |---|---|

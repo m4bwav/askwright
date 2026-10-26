@@ -105,6 +105,29 @@ video { width: 100%; background: #000; border-radius: 6px; }
 figcaption { color: var(--muted); font-size: .9rem; margin-top: .25rem; }
 .missing { padding: .75rem; border: 2px dashed var(--error-fg); color: var(--error-fg); border-radius: 6px; }
 
+.gallery {
+  width: min(100vw - 2rem, 72rem); margin-left: calc(50% - min(50vw - 1rem, 36rem));
+  grid-template-columns: minmax(0, 1fr);
+}
+.gallery-controls {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: .5rem; align-items: center; min-width: 0;
+}
+.gallery-select {
+  width: 100%; min-width: 0; max-width: 100%; min-height: 44px;
+  font: inherit; padding: .5rem; color: var(--fg); background: var(--bg);
+  border: 2px solid var(--border); border-radius: 8px;
+}
+.gallery-count { margin: 0; color: var(--muted); font-size: .95rem; }
+.gallery-slide { min-width: 0; }
+.gallery-slide img { width: auto; max-height: min(58vh, 42rem); margin: 0 auto; object-fit: contain; }
+.gallery .link { justify-self: start; display: inline-flex; align-items: center; }
+@media (max-width: 40rem) {
+  .gallery-controls { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .gallery-select { grid-column: 1 / -1; grid-row: 2; }
+  .gallery-slide img { max-height: min(40vh, 28rem); }
+}
+
 fieldset { border: 0; padding: 0; margin: 1.25rem 0 0; min-width: 0; }
 legend { font-weight: 700; font-size: 1.05rem; padding: 0; margin-bottom: .5rem; }
 .opts { display: grid; gap: .5rem; }
@@ -154,7 +177,7 @@ textarea {
 .prompt .row { display: flex; gap: .75rem; flex-wrap: wrap; }
 
 .onepager { margin: 0 0 1.25rem; border: 1px solid var(--border); border-radius: 8px; padding: .5rem 1rem 1rem; }
-.onepager summary { cursor: pointer; font-weight: 700; min-height: 44px; display: flex; align-items: center; }
+.onepager summary { cursor: pointer; font-weight: 700; min-height: 44px; padding: .5rem 0; }
 .onepager table, .check-table { border-collapse: collapse; width: 100%; margin: .75rem 0; font-size: .97rem; }
 .onepager th, .onepager td { border: 1px solid var(--border); padding: .4rem .55rem; text-align: left; vertical-align: top; }
 .onepager th { background: var(--surface); }

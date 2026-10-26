@@ -10,11 +10,13 @@ import base64
 import json
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 import threading
 import time
 import unittest
+from unittest import mock
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -32,10 +34,14 @@ FIX = ROOT / "tests" / "fixtures"
 PNG = (FIX / "media" / "swatch.png").read_bytes()
 _pw = _browser = None
 _why_skip = None
+_home = _env = None
 
 
 def setUpModule():
-    global _pw, _browser, _why_skip
+    global _pw, _browser, _why_skip, _home, _env
+    _home = tempfile.TemporaryDirectory(prefix="askw-page-registry-")
+    _env = mock.patch.dict(os.environ, {"ASKWRIGHT_HOME": _home.name})
+    _env.start()
     if sync_playwright is None:
         _why_skip = "playwright is not installed (pip install playwright); page tests skipped"
         return
@@ -54,6 +60,8 @@ def tearDownModule():
         _browser.close()
     if _pw:
         _pw.stop()
+    _env.stop()
+    _home.cleanup()
 
 
 def copy_set(src_dir):
@@ -118,6 +126,170 @@ class PageCase(unittest.TestCase):
         return next(q for q in ask.load_set(self.dir)[1]["questions"] if q["id"] == self.qid())["kind"]
 
 
+class DashboardPageTests(PageCase):
+    def setUp(self):
+        super().setUp()
+        self.srv.shutdown()
+        self.srv.server_close()
+        self.home = tempfile.TemporaryDirectory(prefix="askw-inbox-")
+        self.env = mock.patch.dict(os.environ, {"ASKWRIGHT_HOME": self.home.name})
+        self.env.start()
+        self.srv = ask.make_dashboard_server()
+        threading.Thread(target=self.srv.serve_forever, daemon=True).start()
+        self.url = "http://127.0.0.1:%d/" % self.srv.server_address[1]
+        self.other = copy_set(FIX / "good")
+        for folder, title, product in ((self.dir, "Film review", "Copilot"), (self.other, "Site review", "Codex")):
+            _, data = ask.load_set(folder)
+            data.update(title=title, product=product, session="review-session")
+            ask.write_json_atomic(folder / "questions.json", data)
+            ask.register_set(folder)
+
+    def tearDown(self):
+        for folder in (self.dir, self.other):
+            subprocess.run([sys.executable, str(ask.__file__), "stop", str(folder)], capture_output=True, timeout=30)
+        shutil.rmtree(self.other, ignore_errors=True)
+        super().tearDown()
+        self.env.stop()
+        self.home.cleanup()
+
+    def open(self):
+        self.page.goto(self.url)
+        self.page.wait_for_selector("article")
+        return self.page
+
+    def test_filters_counts_accessibility_and_phone(self):
+        p = self.open()
+        self.assertEqual(p.locator("article").count(), 2)
+        p.locator("#product").select_option("Codex")
+        self.assertEqual(p.locator("article h2").all_text_contents(), ["Site review"])
+        p.locator("#product").select_option("")
+        p.locator("#search").fill("Film")
+        self.assertEqual(p.locator("article h2").all_text_contents(), ["Film review"])
+        p.locator("#search").fill("")
+        for folder in (self.dir, self.other):
+            _, data = ask.load_set(folder)
+            for q in data["questions"]:
+                q["status"] = "closed"
+            ask.write_json_atomic(folder / "questions.json", data)
+        p.locator("#refresh").click()
+        p.wait_for_selector("article", state="detached")
+        p.locator("#show-all").check()
+        self.assertEqual(p.locator("article").count(), 2)
+        self.assertIn("0 need attention", p.locator("article").first.inner_text())
+        self.axe("dashboard light")
+        p.emulate_media(color_scheme="dark")
+        self.axe("dashboard dark")
+        p.set_viewport_size({"width": 390, "height": 844})
+        self.assertTrue(p.evaluate("document.documentElement.scrollWidth <= window.innerWidth"))
+        self.assertEqual(self.errors, [])
+
+    def test_next_five_preview_stays_expanded_after_refresh(self):
+        p = self.open()
+        card = p.locator("article").filter(has=p.get_by_role("heading", name="Film review", exact=True))
+        preview = card.locator(".preview")
+        self.assertFalse(preview.evaluate("el => el.open"))
+        preview.locator("summary").focus()
+        p.keyboard.press("Enter")
+        self.assertTrue(preview.evaluate("el => el.open"))
+        row = next(row for row in ask.list_sessions()["sessions"] if row["title"] == "Film review")
+        self.assertEqual(preview.locator("li").all_text_contents(), [q["question"] for q in row["next_questions"]])
+        self.assertEqual(preview.locator("li").count(), 5)
+        self.axe("expanded question preview")
+        _, data = ask.load_set(self.other)
+        data["title"] = "Updated other session"
+        ask.write_json_atomic(self.other / "questions.json", data)
+        p.locator("#refresh").click()
+        p.wait_for_selector("h2:has-text('Updated other session')")
+        self.assertTrue(preview.evaluate("el => el.open"))
+        self.assertEqual(self.errors, [])
+
+    def test_snooze_archive_and_restore_persist_across_reload(self):
+        p = self.open()
+        film = p.locator("article").filter(has=p.get_by_role("heading", name="Film review", exact=True))
+        film.locator(".snooze > summary").click()
+        self.assertEqual(film.locator(".snooze-menu button").all_text_contents(),
+                         ["1 hour", "4 hours", "1 day", "3 days", "1 week"])
+        p.keyboard.press("Escape")
+        self.assertFalse(film.locator(".snooze").evaluate("el => el.open"))
+        film.locator(".snooze > summary").click()
+        film.get_by_role("button", name="1 hour: Film review", exact=True).click()
+        p.wait_for_function("!Array.from(document.querySelectorAll('article h2')).some(el => el.textContent === 'Film review')")
+        p.locator("#show-all").check()
+        self.assertEqual(p.locator("article").count(), 1)
+        p.reload()
+        p.wait_for_selector("article")
+        self.assertEqual(p.locator("article h2").all_text_contents(), ["Site review"])
+        p.locator('[data-view="snoozed"]').click()
+        self.assertTrue(film.get_by_text("Snoozed until", exact=False).is_visible())
+        self.axe("snoozed sessions")
+        film.get_by_role("button", name="Unsnooze: Film review", exact=True).click()
+        p.wait_for_selector("article", state="detached")
+        p.locator('[data-view="inbox"]').click()
+        film.get_by_role("button", name="Archive: Film review", exact=True).click()
+        p.wait_for_function("document.querySelectorAll('article').length === 1")
+        p.locator("#show-all").check()
+        self.assertEqual(p.locator("article h2").all_text_contents(), ["Site review"])
+        p.locator('[data-view="archived"]').click()
+        self.assertEqual(p.locator("article h2").all_text_contents(), ["Film review"])
+        self.axe("archived sessions")
+        film.get_by_role("button", name="Unarchive: Film review", exact=True).click()
+        p.wait_for_selector("article", state="detached")
+        p.locator('[data-view="inbox"]').click()
+        self.assertEqual(p.locator("article").count(), 2)
+        self.assertEqual(self.errors, [])
+
+    def test_snooze_expiry_returns_without_reload_and_errors_keep_card(self):
+        p = self.open()
+        film = p.locator("article").filter(has=p.get_by_role("heading", name="Film review", exact=True))
+        p.route("**/api/session-state", lambda route: route.fulfill(
+            status=500, content_type="application/json", body='{"ok":false,"error":"cannot save state"}'))
+        film.get_by_role("button", name="Archive: Film review", exact=True).click()
+        p.wait_for_selector("#error:visible")
+        self.assertIn("cannot save state", p.locator("#error").inner_text())
+        self.assertEqual(p.locator("article").count(), 2)
+        self.assertTrue(film.get_by_role("button", name="Archive: Film review", exact=True).is_enabled())
+        p.unroute("**/api/session-state")
+        film.locator(".snooze > summary").click()
+        film.get_by_role("button", name="4 hours: Film review", exact=True).click()
+        p.wait_for_function("document.querySelectorAll('article').length === 1")
+        sid = ask.register_set(self.dir)
+        ask.write_json_atomic(ask.state_dir() / "session-state" / (sid + ".json"),
+                              {"state": "snoozed", "snoozed_until": time.time() + .2})
+        p.wait_for_selector("h2:has-text('Film review')", timeout=12000)
+        self.assertEqual(p.locator("article").count(), 2)
+
+    def test_live_refresh_and_open_stopped_session(self):
+        p = self.open()
+        _, data = ask.load_set(self.other)
+        data["title"] = "Updated title"
+        ask.write_json_atomic(self.other / "questions.json", data)
+        p.wait_for_selector("h2:has-text('Updated title')", timeout=12000)
+        p.get_by_role("button", name="Open questions: Film review", exact=True).click()
+        p.wait_for_selector("[data-q]", timeout=60000)
+        self.assertTrue(ask.server_info(self.dir)["alive"])
+        self.assertEqual(self.errors, [])
+        p.get_by_role("link", name="All sessions", exact=True).click()
+        p.wait_for_selector("article")
+        self.assertEqual(p.locator("article").count(), 2)
+
+    def test_empty_missing_and_failed_requests(self):
+        p = self.open()
+        (self.dir / "questions.json").unlink()
+        p.locator("#refresh").click()
+        p.wait_for_selector(".session-error")
+        self.assertIn("no questions.json", p.locator(".session-error").inner_text())
+        p.route("**/api/open", lambda route: route.fulfill(
+            status=400, content_type="application/json", body='{"ok":false,"error":"lint failed"}'))
+        p.get_by_role("button", name="Open questions: Site review", exact=True).click()
+        p.wait_for_selector("#error:visible")
+        self.assertIn("lint failed", p.locator("#error").inner_text())
+        self.assertTrue(p.get_by_role("button", name="Open questions: Site review", exact=True).is_enabled())
+        p.route("**/api/sessions", lambda route: route.fulfill(
+            status=200, content_type="application/json", body='{"ok":true,"sessions":[]}'))
+        p.locator("#refresh").click()
+        p.wait_for_selector("#sessions:has-text('No sessions registered yet')")
+
+
 class GenericPageTests(PageCase):
     """Hold for any valid set: the fixture by default, or ASKW_SET."""
 
@@ -153,6 +325,10 @@ class GenericPageTests(PageCase):
         self.assertEqual(len(seen), len(set(seen)), "a question came round twice: %s" % seen)
 
     def test_media_plays(self):
+        _, data = ask.load_set(self.dir)
+        if not any(ask.media_type(m.get("src", ""), m.get("type")) == "video"
+                   for q in data["questions"] for m in q.get("media") or []):
+            self.skipTest("no video in this set")
         p = self.open()
         for _ in range(40):
             if p.locator("[data-q] .media video").count():
@@ -300,6 +476,8 @@ class FixturePageTests(PageCase):
     def test_one_pager_and_rank_and_text(self):
         p = self.open()
         self.go("render")
+        self.assertFalse(p.locator("details.onepager").evaluate("el => el.open"))
+        p.locator("details.onepager summary").click()
         self.assertTrue(p.locator("details.onepager[open] table").first.is_visible())
         self.assertIn("every", p.locator(".onepager strong").first.inner_text())
         p.keyboard.press("o")
@@ -336,6 +514,106 @@ class FixturePageTests(PageCase):
         page.wait_for_timeout(300)
         ctx.close()
         self.assertEqual(errs, [])
+
+class GalleryPageTests(PageCase):
+    def setUp(self):
+        super().setUp()
+        if not getattr(self, "srv", None):
+            return
+        image = self.dir / "case.svg"
+        image.write_text(
+            '<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1600">'
+            '<rect width="1000" height="1600" fill="teal"/></svg>', encoding="utf-8")
+        _, data = ask.load_set(self.dir)
+        question = data["questions"][0]
+        question.update(kind="choice", media=[
+            {"src": "case.svg", "alt": "Example %d" % i, "label": "Example %d: " % i + "Long case label " * 8,
+             "caption": "Comparison case %d" % i} for i in range(1, 4)
+        ], one_pager=[{"type": "text", "text": "Extra context for the decision."}])
+        ask.write_json_atomic(self.dir / "questions.json", data)
+
+    def test_gallery_navigation_does_not_answer_or_change_question(self):
+        p = self.open()
+        gallery = p.get_by_role("region", name="Review cases")
+        self.assertEqual(gallery.locator("img").count(), 1)
+        self.assertIn("Case 1 of 3", gallery.inner_text())
+        self.assertTrue(p.get_by_role("button", name="Previous case").is_disabled())
+        p.get_by_role("button", name="Next case").click()
+        self.assertEqual(gallery.locator("img").get_attribute("alt"), "Example 2")
+        gallery.focus()
+        p.keyboard.press("ArrowRight")
+        self.assertIn("Case 3 of 3", gallery.inner_text())
+        self.assertTrue(p.get_by_role("button", name="Next case").is_disabled())
+        p.keyboard.press("ArrowRight")
+        self.assertEqual(self.qid(), "arrow")
+        p.keyboard.press("ArrowLeft")
+        self.assertIn("Case 2 of 3", gallery.inner_text())
+        p.get_by_label("Go to case").select_option("0")
+        self.assertIn("Case 1 of 3", gallery.inner_text())
+        self.assertEqual(self.answers(), {})
+        self.assertEqual(p.locator("#ans input:checked").count(), 0)
+        self.assertEqual(self.errors, [])
+
+    def test_gallery_position_survives_question_navigation(self):
+        p = self.open()
+        p.get_by_label("Go to case").select_option("2")
+        p.click("#btn-next")
+        self.assertNotEqual(self.qid(), "arrow")
+        p.click("#btn-back")
+        self.assertEqual(self.qid(), "arrow")
+        self.assertIn("Case 3 of 3", p.locator(".gallery-count").inner_text())
+
+    def test_background_collapses_and_remembers_expansion(self):
+        p = self.open()
+        background = p.locator("details.onepager")
+        self.assertFalse(background.evaluate("el => el.open"))
+        background.locator("summary").focus()
+        p.keyboard.press("Enter")
+        self.assertTrue(background.evaluate("el => el.open"))
+        p.click("#btn-next")
+        p.click("#btn-back")
+        self.assertTrue(p.locator("details.onepager").evaluate("el => el.open"))
+        p.locator("details.onepager summary").click()
+        self.assertFalse(p.locator("details.onepager").evaluate("el => el.open"))
+
+    def test_gallery_is_bounded_and_accessible_on_desktop_and_phone(self):
+        for width, height in ((1100, 900), (390, 844)):
+            with self.subTest(width=width):
+                self.page.set_viewport_size({"width": width, "height": height})
+                p = self.open()
+                p.wait_for_function("document.querySelector('.gallery img').naturalWidth > 0")
+                image = p.locator(".gallery img").bounding_box()
+                self.assertLessEqual(image["height"], height * .58 + 1)
+                self.assertLessEqual(p.evaluate("document.documentElement.scrollWidth"), width)
+                self.assertLess(p.locator("#ans").bounding_box()["y"], height * 1.6)
+                self.axe("gallery at %d" % width)
+
+    def test_explicit_stack_preserves_simultaneous_images(self):
+        _, data = ask.load_set(self.dir)
+        data["questions"][0]["media_layout"] = "stack"
+        ask.write_json_atomic(self.dir / "questions.json", data)
+        p = self.open()
+        self.assertEqual(p.locator(".gallery").count(), 0)
+        self.assertEqual(p.locator(".media img").count(), 3)
+
+    def test_two_image_gallery_can_be_requested(self):
+        _, data = ask.load_set(self.dir)
+        data["questions"][0]["media"] = data["questions"][0]["media"][:2]
+        data["questions"][0]["media_layout"] = "gallery"
+        ask.write_json_atomic(self.dir / "questions.json", data)
+        p = self.open()
+        self.assertIn("Case 1 of 2", p.locator(".gallery-count").inner_text())
+
+    def test_single_frame_keeps_full_size_access(self):
+        _, data = ask.load_set(self.dir)
+        data["questions"][0]["media"] = data["questions"][0]["media"][:1]
+        ask.write_json_atomic(self.dir / "questions.json", data)
+        p = self.open()
+        self.assertEqual(p.locator(".gallery").count(), 0)
+        self.assertEqual(p.locator(".media img").count(), 1)
+        link = p.get_by_role("link", name="Open full-size image", exact=True)
+        self.assertTrue(link.is_visible())
+        self.assertEqual(link.get_attribute("target"), "_blank")
 
 
 if __name__ == "__main__":

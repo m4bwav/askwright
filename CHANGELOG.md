@@ -4,6 +4,11 @@ Every change to [README.md](README.md) and its companions, newest first, each wi
 
 Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (IDs or "user request"), `files:` (file and section), and a sentence on what changed. Cite section headings, not line numbers.
 
+### C-20261025-8 · 2026-10-25 · Header and footer bars whole again; cleaner header on laptop and phone
+- because: user request (2026-10-25: the bars were cut off, "hard to see what question you're on and click the next button"), L-017 `class-name-collision`
+- files: skills/askwright/scripts/page/app.css (header grid, track, notice, footer, phone rules, `.meter`), app.js (`topbar`, `showNotice`, the score meter), index.html (track), tests/test_page.py `test_bars_whole_at_laptop_and_phone_width`, .claude-plugin/plugin.json 0.2.1
+- 0.2.0's per-topic score meter used the class `bar`, which the header and footer already used for their inner row, so both rows became an 8 px grey pill that clipped the title, progress, Back and Next on every set. The meter is now `.meter`. The header keeps the title to one line (full title on hover), puts the progress under it, and adds a thin track showing how much is answered; on a phone the counts and keyboard hints drop and the links share the progress line. The notice's Dismiss button sits at its right, `[hidden]` always hides, and the save status wraps instead of clipping.
+
 ### C-20261025-7 · 2026-10-25 · Three sentences in the shipped docs corrected before the 0.2.0 tag
 - because: ai-docs/notes/2026-10-24-github-wiki.md "Inaccuracies found in the shipped docs" (1, 2 and 4)
 - files: README.md "ask.py" and "Security", skills/askwright/references/schema.md "What comes back"
@@ -45,6 +50,9 @@ Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (ID
 - ask.py: lint (the plan's rules plus alt text and title length), serve (127.0.0.1, exclusive bind on Windows, Range, token, Host and Origin checks, self-check, --detach), status (--wait-done), read, close, add, inline, new, stop. The page: one question per screen, compare sides revealed after the pick, guess shown or hidden by confidence, notes with pasted images and timecodes, resume line, overview, check answers, keys. Small calls: ai-docs/decisions/2026-10-24-session2-build-calls.md.
 
 ## Release notes
+
+### 0.2.1 (2026-10-25)
+- Fix: the header and footer were squashed into a thin grey strip in 0.2.0, cutting off the question number, Back and Next. The header is also tidier: the title stays on one line, a thin track shows progress, and phones lose the keyboard hints.
 
 ### 0.2.0 (2026-10-25)
 - Study mode: `"mode": "study"` makes a quiz. Multiple-choice questions score on submit; the review shows the score, a score per topic, and for each question your answer, the right one and why each option is right or wrong. Written questions wait for `ask.py grade`. "Try again" reshuffles and keeps earlier attempts. The answer key never reaches the page before submit.

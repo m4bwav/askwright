@@ -127,6 +127,7 @@
     S.studySig = studySig;
     if (d.note) showBanner(d.note);
     $("#set-title").textContent = d.set.title || "Questions for you";
+    $("#set-title").title = d.set.title || "";
     document.title = (d.set.title || "Questions") + " · askwright";
     if (S.firstLoad) {
       S.firstLoad = false;
@@ -250,7 +251,7 @@
   function hideBanner() { $("#banner").hidden = true; }
   function showNotice(text) {
     const n = $("#notice");
-    n.replaceChildren(text, h("button", { type: "button", class: "btn small", text: "Dismiss", onclick: () => { n.hidden = true; } }));
+    n.replaceChildren(h("span", { text }), h("button", { type: "button", class: "btn small", text: "Dismiss", onclick: () => { n.hidden = true; } }));
     n.hidden = false;
   }
 
@@ -327,8 +328,11 @@
     const answered = list.filter(done).length;
     const left = list.length - answered;
     const i = list.findIndex((q) => q.id === S.current);
-    const pos = S.view === "question" && i >= 0 ? "Question " + (i + 1) + " of " + list.length + " · " : "";
-    $("#progress").textContent = pos + answered + " answered · " + left + " left";
+    const pos = S.view === "question" && i >= 0 ? "Question " + (i + 1) + " of " + list.length : "";
+    const counts = answered + " answered · " + left + " left";
+    // The counts drop on a phone (the track under the header shows them); the position stays.
+    $("#progress").replaceChildren(pos ? h("span", { text: pos }) : "", h("span", { class: pos ? "counts" : null, text: (pos ? " · " : "") + counts }));
+    $("#track-fill").style.width = (list.length ? Math.round((answered / list.length) * 100) : 0) + "%";
     const ba = $("#btn-answered");
     ba.hidden = answered === 0;
     ba.textContent = (S.showAnswered ? "Hide answered (" : "Show answered (") + answered + ")";
@@ -756,7 +760,7 @@
         h("tbody", null, topics.map(([name, t]) => h("tr", null,
           h("th", { scope: "row" }, name, t.earned < t.max - t.pending ? h("span", { class: "weak", text: " · practice this" }) : null),
           h("td", null, t.earned + " / " + t.max + (t.pending ? " (" + t.pending + " waiting)" : ""),
-            h("span", { class: "bar", "aria-hidden": "true" }, h("span", { style: null, "data-w": t.max ? Math.round((t.earned / t.max) * 100) : 0 }))))))));
+            h("span", { class: "meter", "aria-hidden": "true" }, h("span", { style: null, "data-w": t.max ? Math.round((t.earned / t.max) * 100) : 0 }))))))));
     }
     const past = (S.studyInfo.attempts || []).filter((a) => a.n !== rv.n);
     if (past.length) kids.push(h("p", { class: "hint", text: "Earlier tries: " + past.map((a) => "attempt " + a.n + ": " + a.earned + " / " + a.max).join(", ") + "." }));
@@ -777,7 +781,7 @@
     const list = S.missedOnly ? missed : rv.questions;
     kids.push(h("ol", { class: "review" }, list.map((q) => reviewItem(q, rv.questions.indexOf(q) + 1))));
     main.replaceChildren(...kids);
-    main.querySelectorAll(".bar > span").forEach((s) => { s.style.width = s.dataset.w + "%"; });  // CSP allows no inline style attribute
+    main.querySelectorAll(".meter > span").forEach((s) => { s.style.width = s.dataset.w + "%"; });  // CSP allows no inline style attribute
   }
   function reviewItem(q, num) {
     const li = h("li", { class: "rv " + q.status, "data-rq": q.qid });

@@ -8,6 +8,14 @@ Entry shape: `### T-YYYYMMDD-n · date · harness · env · passed/total`, then 
 
 ## Runs
 
+### T-20261026-3 · 2026-10-26 · upstream integration and added regressions · Windows, Python, Chrome · application checks passed
+- Combined offline suite: 86 tests, 85 passed and one existing Windows symlink-rights skip. All upstream study-mode, grading, retake and figure tests are retained.
+- Added three regressions: study preview payloads omit answer keys, dashboard organization leaves quiz attempts unchanged, and unsupported POST bodies are consumed before another request on the same connection. The last case covers a Windows connection reset found during integration.
+- Combined browser suite: 34 passed, retaining study review, figure, header/footer, gallery and dashboard checks. Both JavaScript syntax checks and the repository structure check passed.
+- Budget: 222 KB install, 10,103-byte skill body and description about 164 tokens. Install ceiling is 240 KB for the combined features; the skill body still fits the unchanged 10 KB ceiling.
+- Fresh-agent evaluation remains blocked as previously recorded. Local application checks do not replace model-level evaluation.
+- led to: C-20261026-3
+
 ### T-20261026-2 · 2026-10-26 · session previews and organization · Windows, Python, Chrome · application checks passed
 - Offline suite: 64 tests, 63 passed and one existing Windows symlink-rights skip. Previews contain at most five visible pending questions in set order, including stale answers and excluding answered, closed and conditional questions that are not shown.
 - Snooze tests verify all five durations, the instant before expiry and the exact expiry boundary. Archive and restore persist through registration and server restarts, including missing sets. Auth, invalid durations, unknown sessions, corrupt state and write failures are covered. Questions and answers remain byte-for-byte unchanged.
@@ -41,6 +49,13 @@ Entry shape: `### T-YYYYMMDD-n · date · harness · env · passed/total`, then 
 - The first phone check exposed tall media; a real long-caption case also exposed grid-track overflow. Reduced the phone image-height bound and used shrinkable grid tracks, then repeated the measurements successfully.
 - New outcome-compact-media-review case and deterministic checker added. The initial model run lacked write/shell grants and was stopped. Retrying with declared grants refused all three runs before execution because the native Windows sandbox backend was unavailable. This is an infrastructure block, not a measured skill failure; no sandbox requirement was disabled. Fresh-agent baseline and outcome validation remain open on a supported runner.
 - led to: L-012, L-013, C-20261025-2
+
+### T-20261025-3 · 2026-10-25 · repository suites + claude plugin eval (triggers, decoys) · Windows 11, Python 3.14, Playwright, Chrome · all passed
+- tests/test_ask.py 67/67 (1 skip, the Windows symlink test): the 48 earlier tests unchanged, plus StudyLintTests, StudyScoreTests, StudyServerTests (key hidden until submit, neutral option ids, submit, 409 after submit, retake keeps attempts, grade round trip, read/status, decision sets refuse study routes) and FigureTests.
+- tests/test_page.py 20/20: the 15 earlier plus StudyPageTests (no key, extras, guess or note before submit; real ids never in the DOM; submit, review, missed-only filter, axe light and dark on the review, reload keeps the review, a grade written to results.json shows at the next poll, try again; review fits a 375 px phone; figure draws under the real CSP; no console errors). `ASKW_SET=tests/fixtures/study` GenericPageTests 3/3 + 1 skip (no video; the media test now skips instead of looping when a set has none).
+- Real set: the owner's 22-question forces quiz lints clean and served; figures load under the real CSP on laptop and phone with no horizontal scroll. Two cold takes by fresh agents found no question with two defensible answers after fixes (findings: option ids leaking the key, L-015; giveaways by length, form and "only" wording; loose physics wording), all fixed.
+- Eval: trigger-study-quiz 3/3 with the skill, 0/3 without; decoy-explain-mistakes quiet 3/3 in both arms; the five earlier trigger and decoy cases 3/3 each with the new description. Value cases (action, outcome) not re-run: they concern decision sets, whose behaviour did not change.
+- led to: L-015, L-016, C-20261025-5
 
 ### T-20261024-2 · 2026-10-24 · claude plugin eval (triggers, decoys) + evergreen `worth --ab` (value cases, `claude -p`) · Windows 11, Claude Code 2.1.281, default model, no judge used · 8/8 after one tune (6/8 before)
 - First eval-suite run, baseline arm included. Triggers 3/3 on each of three prompts with the plugin (0/3 without); decoys 0/3 on both, either arm. These are headless runs, a proxy for the main loop.

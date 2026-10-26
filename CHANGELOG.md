@@ -4,6 +4,11 @@ Every change to [README.md](README.md) and its companions, newest first, each wi
 
 Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (IDs or "user request"), `files:` (file and section), and a sentence on what changed. Cite section headings, not line numbers.
 
+### C-20261026-3 · 2026-10-26 · Integrate upstream study mode and add cross-feature regressions
+- because: user request (tests and completing the pull-request workflow), upstream PRs #14 to #18
+- files: ask.py (study routes, figures in self-check, rejected request bodies), page/app.js, SKILL.md, plugin.json, tests/test_ask.py, scripts/budget.py, merged documentation and metadata
+- Preserve quiz grading and retakes, figure media, study captions and header/footer fixes alongside galleries and the dashboard. Added tests for quiz-key privacy in previews, preserving study attempts through dashboard actions, and rejecting unsupported POST routes without resetting the connection. Condensed the skill while preserving both workflows. The combined install is about 223 KB, so the install ceiling grows from 200 to 240 KB; the per-use skill ceiling stays 10 KB.
+
 ### C-20261026-2 · 2026-10-26 · 0.4.0: previews, snooze and archive for session cards
 - because: user request
 - files: ask.py (five-question previews and persistent session-state API), page/dashboard.html, dashboard.js, dashboard.css, README.md, plugin.json, tests/test_ask.py, tests/test_page.py
@@ -19,10 +24,35 @@ Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (ID
 - files: SKILL.md (review granularity and synthesis), writing-questions.md, README.md, LEARNINGS.md, page/app.js, evals/evals.json, evals/check_set.py, tests/test_ask.py, tests/test_page.py
 - Batch reviews now call for one question per frame/pair with Good / Keep / Reject checks and both/neither outcomes. Galleries remain available for supporting views or explicit aggregate judgments. Single-image comparisons retain a full-size link. The agent synthesizes per-case picks before recommending a model/default change.
 
-### C-20261025-2 · 2026-10-25 · 0.2.0: compact image galleries and collapsed background
+### C-20261025-2 · 2026-10-25 · Compact image galleries and collapsed background
 - because: user request, L-012 `compact-review-cases`
 - files: page/app.js and app.css (case navigation, bounded images, native background disclosure), ask.py (media_layout and long-media lint), schema.md, writing-questions.md, SKILL.md, tests/test_ask.py, tests/test_page.py, evals/evals.json, README.md, plugin.json
 - Three or more question images use a gallery automatically. Authors can request a gallery for two images or keep a simultaneous stack. Keyboard case navigation does not answer or change questions. Background starts collapsed and remembers expansion during page navigation. Authoring guidance distinguishes examples supporting one decision from independent questions.
+
+### C-20261025-8 · 2026-10-25 · Header and footer bars whole again; cleaner header on laptop and phone
+- because: user request (2026-10-25: the bars were cut off, "hard to see what question you're on and click the next button"), L-017 `class-name-collision`
+- files: skills/askwright/scripts/page/app.css (header grid, track, notice, footer, phone rules, `.meter`), app.js (`topbar`, `showNotice`, the score meter), index.html (track), tests/test_page.py `test_bars_whole_at_laptop_and_phone_width`, .claude-plugin/plugin.json 0.2.1
+- 0.2.0's per-topic score meter used the class `bar`, which the header and footer already used for their inner row, so both rows became an 8 px grey pill that clipped the title, progress, Back and Next on every set. The meter is now `.meter`. The header keeps the title to one line (full title on hover), puts the progress under it, and adds a thin track showing how much is answered; on a phone the counts and keyboard hints drop and the links share the progress line. The notice's Dismiss button sits at its right, `[hidden]` always hides, and the save status wraps instead of clipping.
+
+### C-20261025-7 · 2026-10-25 · Three sentences in the shipped docs corrected before the 0.2.0 tag
+- because: ai-docs/notes/2026-10-24-github-wiki.md "Inaccuracies found in the shipped docs" (1, 2 and 4)
+- files: README.md "ask.py" and "Security", skills/askwright/references/schema.md "What comes back"
+- `--version` and usage errors do not print JSON; the Origin is checked only on POST and only when sent (ask.py `origin_ok`); `read --all` gives unanswered questions the state `unanswered`. No behaviour changed.
+
+### C-20261025-6 · 2026-10-25 · Figures: graphs, force diagrams and shapes drawn from JSON
+- because: user request (2026-10-25: "askwright should be able to generate graphs or other images and shapes for questions")
+- files: skills/askwright/scripts/ask.py (figure section, `check_media`, `page_set`, `self_check`, `figure` command), SKILL.md "Step 1", references/schema.md "Media items", references/study-mode.md, README.md, tests/fixtures/study, tests/test_ask.py FigureTests, tests/test_page.py `test_figure_draws_under_the_csp`
+- A media item may hold `figure` (graph, forces or shapes) instead of `src`; ask.py lints it and sends the page an SVG data URL, which the existing CSP allows, so the page code is unchanged. `ask.py figure` saves one to look at.
+
+### C-20261025-5 · 2026-10-25 · Study mode: option ids are aliased, two lint rules relaxed for quizzes
+- because: L-015 `quiz-ids-leak-the-key`, L-016 `quiz-wording-rules`, T-20261025-3
+- files: skills/askwright/scripts/ask.py `option_aliases`, `page_study`, `Handler.answer`, `lint_set` (question-mark, option-label), references/study-mode.md, references/schema.md "Study sets", tests/test_ask.py, tests/test_page.py
+- The page now sees `o1`..`o4` in shown order instead of the author's option ids, and the server maps picks back. In a study set the question only has to contain a `?` (it may quote its sentence after the ask) and option labels are compared case-sensitively.
+
+### C-20261025-4 · 2026-10-25 · 0.2.0: study mode, a quiz that teaches and grades
+- because: user request (study-mode kickoff, 2026-10-25), decisions/2026-10-25-study-mode.md
+- files: skills/askwright/scripts/ask.py (study lint, `study_score`, `study_review`, `/api/submit`, `/api/retake`, `grade`, study `read`/`status`, `inline` refusal), scripts/page/app.js and app.css (no extras, guess or note in a quiz; submit; review view; try again), SKILL.md "A quiz instead: study mode" and the description, references/study-mode.md (new), references/schema.md, tests/fixtures/study/, tests/test_ask.py (study classes), tests/test_page.py (StudyPageTests), evals/evals.json and evals/cases (trigger-study-quiz, decoy-explain-mistakes)
+- `"mode": "study"` turns a set into a quiz: one `correct` option and a `why` on every option, a `topic` per question, optional written questions with a `rubric`. The server keeps the key until submit, shuffles options per attempt, scores on submit and keeps every attempt in results.json; `ask.py grade` lists written answers and writes grades back. Decision sets are unchanged.
 
 ### C-20261025-1 · 2026-10-25 · `ask.py add` takes a questions.json-shaped file
 - because: L-011 `add-takes-questions-wrapper`
@@ -56,10 +86,16 @@ Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (ID
 - Automatic registration, live counts, session metadata and reopening stopped pages.
 - Search, product filters and an All sessions view for answered rounds.
 
-### 0.2.0 (2026-10-25)
 - Case-by-case image review with Previous/Next, a case selector and full-size links.
 - Collapsed, expandable background and guidance for splitting long reviews into the right questions.
 - Frame-level Good / Keep / Reject checks and individual picks before aggregate model-policy advice.
+
+### 0.2.1 (2026-10-25)
+- Fix: the header and footer were squashed into a thin grey strip in 0.2.0, cutting off the question number, Back and Next. The header is also tidier: the title stays on one line, a thin track shows progress, and phones lose the keyboard hints.
+
+### 0.2.0 (2026-10-25)
+- Study mode: `"mode": "study"` makes a quiz. Multiple-choice questions score on submit; the review shows the score, a score per topic, and for each question your answer, the right one and why each option is right or wrong. Written questions wait for `ask.py grade`. "Try again" reshuffles and keeps earlier attempts. The answer key never reaches the page before submit.
+- Figures: graphs, force diagrams and simple shapes drawn from a few lines of JSON in any question (`"figure"` media).
 
 ### 0.1.1 (2026-10-24)
 - The README links the new [wiki](https://github.com/m4bwav/askwright/wiki). No behaviour changed.

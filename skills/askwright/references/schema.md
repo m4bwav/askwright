@@ -8,6 +8,7 @@ A set is one folder holding `questions.json`. The server writes `answers.json`, 
 | Field | Required | Meaning |
 |---|---|---|
 | `askwright` | yes | Format version: `1`. |
+| `mode` | no | `decide` (default) or `study`: a quiz with an answer key (see "Study sets"). |
 | `id` | yes | Letters, digits, `-`, `_`, `.` (64 at most). |
 | `title` | yes | What this round decides; shown in the top bar. |
 | `context` | no | One or two sentences on the project, for the record. |
@@ -43,6 +44,16 @@ A set is one folder holding `questions.json`. The server writes `answers.json`, 
 ### Media items
 
 `{"src": "G08_pair.mp4", "type": "video", "start": 6.0, "label": "...", "alt": "...", "caption": "..."}`.
+A media item can be a drawn **figure** instead of a file: `{"figure": {...}, "alt": "..."}`. ask.py draws it as SVG
+and the page shows it as an image (no file is written; `ask.py figure <spec.json> <out.svg>` saves one to look at).
+- `graph`: `x_label`, `y_label`, optional `x_max`, `y_max`, `grid`, `ticks`, and `lines`: `[{"label": "A", "points":
+  [[0, 0], [5, 40]], "dashed": false, "marks": [{"x": 2, "y": 16, "label": "C"}]}]`. Lines differ by colour and dash.
+  Give a curve as many points.
+- `forces`: a box (`object` names it) with arrows scaled to `newtons`: `"forces": [{"dir": "right", "newtons": 30,
+  "label": "push"}]`; `dir` is right, left, up or down, and several forces one way sit side by side.
+- `shapes`: `width`, `height` and `items` of `rect` (x, y, w, h), `circle` (x, y, r), `line` and `arrow` (x1, y1, x2,
+  y2) and `text` (x, y, text), each with an optional `label`, `color` and `fill`.
+
 `type` is inferred from the extension (video: mp4, m4v, webm, mov; audio: mp3, m4a, wav, ogg, opus, flac; image:
 png, jpg, gif, webp, svg, avif). `start` (seconds) cues a video when it loads. Images need `alt`. `src` is looked
 up in the set folder first, then in each media root.
@@ -124,11 +135,34 @@ while navigating the current page session. Critical consequences still belong in
 }
 ```
 
+## Study sets (quizzes)
+
+`"mode": "study"` on the set (default `"decide"`) makes it a quiz; [study-mode.md](study-mode.md) says how to write
+one. Kinds are `choice` and `text` only; `guess`, the question's `why` and `look_for` are not needed, and a question
+may quote its sentence after the `?`.
+
+| Field | Where | Meaning |
+|---|---|---|
+| `topic` | question | The topic the review scores it under (warned when missing). |
+| `correct` | option | `true` on exactly one option of a `choice` question. |
+| `why` | option | Required on every option: why it is right, or the mistake it stands for. |
+| `points` | question | Default 1. |
+| `bonus` | question | `true`: scored apart from the main score and the topics. |
+| `shuffle` | question | `false` keeps the option order; otherwise each attempt shuffles it. |
+| `rubric`, `model_answer` | `text` question | For the grader; one of them is required. A rubric is a string or a list. |
+
+The server writes `results.json`: `{"attempts": [{"n", "seed", "started", "submitted", "answers", "grades", "score"}]}`.
+The page never sees `correct`, option `why`s, `rubric` or `model_answer` before the attempt is submitted.
+`ask.py read <set>` on a study set prints `attempts` (each with `earned`, `max`, `pending_points`, `bonus_earned`),
+the chosen attempt's `score` with `by_topic`, and per question `status` (`right`, `wrong`, `partial`,
+`unanswered`, `pending`), `picked` and `right` labels or the written `text` and `grade`. `ask.py grade <set>` lists
+`ungraded` and `graded` written answers; `--apply <file>` takes `{"<qid>": {"points", "feedback"}}`.
+
 ## What comes back
 
 `ask.py read <set>` prints, per answered question: `state` (`answered`, `unsure`, `note_only`), `choice` and
 `label` (or `choices`, `order`, `text`), `side` for compare takes, `note`, `attachments` (absolute paths),
 `timecodes` (`[{"t": 6.4}]`, seconds into the first video), `matched_guess`, `guess_revealed_before_pick`,
 `q_rev`, `current_rev`, `stale` and the answer `rev`. `--since <rev>` returns only newer answers; `--all` adds the
-unanswered ones. `ask.py status <set>` lists `answered`, `unsure`, `note_only`, `unanswered`, `waiting` (behind a
+unanswered ones, with state `unanswered`. `ask.py status <set>` lists `answered`, `unsure`, `note_only`, `unanswered`, `waiting` (behind a
 `show_if`), `not_applicable`, `stale`, and `done` / `paused` from the page's finish buttons.

@@ -304,21 +304,26 @@ class GenericPageTests(PageCase):
 
     def test_keyboard_only_to_all_done(self):
         p = self.open()
+        study = ask.is_study(ask.load_set(self.dir)[1])
         p.locator("h1").focus()
         seen = []
         for _ in range(40):
             if p.locator("[data-q]").count() == 0:
                 break
             seen.append(self.qid())
-            p.keyboard.press("u" if self.kind() in ("rank", "text") else "1")
+            if study and self.kind() == "text":
+                p.locator("#ans-text").focus()
+                p.keyboard.type("An answer typed with the keyboard.")
+            else:
+                p.keyboard.press("u" if self.kind() in ("rank", "text") else "1")
             p.locator("h1").focus()
             p.keyboard.press("n")
             p.wait_for_timeout(150)
         self.assertEqual(p.locator("h1").inner_text(), "Check your answers")
         self.wait_saved()
-        p.get_by_role("button", name="All done").focus()
+        p.get_by_role("button", name="Submit my answers" if study else "All done").focus()
         p.keyboard.press("Enter")
-        p.wait_for_selector(".done-msg:has-text('Thank you')")
+        p.wait_for_selector("h1:has-text('Your score')" if study else ".done-msg:has-text('Thank you')")
         st = ask.summarize(self.dir)
         self.assertTrue(st["done"])
         self.assertEqual(st["unanswered"], [], st)
@@ -337,6 +342,8 @@ class GenericPageTests(PageCase):
                 self.skipTest("no video in this set")
             p.click("#btn-next")
             p.wait_for_timeout(100)
+        else:
+            self.skipTest("no video in this set")  # Next cycles through unanswered questions, so it never ends
         v = p.locator("[data-q] .media video").first
         p.wait_for_function("document.querySelector('.media video').readyState >= 2")
         t0 = v.evaluate("v => v.currentTime")
@@ -502,7 +509,28 @@ class FixturePageTests(PageCase):
         p.evaluate("() => window.dispatchEvent(new Event('focus'))")
         p.wait_for_selector("#notice:has-text('1 question was added')", timeout=25000)
 
+    def test_bars_whole_at_laptop_and_phone_width(self):
+        # 0.2.0's score meter reused the class "bar" and squashed both bars to an 8 px clipped pill.
+        p = self.open()
+        for width in (1100, 390):
+            p.set_viewport_size({"width": width, "height": 800})
+            got = p.evaluate("""() => [...document.querySelectorAll('.top .bar, .bottom .bar')].map(b => ({
+                h: b.getBoundingClientRect().height, clipped: b.scrollHeight > b.clientHeight + 1,
+                kids: [...b.querySelectorAll('button:not([hidden])')].filter(k => getComputedStyle(k).display !== 'none')
+                  .map(k => k.getBoundingClientRect()).every(r => r.height >= 36 && r.right <= innerWidth)}))""")
+            self.assertEqual(len(got), 2)
+            for bar in got:
+                self.assertGreaterEqual(bar["h"], 44, "width %d: %s" % (width, got))
+                self.assertFalse(bar["clipped"], "width %d: %s" % (width, got))
+                self.assertTrue(bar["kids"], "width %d: a button is squashed or off screen" % width)
+            line = p.evaluate("() => { const t = document.querySelector('#set-title');"
+                              " return t.getBoundingClientRect().height <= parseFloat(getComputedStyle(t).lineHeight) + 1; }")
+            self.assertTrue(line, "width %d: the set title wrapped" % width)
+
     def test_no_console_errors_with_csp(self):
+        self.csp_clean()
+
+    def csp_clean(self):
         ctx = _browser.new_context()
         page = ctx.new_page()
         errs = []
@@ -614,6 +642,113 @@ class GalleryPageTests(PageCase):
         link = p.get_by_role("link", name="Open full-size image", exact=True)
         self.assertTrue(link.is_visible())
         self.assertEqual(link.get_attribute("target"), "_blank")
+
+
+class StudyPageTests(PageCase):
+    """Study mode (a quiz): no key before submit, the review after it, grading shown at the next poll, try again."""
+
+    SET = FIX / "study"
+
+    def pick(self, qid, label):
+        p = self.page
+        p.keyboard.press("o")
+        p.click(".tasks a >> text=%s" % next(q["title"] for q in ask.load_set(self.dir)[1]["questions"] if q["id"] == qid))
+        p.click(".opt:has-text('%s')" % label)
+        self.wait_saved()
+
+    def submit(self):
+        p = self.page
+        p.locator("h1").focus()  # keys do nothing while the answer box has focus
+        p.keyboard.press("o")
+        p.click("#btn-next")
+        p.wait_for_selector("h1:has-text('Check your answers')")
+        p.click("text=Submit my answers")
+        p.wait_for_selector("h1:has-text('Your score')")
+
+    def test_no_key_extras_guess_or_note_before_submit(self):
+        p = self.open()
+        html = p.content()
+        for secret in ("Half of 8 is 8 divided by 2", "The sun heats sea water", "Splitting into fewer pieces"):
+            self.assertNotIn(secret, html)
+        self.assertEqual(p.locator("input[value=unsure], input[value=other], .guess, #note").count(), 0)
+        values = p.eval_on_selector_all("input[type=radio]", "els => els.map(e => e.value)")
+        self.assertEqual(sorted(values), ["o1", "o2", "o3", "o4"])  # real ids ("four") would hint at the answer
+        self.assertIn("Fractions", p.locator(".caption").inner_text())
+        self.assertEqual(p.locator("input[type=radio]:checked").count(), 0)
+        self.assertEqual(self.errors, [])
+
+    def test_submit_review_grade_and_try_again(self):
+        p = self.open()
+        self.pick("frac-half", "4 slices")
+        self.pick("water-cond", "Water leaks through the glass")
+        p.keyboard.press("o")
+        p.click(".tasks a >> text=Explain the cycle")
+        p.fill("#ans-text", "The sun evaporates sea water and it rains.")
+        self.wait_saved()
+        self.submit()
+        self.assertIn("1 / 6", p.locator(".score-big").inner_text())
+        self.assertIn("waiting for grading", p.locator(".notice-line").inner_text())
+        self.assertEqual(p.locator(".topics tbody tr").count(), 2)
+        self.assertEqual(p.locator(".topics .weak").count(), 2)
+        wrong = p.locator(".rv[data-rq=water-cond]")
+        self.assertIn("Not right", wrong.locator(".verdict").inner_text())
+        self.assertIn("Water leaks through the glass", wrong.locator(".opt-rv.mine").inner_text())
+        self.assertIn("Glass does not let water through", wrong.locator(".opt-rv.mine").inner_text())
+        self.assertIn("cools, and its water vapor", wrong.locator(".opt-rv.right").inner_text())
+        self.assertTrue(wrong.locator("details.others[open]").is_visible())
+        self.assertIn("Waiting for grading", p.locator(".rv[data-rq=water-explain] .verdict").inner_text())
+        right = p.locator(".rv[data-rq=frac-half]")
+        self.assertIn("Your answer, and the right one", right.inner_text())
+        p.click("text=Show only the ones to fix")
+        self.assertEqual(p.locator(".rv[data-rq=frac-half]").count(), 0)
+        p.click("text=Show every question")
+        for scheme in ("light", "dark"):
+            p.emulate_media(color_scheme=scheme)
+            self.axe(scheme + " review")
+        p.reload()  # the review survives a reload: the attempt is submitted on disk
+        p.wait_for_selector("h1:has-text('Your score')")
+        res = ask.load_results(self.dir)
+        att = res["attempts"][-1]
+        att["grades"] = {"water-explain": {"points": 1, "feedback": "Say where the vapor condenses."}}
+        att["score"] = ask.study_score(ask.load_set(self.dir)[1], att["answers"], att["grades"])
+        ask.write_json_atomic(self.dir / "results.json", res)
+        p.evaluate("() => window.dispatchEvent(new Event('focus'))")
+        p.wait_for_selector(".rv[data-rq=water-explain] .verdict:has-text('Part right')")
+        self.assertIn("Say where the vapor condenses.", p.locator(".rv[data-rq=water-explain]").inner_text())
+        self.assertIn("2 / 6", p.locator(".score-big").inner_text())
+        p.click("text=Try again")
+        p.wait_for_selector("[data-q]")
+        self.assertEqual(p.locator("input[type=radio]:checked").count(), 0)
+        self.assertEqual([a["n"] for a in ask.load_results(self.dir)["attempts"]], [1, 2])
+        self.assertEqual(self.answers(), {})
+        self.assertEqual(self.errors, [])
+
+    def test_figure_draws_under_the_csp(self):
+        ctx = _browser.new_context()  # the real CSP, not bypassed: figures are data URLs the policy allows
+        page = ctx.new_page()
+        page.goto(self.url)
+        page.wait_for_selector("[data-q]")
+        page.keyboard.press("o")
+        page.click(".tasks a >> text=The bigger fraction")
+        page.wait_for_selector("[data-q] .media img")
+        ok = page.evaluate("() => { const i = document.querySelector('[data-q] .media img'); "
+                           "return i.complete && i.naturalWidth > 0 && i.alt.length > 0; }")
+        ctx.close()
+        self.assertTrue(ok)
+
+    def test_review_fits_a_phone(self):
+        self.ctx.close()
+        self.ctx = _browser.new_context(bypass_csp=True, viewport={"width": 375, "height": 740}, is_mobile=True)
+        self.page = self.ctx.new_page()
+        p = self.open()
+        self.pick("frac-compare", "1/8")
+        self.submit()
+        wide = p.evaluate("() => document.documentElement.scrollWidth - window.innerWidth")
+        self.assertLessEqual(wide, 0)
+        self.assertTrue(p.locator(".rv[data-rq=frac-compare] .opt-rv.right").is_visible())
+
+    def test_no_console_errors_with_csp(self):
+        FixturePageTests.csp_clean(self)
 
 
 if __name__ == "__main__":

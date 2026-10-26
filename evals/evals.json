@@ -88,6 +88,25 @@
       "runs": 3
     },
     {
+      "id": "trigger-study-quiz",
+      "kind": "trigger",
+      "prompt": "my daughter has a test on the water cycle friday, her worksheet is in this folder. make her a quiz she can take on the laptop that tells her what she got wrong and why",
+      "expectations": [
+        "the askwright skill is invoked"
+      ],
+      "runs": 3
+    },
+    {
+      "id": "decoy-explain-mistakes",
+      "kind": "trigger",
+      "decoy": true,
+      "prompt": "My son got questions 3 and 7 wrong on his fractions homework (3/4 + 1/8, and 2/3 of 9). Can you explain each one so I can walk him through it tonight?",
+      "expectations": [
+        "the askwright skill is not invoked"
+      ],
+      "runs": 3
+    },
+    {
       "id": "action-serve-a-set",
       "kind": "action",
       "prompt": "In this folder, clip.mp4 is a side-by-side of two takes of the same shot (take 3 on the left, take 7 on the right), tone.wav is a music idea for the intro, and swatch.png is the colour grade. I need to decide: which take to keep, whether to use that music, whether the grade is too cold, and when to run the 10-hour final render. Put the questions to me on a page and give me the link; I'll answer later.",

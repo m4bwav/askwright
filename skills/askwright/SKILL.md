@@ -1,6 +1,6 @@
 ---
 name: askwright
-description: "Use whenever you need the user to decide things you cannot settle yourself and a chat question is not enough: several decisions at once, takes, clips or images to compare, video or audio to review, a major call that needs a one-pager, or answers that will come in over hours ('ask me about these takes', 'make me a decision page', 'put these questions on a page', 'I'll answer when I have a minute'). Writes the questions as data, lints them, serves one question per screen on 127.0.0.1 with your guess, notes and pasted images, then reads the answers back from disk (ask.py). Not for one quick yes/no (ask in chat) or surveys of other people. Also 'refresh askwright'."
+description: "Use whenever you need the user to decide things you cannot settle yourself and a chat question is not enough: several decisions at once, takes, clips or images to compare, video or audio to review, a major call that needs a one-pager, or answers that come in over hours ('ask me about these takes', 'make me a decision page', 'put these questions on a page'). Also quizzes that grade and explain ('quiz my kid on this homework', 'make a review quiz'). Writes questions as data, lints them, serves one per screen on 127.0.0.1, reads answers back from disk (ask.py). Not for one quick yes/no (ask in chat) or surveys of other people. Also 'refresh askwright'."
 ---
 
 # askwright
@@ -26,12 +26,22 @@ Then pick the channel:
 - Anything with clips, images or audio, more than 4 questions, a major decision that needs background, or answers
   that will arrive over hours: the page.
 
+## A quiz instead: study mode
+
+When someone wants to practise or test what they know (a quiz on homework, a review before a test), write a study
+set: `"mode": "study"`, multiple-choice questions with one `correct` option and a `why` on every option (each wrong
+option stands for a real mistake), a `topic` on each, and optional written questions with a `rubric`. The page
+scores it on submit and shows a review per question and per topic; `ask.py grade` lists written answers for you to
+grade. No guesses, no "not sure". Read [references/study-mode.md](references/study-mode.md) before writing one;
+steps 1 and 2 below are for decision sets.
+
 ## Step 1: write the set
 
 One folder per set, `<project>/ask/<set-id>/` unless the project already keeps review files somewhere (then put
 it beside them). Start it with `ask.py new <folder> --title "<what this round decides>" --product "<your agent product>" --session "<session name or id>" --asked-by "<your role>"`, then add questions.
 Use the actual product and session, never invent them; omit unknown metadata.
-Media stays where it is: list its folders in `media_roots` and refer to files by name.
+Media stays where it is: list its folders in `media_roots` and refer to files by name. A graph, a force diagram or a
+simple drawing needs no file: a media item `{"figure": {...}, "alt": "..."}` is drawn by ask.py (schema.md, Media).
 
 Every question has:
 - `question`: one real question that ends in `?`. The short label goes in `title` ("The arrow shot").
@@ -52,18 +62,16 @@ table, images, a chart) above it. Keep a set to 12 open questions or fewer.
 
 ### Keep long reviews compact
 
-Choose the unit of judgment before the layout. For evaluating frames, takes or edits, ask one comparison per
-case first; do not start with "should this model replace the default?" and hide the evidence in a gallery.
-Each case states the requested result, shows the comparison, and supplies visible **Good / Keep / Reject**
-checks: what success looks like, what must remain unchanged, and specific disqualifying defects with locations.
-Make source references available. Allow "Both meet the request" and "Neither meets the request"; uncertainty
-is different from a tie or two failures. Collect these picks and notes, then recommend an overall answer.
-Use a gallery for supporting views of one case, or when the user explicitly wants one overall judgment without
-case-level picks. Three or more images use it automatically; `media_layout: "gallery"` handles two tall images.
-Keep both candidates of a comparison together. Independent picks get separate questions and rounds of at most 12.
-Put optional detail in the collapsed `one_pager`, and use a short table for facts shared by all cases.
-Use `media_layout: "stack"` only when seeing the images together matters more than page length.
-Check the real page at desktop and phone widths: cases must remain readable and answers easy to reach.
+Ask one comparison per independent frame, take or edit before recommending a model or workflow.
+Each case states the requested result, links sources and has visible **Good / Keep / Reject** checks:
+success, what must stay fixed, and specific defects with locations. Offer "Both meet the request" and
+"Neither meets the request", distinct from uncertainty. Collect picks and notes before proposing policy.
+Use galleries for supporting views of one case or an explicitly requested aggregate judgment.
+Three images use a gallery automatically; `media_layout: "gallery"` handles two tall images.
+Keep comparison candidates together; independent picks get separate questions, at most 12 per round.
+Put optional detail in the collapsed `one_pager` and shared facts in a short table.
+Use `media_layout: "stack"` only when simultaneous viewing matters more than length.
+Check desktop and phone widths: readable cases, reachable answers.
 
 ## Step 2: review, then lint
 
@@ -89,12 +97,10 @@ URL with one line on what the set decides and how many questions it has. If a se
 `serve` returns its URL instead of starting another. Add `--open` to open their browser. The server only ever
 listens on 127.0.0.1; serving to another machine is not supported.
 
-`new` and `serve` register the set in the shared local inbox across agent products and project folders.
-The returned `dashboard_url` and the page's "All sessions" link show every registered set. For an independent
-master page, run `ask.py dashboard --detach` and share its URL; repeated calls reuse it. Counts refresh from disk,
-with unanswered sessions first and an All sessions view. Stopped sets reopen from that page.
-Register older sets with `ask.py register <set>`. The registry is in `~/.askwright`; `ASKWRIGHT_HOME` overrides it.
-All products must use the same home. `ask.py dashboard --stop` stops only the master page.
+`new` and `serve` register sets in the shared inbox. Share `dashboard_url` alongside the question URL.
+`ask.py dashboard --detach` starts or reuses an independent master page; `--stop` stops only that page.
+Register older sets with `ask.py register <set>`. All products share `~/.askwright` unless
+`ASKWRIGHT_HOME` overrides it. The master's counts update from disk; stopped question pages reopen from it.
 
 ## Step 4: wait without guessing
 

@@ -56,10 +56,10 @@ Runs: Linux (Ubuntu under WSL, Python 3.14.4), Windows (Python 3.14.6 and CPytho
 
 ## Inaccuracies found in the shipped docs
 
-1. README "ask.py": "Every command prints one JSON object." `--version` prints plain text, and a usage mistake prints argparse text on standard error with exit code 2 (wiki-verify `version` and `load-errors` sections). Waits for the next release.
-2. README "Security": "Every API call needs a per-run token from the page and a matching Host header and Origin." The Origin is checked only on POST, and a POST without an Origin header is accepted (ask.py `origin_ok`, `do_GET`). Waits for the next release.
+1. README "ask.py": "Every command prints one JSON object." `--version` prints plain text, and a usage mistake prints argparse text on standard error with exit code 2 (wiki-verify `version` and `load-errors` sections). Fixed before the 0.2.0 tag (C-20261025-7).
+2. README "Security": "Every API call needs a per-run token from the page and a matching Host header and Origin." The Origin is checked only on POST, and a POST without an Origin header is accepted (ask.py `origin_ok`, `do_GET`). Fixed before the 0.2.0 tag (C-20261025-7).
 3. CHANGELOG release notes for 0.1.0: "Windows and macOS". CI also runs Linux, and the wiki's Linux run passed. Historical; leave or amend at the next release.
-4. schema.md "What comes back" lists the states `answered`, `unsure`, `note_only`; `read --all` also returns `unanswered` (wiki-verify `add` section). Waits for the next release.
+4. schema.md "What comes back" lists the states `answered`, `unsure`, `note_only`; `read --all` also returns `unanswered` (wiki-verify `add` section). Fixed before the 0.2.0 tag (C-20261025-7).
 
 ## Gotchas
 
@@ -69,3 +69,35 @@ Runs: Linux (Ubuntu under WSL, Python 3.14.4), Windows (Python 3.14.6 and CPytho
 - An output block that is part of a longer output line (one message inside a JSON line) fails `outputs`; quote it in prose instead.
 
 Related: see also [../HANDOFF.md](../HANDOFF.md), [../log.md](../log.md).
+
+## 0.2.0 update (2026-10-25)
+
+Written on the owner's go ("yes" to tagging 0.2.0 and the wiki). Wiki commit `b7d5801`; `live`: 12 pages, 0 failures, sidebar and footer render, 24 anchor links to 7 pages, 0 broken. `check` 0 errors; `outputs` 119 checked, 0 missing, 1 skipped; `snippets` 0 missing; prose checker 0 strong.
+
+- New pages: Study-Mode, Figures. Three SVG files in the wiki root (`figure-graph.svg`, `figure-forces.svg`, `figure-shapes.svg`), written by the program's `figure` section when it is given a second argument (a folder); each answered 200 `image/svg+xml` and renders on the Figures page.
+- Changed: Home, Getting-Started (zip `askwright-0.2.0.zip`, 61,076 bytes), Commands (eleven commands; grade, figure, `read --attempt`, the status study block, the inline study reason), Question-Set-Format (`mode`, a Study sets section, figure media), Lint-Rules-and-Errors (Rules for study sets, `study-fields`, the relaxations), Server-and-Security (submit, retake, the key stripped before submit), Versions-and-Upgrading, FAQ, Development (67 tests), `_Sidebar`, `_Footer`.
+- Program: [2026-10-25-wiki-verify.py](2026-10-25-wiki-verify.py), the 0.1.1 program plus `add-wrapper`, the study sections and the figure sections; saved output [2026-10-25-wiki-verify.out.txt](2026-10-25-wiki-verify.out.txt) (Linux, Python 3.14.4 under WSL). The 2026-10-24 files stay as the 0.1.1 record. Next release: run the 2026-10-25 program and diff against its output.
+- Runs: Linux 3.14.4, Windows 3.14.6 and CPython 3.9.25 (from `uv python find 3.9`). Every 0.1.1 section printed the same on 0.2.0 apart from the version line. Expected differences: Windows paths in two error messages, and `study-page-sees`, whose option order is reshuffled every attempt (pass `--skip study-page-sees` to `diffout`, or accept the change).
+- The 0.1.1 claim in Versions that `add` refused a `{"questions": [...]}` file was run against the 0.1.1 zip (seven lint errors, "lint failed; nothing was added").
+- Not run: the page in a browser (the repository's page tests cover it; the program posts what the page posts), macOS, the plugin install.
+
+Facts found while writing (not in the README):
+- A submit counts as done: `status` says `"done": true` and `last_mark` is the submit, so `--wait-done` returns on submit.
+- `grade --apply` refuses the whole file when one entry is bad (points over the maximum, a multiple-choice id, a blank answer).
+- A retake empties `answers.json`; `results.json` keeps every attempt. A retake before submit, and an answer or submit after it, are 409.
+- A forces figure labels an arrow with its newtons ("50 N") when it has no `label`.
+- `inline` refuses every study set; `grade` on a decision set exits 1.
+
+Inaccuracy found in the shipped docs (for the next release):
+5. schema.md "Media items" and study-mode.md: forces arrows are "scaled to `newtons`", but each axis has its own room (`_forces` in ask.py), so a 30 N sideways arrow is drawn about as long as a 50 N upright one. Either scale both axes to one length per newton or say that lengths compare along one axis only. This is also the "force diagrams use space poorly" follow-up. The wiki's Figures page says it.
+
+## Owed for 0.2.0 (study mode and figures): done 2026-10-25, see above
+
+
+Not written yet; do them with the 0.2.0 tag, on the owner's go, with every example run against the release zip.
+- A new page "Study mode": a whole small quiz set, the review it produces, `read` output for a study set, `grade` and `grade --apply` with real output, retakes and results.json.
+- A new page or section "Figures": one example each of graph, forces and shapes with the rendered SVG, and `ask.py figure`.
+- Question-set format page: `mode`, the study fields (topic, correct, option why, points, bonus, shuffle, rubric, model_answer) and `figure` media.
+- Lint rules page: mode, study-kind, study-correct, study-why, study-rubric, points, topic, study-few-options, study-longest-right, study-fields, figure; the study relaxations of question-mark and option-label (L-016).
+- Commands page: `grade`, `figure`, `read --attempt`; `status` `study` block; `inline` refusing study sets.
+- Security page: the key and real option ids never reach the browser before submit (L-015).

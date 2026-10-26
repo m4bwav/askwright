@@ -1149,7 +1149,8 @@ def sniff_image(data):
 
 class Server(ThreadingHTTPServer):
     daemon_threads = True
-    allow_reuse_address = False  # on Windows SO_REUSEADDR lets a second server take a busy port
+    # Unix needs reuse after TIME_WAIT; Windows must keep exclusive ownership of a listening port.
+    allow_reuse_address = os.name != "nt"
     allow_reuse_port = False
 
     def server_bind(self):
@@ -1727,7 +1728,7 @@ def run_server(srv, d, warns, open_browser):
         srv.server_close()
         cur = server_info(d, check=False)
         if not dashboard and cur and cur.get("pid") == os.getpid():
-            (d / "server.json").unlink()
+            (d / "server.json").unlink(missing_ok=True)
     return 0
 
 
@@ -1743,7 +1744,7 @@ def stop_server(d):
     p = ping(info)
     if not p or p.get("pid") != info.get("pid") or p.get("set_dir") != str(d):
         if d != state_dir() / "dashboard":
-            (d / "server.json").unlink()
+            (d / "server.json").unlink(missing_ok=True)
         return emit({"ok": True, "stopped": False, "note": "the server was not running"})
     os.kill(info["pid"], signal.SIGTERM)  # by PID only, and only after the server proved it owns that PID
     for _ in range(50):
@@ -1751,7 +1752,7 @@ def stop_server(d):
             break
         time.sleep(0.1)
     if d != state_dir() / "dashboard" and (d / "server.json").exists():
-        (d / "server.json").unlink()
+        (d / "server.json").unlink(missing_ok=True)
     return emit({"ok": True, "stopped": True, "pid": info["pid"]})
 
 

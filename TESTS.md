@@ -8,6 +8,13 @@ Entry shape: `### T-YYYYMMDD-n · date · harness · env · passed/total`, then 
 
 ## Runs
 
+### T-20261026-4 · 2026-10-26 · cross-platform CI follow-up · Windows, Python · local regressions passed
+- PR #19 CI found that Linux and macOS could not reopen the bookmarked port after closing a connection. Ubuntu Python 3.9 also exposed concurrent server-info cleanup.
+- Allow address reuse on Unix only; retain Windows exclusive binding and refusal of simultaneous listeners everywhere. Server-info cleanup tolerates another process already removing the file.
+- Added regressions for immediate same-port restart while refusing a second live listener, and for removal of server.json between the stop command's existence check and unlink.
+- Offline suite: 88 tests, 87 passed and one existing Windows symlink-rights skip. Structure and budget checks passed. The integrated browser suite's 34 passes are unchanged; cross-platform confirmation remains with CI.
+- led to: C-20261026-4
+
 ### T-20261026-3 · 2026-10-26 · upstream integration and added regressions · Windows, Python, Chrome · application checks passed
 - Combined offline suite: 86 tests, 85 passed and one existing Windows symlink-rights skip. All upstream study-mode, grading, retake and figure tests are retained.
 - Added three regressions: study preview payloads omit answer keys, dashboard organization leaves quiz attempts unchanged, and unsupported POST bodies are consumed before another request on the same connection. The last case covers a Windows connection reset found during integration.

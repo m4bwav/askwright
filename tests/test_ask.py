@@ -549,6 +549,38 @@ class DashboardTests(ServerCase):
         finally:
             connection.close()
 
+    def test_dashboard_port_rebinds_after_close_but_cannot_be_shared(self):
+        self.assertEqual(self.req("GET", "/", headers={"Connection": "close"})[0], 200)
+        with self.assertRaises(OSError):
+            ask.make_dashboard_server(self.port)
+        self.srv.shutdown()
+        self.srv.server_close()
+        self.srv = ask.make_dashboard_server(self.port)
+        threading.Thread(target=self.srv.serve_forever, daemon=True).start()
+        self.assertEqual(self.srv.server_address[1], self.port)
+        self.assertTrue(ask.self_check(self.srv)["ok"])
+
+    def test_stop_tolerates_concurrent_server_info_removal(self):
+        info_file = self.s.dir / "server.json"
+        info = {"pid": 123, "port": 12345, "token": "test-token", "set_dir": str(self.s.dir)}
+        ask.write_json_atomic(info_file, info)
+        exists = Path.exists
+
+        def removed_after_check(path):
+            if path == info_file:
+                info_file.unlink()
+                return True
+            return exists(path)
+
+        with mock.patch.object(ask, "ping", side_effect=[info, None]), \
+                mock.patch.object(ask.os, "kill") as kill, \
+                mock.patch.object(Path, "exists", new=removed_after_check), \
+                mock.patch.object(ask, "emit", side_effect=lambda result: result):
+            result = ask.stop_server(self.s.dir)
+        self.assertTrue(result["stopped"])
+        kill.assert_called_once_with(123, ask.signal.SIGTERM)
+        self.assertFalse(info_file.exists())
+
     def test_preview_is_next_five_visible_pending_questions_in_set_order(self):
         ask.register_set(self.s.dir)
         ask.write_json_atomic(self.s.dir / "answers.json", {"rev": 1, "answers": {

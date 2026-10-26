@@ -4,6 +4,11 @@ Every change to [README.md](README.md) and its companions, newest first, each wi
 
 Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (IDs or "user request"), `files:` (file and section), and a sentence on what changed. Cite section headings, not line numbers.
 
+### C-20261026-4 · 2026-10-26 · Reopen bookmarked ports on Unix and tolerate stop cleanup races
+- because: PR #19 CI on Linux and macOS
+- files: ask.py (Server binding and server-info cleanup), tests/test_ask.py (exclusive bind and immediate restart)
+- Unix servers can reuse their port after a connection closes, while Windows keeps exclusive address use. Neither platform permits two active listeners on one port. Concurrent stop and server cleanup tolerate an already-removed server.json.
+
 ### C-20261026-3 · 2026-10-26 · Integrate upstream study mode and add cross-feature regressions
 - because: user request (tests and completing the pull-request workflow), upstream PRs #14 to #18
 - files: ask.py (study routes, figures in self-check, rejected request bodies), page/app.js, SKILL.md, plugin.json, tests/test_ask.py, scripts/budget.py, merged documentation and metadata

@@ -331,6 +331,24 @@ class FixturePageTests(PageCase):
         p.evaluate("() => window.dispatchEvent(new Event('focus'))")
         p.wait_for_selector("#notice:has-text('1 question was added')", timeout=25000)
 
+    def test_bars_whole_at_laptop_and_phone_width(self):
+        # 0.2.0's score meter reused the class "bar" and squashed both bars to an 8 px clipped pill.
+        p = self.open()
+        for width in (1100, 390):
+            p.set_viewport_size({"width": width, "height": 800})
+            got = p.evaluate("""() => [...document.querySelectorAll('.top .bar, .bottom .bar')].map(b => ({
+                h: b.getBoundingClientRect().height, clipped: b.scrollHeight > b.clientHeight + 1,
+                kids: [...b.querySelectorAll('button:not([hidden])')].filter(k => getComputedStyle(k).display !== 'none')
+                  .map(k => k.getBoundingClientRect()).every(r => r.height >= 36 && r.right <= innerWidth)}))""")
+            self.assertEqual(len(got), 2)
+            for bar in got:
+                self.assertGreaterEqual(bar["h"], 44, "width %d: %s" % (width, got))
+                self.assertFalse(bar["clipped"], "width %d: %s" % (width, got))
+                self.assertTrue(bar["kids"], "width %d: a button is squashed or off screen" % width)
+            line = p.evaluate("() => { const t = document.querySelector('#set-title');"
+                              " return t.getBoundingClientRect().height <= parseFloat(getComputedStyle(t).lineHeight) + 1; }")
+            self.assertTrue(line, "width %d: the set title wrapped" % width)
+
     def test_no_console_errors_with_csp(self):
         self.csp_clean()
 

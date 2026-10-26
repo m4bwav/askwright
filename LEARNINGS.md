@@ -110,6 +110,14 @@ Write an entry the moment a real signal happens: a user correction, the same err
 - Scope: skill
 - Status: active · helpful 1 · harmful 0 · last_confirmed 2026-10-25
 
+### L-017 · 2026-10-25 · `class-name-collision`: a new component reused the layout class `bar`
+- Trigger: after 0.2.0 the header and footer on every set were an 8 px grey pill cutting off the title, progress, Back and Next; the owner saw it on a live quiz at laptop and phone width
+- Hypothesis: a browser or screenshot quirk; it was a global `.bar` rule from the study score meter (height .5rem, overflow hidden) landing on the bars' inner rows
+- Rule: before adding a class in app.css, grep app.css, app.js and index.html for it; name components by what they are (`meter`, `track`). Every page change gets a viewport screenshot at laptop and phone width, not only full-page shots, which also misplace fixed bars
+- Evidence: test_bars_whole_at_laptop_and_phone_width fails at 14 px with the old rule and passes with `.meter`
+- Scope: skill
+- Status: active · helpful 1 · harmful 0 · last_confirmed 2026-10-25
+
 <!-- Example (delete once you have a real entry):
 ### L-001 · 2026-10-24 · One-line lesson in plain words
 - Trigger: what happened, with dates or counts

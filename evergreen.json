@@ -42,11 +42,11 @@
   },
   "consolidate_every": 25,
   "tests": {
-    "last_run": "2026-10-24T19:59",
-    "harness": "claude plugin eval (triggers, decoys) + worth --ab (value cases)",
-    "env": "Windows 11, Claude Code 2.1.281",
-    "cases": 8,
-    "passed": 8,
+    "last_run": "2026-10-25T20:05",
+    "harness": "claude plugin eval (triggers, decoys; value cases not re-run)",
+    "env": "Windows 11, Claude Code",
+    "cases": 10,
+    "passed": 10,
     "failed": 0,
     "failing": [],
     "last_failure": {

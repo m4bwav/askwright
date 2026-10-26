@@ -69,3 +69,13 @@ Runs: Linux (Ubuntu under WSL, Python 3.14.4), Windows (Python 3.14.6 and CPytho
 - An output block that is part of a longer output line (one message inside a JSON line) fails `outputs`; quote it in prose instead.
 
 Related: see also [../HANDOFF.md](../HANDOFF.md), [../log.md](../log.md).
+
+## Owed for 0.2.0 (study mode and figures)
+
+Not written yet; do them with the 0.2.0 tag, on the owner's go, with every example run against the release zip.
+- A new page "Study mode": a whole small quiz set, the review it produces, `read` output for a study set, `grade` and `grade --apply` with real output, retakes and results.json.
+- A new page or section "Figures": one example each of graph, forces and shapes with the rendered SVG, and `ask.py figure`.
+- Question-set format page: `mode`, the study fields (topic, correct, option why, points, bonus, shuffle, rubric, model_answer) and `figure` media.
+- Lint rules page: mode, study-kind, study-correct, study-why, study-rubric, points, topic, study-few-options, study-longest-right, study-fields, figure; the study relaxations of question-mark and option-label (L-016).
+- Commands page: `grade`, `figure`, `read --attempt`; `status` `study` block; `inline` refusing study sets.
+- Security page: the key and real option ids never reach the browser before submit (L-015).

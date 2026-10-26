@@ -4,6 +4,21 @@ Every change to [README.md](README.md) and its companions, newest first, each wi
 
 Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (IDs or "user request"), `files:` (file and section), and a sentence on what changed. Cite section headings, not line numbers.
 
+### C-20261025-6 · 2026-10-25 · Figures: graphs, force diagrams and shapes drawn from JSON
+- because: user request (2026-10-25: "askwright should be able to generate graphs or other images and shapes for questions")
+- files: skills/askwright/scripts/ask.py (figure section, `check_media`, `page_set`, `self_check`, `figure` command), SKILL.md "Step 1", references/schema.md "Media items", references/study-mode.md, README.md, tests/fixtures/study, tests/test_ask.py FigureTests, tests/test_page.py `test_figure_draws_under_the_csp`
+- A media item may hold `figure` (graph, forces or shapes) instead of `src`; ask.py lints it and sends the page an SVG data URL, which the existing CSP allows, so the page code is unchanged. `ask.py figure` saves one to look at.
+
+### C-20261025-5 · 2026-10-25 · Study mode: option ids are aliased, two lint rules relaxed for quizzes
+- because: L-015 `quiz-ids-leak-the-key`, L-016 `quiz-wording-rules`, T-20261025-3
+- files: skills/askwright/scripts/ask.py `option_aliases`, `page_study`, `Handler.answer`, `lint_set` (question-mark, option-label), references/study-mode.md, references/schema.md "Study sets", tests/test_ask.py, tests/test_page.py
+- The page now sees `o1`..`o4` in shown order instead of the author's option ids, and the server maps picks back. In a study set the question only has to contain a `?` (it may quote its sentence after the ask) and option labels are compared case-sensitively.
+
+### C-20261025-4 · 2026-10-25 · 0.2.0: study mode, a quiz that teaches and grades
+- because: user request (study-mode kickoff, 2026-10-25), decisions/2026-10-25-study-mode.md
+- files: skills/askwright/scripts/ask.py (study lint, `study_score`, `study_review`, `/api/submit`, `/api/retake`, `grade`, study `read`/`status`, `inline` refusal), scripts/page/app.js and app.css (no extras, guess or note in a quiz; submit; review view; try again), SKILL.md "A quiz instead: study mode" and the description, references/study-mode.md (new), references/schema.md, tests/fixtures/study/, tests/test_ask.py (study classes), tests/test_page.py (StudyPageTests), evals/evals.json and evals/cases (trigger-study-quiz, decoy-explain-mistakes)
+- `"mode": "study"` turns a set into a quiz: one `correct` option and a `why` on every option, a `topic` per question, optional written questions with a `rubric`. The server keeps the key until submit, shuffles options per attempt, scores on submit and keeps every attempt in results.json; `ask.py grade` lists written answers and writes grades back. Decision sets are unchanged.
+
 ### C-20261025-1 · 2026-10-25 · `ask.py add` takes a questions.json-shaped file
 - because: L-011 `add-takes-questions-wrapper`
 - files: skills/askwright/scripts/ask.py `cmd_add`, tests/test_ask.py `test_close_and_add`
@@ -25,6 +40,10 @@ Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (ID
 - ask.py: lint (the plan's rules plus alt text and title length), serve (127.0.0.1, exclusive bind on Windows, Range, token, Host and Origin checks, self-check, --detach), status (--wait-done), read, close, add, inline, new, stop. The page: one question per screen, compare sides revealed after the pick, guess shown or hidden by confidence, notes with pasted images and timecodes, resume line, overview, check answers, keys. Small calls: ai-docs/decisions/2026-10-24-session2-build-calls.md.
 
 ## Release notes
+
+### 0.2.0 (2026-10-25)
+- Study mode: `"mode": "study"` makes a quiz. Multiple-choice questions score on submit; the review shows the score, a score per topic, and for each question your answer, the right one and why each option is right or wrong. Written questions wait for `ask.py grade`. "Try again" reshuffles and keeps earlier attempts. The answer key never reaches the page before submit.
+- Figures: graphs, force diagrams and simple shapes drawn from a few lines of JSON in any question (`"figure"` media).
 
 ### 0.1.1 (2026-10-24)
 - The README links the new [wiki](https://github.com/m4bwav/askwright/wiki). No behaviour changed.

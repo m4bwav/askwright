@@ -175,6 +175,39 @@ textarea {
 .finish-actions { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1.5rem; }
 .done-msg { margin-top: 1rem; font-weight: 600; color: var(--ok-fg); }
 
+/* Study mode: the score and the review. Verdicts carry a word and a mark, never colour alone. */
+.score-big { font-size: 1.25rem; margin: 0 0 .5rem; }
+.score-big strong { font-size: 2.4rem; line-height: 1.1; margin-right: .25rem; }
+.notice-line { background: var(--warn-bg); color: var(--warn-fg); padding: .5rem .85rem; border-radius: 8px; }
+.topics { border-collapse: collapse; width: 100%; max-width: 32rem; margin: .5rem 0 1rem; }
+.topics th, .topics td { text-align: left; padding: .45rem .5rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.topics thead th { color: var(--muted); font-weight: 600; font-size: .95rem; }
+.topics .weak { color: var(--error-fg); font-weight: 400; font-size: .9rem; }
+.bar { display: block; height: .5rem; margin-top: .3rem; background: var(--tag-bg); border-radius: 999px; overflow: hidden; }
+.bar > span { display: block; height: 100%; width: 0; background: var(--accent); }
+.review { list-style: none; padding: 0; margin: 1rem 0; display: grid; gap: 1rem; }
+.rv { border: 2px solid var(--border); border-left-width: 6px; border-radius: 8px; padding: .75rem 1rem; }
+.rv.right { border-left-color: var(--ok-fg); }
+.rv.wrong, .rv.unanswered, .rv.partial { border-left-color: var(--error-fg); }
+.rv.pending { border-left-color: var(--warn-fg); border-left-style: dashed; }
+.rv h3 { font-size: 1.1rem; margin: 0 0 .35rem; }
+.rv .caption { margin: 0 0 .2rem; }
+.verdict { font-weight: 700; margin: 0 0 .5rem; }
+.verdict.right { color: var(--ok-fg); }
+.verdict.wrong, .verdict.unanswered, .verdict.partial { color: var(--error-fg); }
+.verdict.pending { color: var(--warn-fg); }
+.opt-rv { margin: .5rem 0; padding: .5rem .75rem; border-radius: 6px; background: var(--surface); }
+.opt-rv p { margin: 0; }
+.opt-rv .ans { font-weight: 700; margin: .1rem 0 .25rem; }
+.opt-rv.right { border-left: 4px solid var(--ok-fg); }
+.opt-rv.mine { border-left: 4px solid var(--error-fg); }
+.rv .lbl { color: var(--muted); font-size: .9rem; margin: .5rem 0 0; }
+.rv blockquote { margin: .25rem 0; padding: .4rem .75rem; border-left: 4px solid var(--border); background: var(--surface); white-space: pre-wrap; }
+.others { margin-top: .5rem; }
+.others summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; color: var(--accent); }
+.others ul { margin: .25rem 0 0; padding-left: 1.25rem; }
+.others li { margin: .3rem 0; }
+
 dialog { border: 2px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--fg); max-width: 32rem; width: calc(100% - 2rem); }
 dialog::backdrop { background: rgb(0 0 0 / .5); }
 .keys { display: grid; grid-template-columns: max-content 1fr; gap: .4rem 1rem; }

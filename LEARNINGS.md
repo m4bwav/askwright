@@ -94,6 +94,22 @@ Write an entry the moment a real signal happens: a user correction, the same err
 - Scope: skill
 - Status: active · helpful 1 · harmful 0 · last_confirmed 2026-10-25
 
+### L-015 · 2026-10-25 · `quiz-ids-leak-the-key`: option ids in a quiz page give the answer away
+- Trigger: the first real quiz (22 questions) went to a fresh agent for a cold take with the key stripped. It flagged that ids such as `right`, `no-comma` and `double-neg` would sit in the page as radio values, readable in devtools or by anyone who reads the HTML
+- Hypothesis: authors name option ids after what the option is, and in a quiz that is the answer; stripping `correct` and `why` was not enough
+- Rule: a study page never gets author ids. The server sends `o1`, `o2`... in shown order and maps picks back (`option_aliases`); test that no real id reaches the DOM
+- Evidence: T-20261025-3 (test_key_is_hidden_until_submit_then_scored, StudyPageTests ids check)
+- Scope: skill
+- Status: active · helpful 1 · harmful 0 · last_confirmed 2026-10-25
+
+### L-016 · 2026-10-25 · `quiz-wording-rules`: two decision-set lint rules were wrong for quizzes
+- Trigger: the first real quiz failed lint with 7 errors: six questions quoted their sentence after the ask (`Which word is the verb? "..."`), and a capital-letter question had options that differ only by "We"/"we", reported as repeated labels
+- Hypothesis: the rules were written for decisions, where a question ends in `?` and labels that differ only by case are duplicates
+- Rule: in study mode the question only has to contain a `?`, and labels compare case-sensitively. When a new mode reuses lint, run a real set through it before trusting each rule
+- Evidence: lint output before and after; test_quiz_wording_rules
+- Scope: skill
+- Status: active · helpful 1 · harmful 0 · last_confirmed 2026-10-25
+
 <!-- Example (delete once you have a real entry):
 ### L-001 · 2026-10-24 · One-line lesson in plain words
 - Trigger: what happened, with dates or counts

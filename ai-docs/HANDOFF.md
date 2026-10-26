@@ -1,6 +1,10 @@
 # Handoff
 
 ## Current state
+2026-10-25 (study-mode session): 0.2.0 study mode and figures merged to main via PR (see log), not tagged. `"mode": "study"` makes a quiz (key kept on the server until submit, neutral option ids `o1`.., per-attempt shuffle, results.json attempts, review page with per-topic scores, `ask.py grade` for written answers); `figure` media draws graphs, force diagrams and shapes. Design: [decisions/2026-10-25-study-mode.md](decisions/2026-10-25-study-mode.md). Tests: T-20261025-3. Guide for authors: skills/askwright/references/study-mode.md.
+
+Collision to resolve: another session's uncommitted 0.2.0 work (compact image review: `media_layout`, galleries, L-012 to L-014, C-20261025-2/-3, T-20261025-1/-2) sits in the main clone on `feat/compact-image-review`. This session used L-015/L-016, C-20261025-4 to -6 and T-20261025-3 so the ids do not clash. That branch must rebase onto main (conflicts expected in ask.py, app.js, app.css, CHANGELOG, TESTS, HANDOFF, log, schema.md, SKILL.md) and either join the 0.2.0 release notes (nothing is tagged yet) or become 0.3.0.
+
 Session 6 (2026-10-24): v0.1.1 released on the owner's go ("do the wiki now and tag"; README links the wiki, no behaviour change), and the GitHub wiki written for it: https://github.com/m4bwav/askwright/wiki, ten pages, every output from [notes/2026-10-24-wiki-verify.py](notes/2026-10-24-wiki-verify.py) run against the release zip. How to update it: [notes/2026-10-24-github-wiki.md](notes/2026-10-24-github-wiki.md), which also lists four inaccuracies in the shipped README, CHANGELOG and schema.md for the next release. The first real film review was answered earlier in the session (L-008 `pick-without-reason`).
 
 Session 3 (2026-10-24) ran the eval suite, wired the first review workflow and released v0.1.0 on the owner's go (https://github.com/m4bwav/askwright/releases/tag/v0.1.0, askwright-0.1.0.zip).
@@ -23,4 +27,6 @@ Nothing half-done. Closed PR #2's old commit stays as is (owner ruling, session 
 - `evals/results/` from `claude plugin eval` holds machine paths and is git-ignored. Delete it before `tests/check_skills.py`, or the guard fails on it.
 
 ## Next single action
-Over-ask probe 3 with a clean baseline (outside the owner's profile), or fix the four documented inaccuracies in the next release and update the wiki with its update procedure.
+Grade the study set's written answers when they arrive (`ask.py grade`), then: rebase the compact-image-review branch onto main (see above), and ask the owner before tagging 0.2.0 and updating the wiki (pages owed listed in notes/2026-10-24-github-wiki.md, "Owed for 0.2.0").
+
+Older next action, still open: Over-ask probe 3 with a clean baseline (outside the owner's profile), or fix the four documented inaccuracies in the next release and update the wiki with its update procedure.

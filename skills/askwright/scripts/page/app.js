@@ -10,6 +10,7 @@
     set: null, questions: [], answers: {}, view: "question", current: null, history: [],
     showAnswered: false, editing: {}, dirty: new Set(), timers: {}, sig: "", leftPrompt: null,
     lookTimes: [], lookIdx: -1, keyInputs: [], tcOffer: null, firstLoad: true, serverTime: null,
+    mediaIndex: {}, backgroundOpen: {},
     study: false, studyInfo: null, review: null, studySig: "", missedOnly: false,
   };
   // Study (quiz) mode: the server holds the answer key and sends it only in `review`, after the attempt is submitted.
@@ -383,6 +384,58 @@
     return h("figure", null, el, capt ? h("figcaption", { text: capt }) : null);
   }
 
+  function questionMedia(q) {
+    const items = q.media || [];
+    const imagesOnly = items.every((m) => m.type === "image");
+    const gallery = imagesOnly && items.length > 1 &&
+      (q.media_layout === "gallery" || (!q.media_layout || q.media_layout === "auto") && items.length >= 3);
+    if (!gallery) return h("div", { class: "media" }, items.map((m, i) => mediaEl(m, i === 0)),
+      items.length === 1 && imagesOnly && items[0].url && !items[0].missing
+        ? h("a", { class: "link", href: items[0].url, target: "_blank", rel: "noopener noreferrer",
+          text: "Open full-size image" }) : null);
+    const region = h("section", { class: "media gallery", tabindex: "0", role: "region",
+      "aria-roledescription": "carousel", "aria-label": "Review cases" });
+    const slide = h("div", { class: "gallery-slide", role: "group", "aria-roledescription": "slide" });
+    const count = h("p", { class: "gallery-count", role: "status", "aria-live": "polite", "aria-atomic": "true" });
+    const select = h("select", { id: "gallery-case", class: "gallery-select",
+      "aria-label": "Go to case", onchange: () => show(+select.value) },
+      items.map((m, i) => h("option", { value: i, text: "Case " + (i + 1) +
+        (m.label || m.caption ? ": " + (m.label || m.caption).replace(/^case\s+\d+\s*:\s*/i, "").slice(0, 90) : "") })));
+    const previous = h("button", { type: "button", class: "btn", text: "Previous case",
+      onclick: () => show(S.mediaIndex[q.id] - 1) });
+    const next = h("button", { type: "button", class: "btn", text: "Next case",
+      onclick: () => show(S.mediaIndex[q.id] + 1) });
+    const original = h("a", { class: "link", target: "_blank", rel: "noopener noreferrer",
+      text: "Open full-size image" });
+    function show(index) {
+      const focused = document.activeElement;
+      index = Math.max(0, Math.min(index, items.length - 1));
+      S.mediaIndex[q.id] = index;
+      slide.replaceChildren(mediaEl(items[index], true));
+      slide.setAttribute("aria-label", "Case " + (index + 1) + " of " + items.length);
+      count.textContent = "Case " + (index + 1) + " of " + items.length;
+      select.value = String(index);
+      previous.disabled = index === 0;
+      next.disabled = index === items.length - 1;
+      if (focused === previous && previous.disabled || focused === next && next.disabled) {
+        region.focus({ preventScroll: true });
+      }
+      original.hidden = !items[index].url || !!items[index].missing;
+      if (!original.hidden) original.href = items[index].url;
+    }
+    region.addEventListener("keydown", (e) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || e.target.tagName === "SELECT") return;
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      e.preventDefault();
+      e.stopPropagation();
+      show(S.mediaIndex[q.id] + (e.key === "ArrowRight" ? 1 : -1));
+    });
+    region.append(h("div", { class: "gallery-controls" }, previous, select, next),
+      count, slide, original);
+    show(S.mediaIndex[q.id] || 0);
+    return region;
+  }
+
   function inlineMd(text) {
     const out = [];
     const re = /(\*\*([^*]+)\*\*|\*([^*]+)\*|`([^`]+)`|\[([^\]]+)\]\((https?:\/\/[^)\s]+)\))/g;
@@ -415,7 +468,7 @@
       h("thead", null, h("tr", null, cols.map((c) => h("th", { scope: "col", text: c })))),
       h("tbody", null, (rows || []).map((r) => h("tr", null, r.map((c) => h("td", { text: c == null ? "" : String(c) }))))));
   }
-  function onePager(blocks) {
+  function onePager(blocks, qid) {
     const kids = blocks.map((b) => {
       switch (b.type) {
         case "text": return h("div", null, md(b.text));
@@ -428,7 +481,9 @@
         default: return null;
       }
     });
-    return h("details", { class: "onepager", open: true }, h("summary", { text: "Background for this question" }), kids);
+    return h("details", { class: "onepager", open: !!S.backgroundOpen[qid],
+      ontoggle: (e) => { S.backgroundOpen[qid] = e.currentTarget.open; } },
+      h("summary", { text: "Background for this question" }), kids);
   }
 
   function renderQuestion(q) {
@@ -436,7 +491,7 @@
     const a = S.answers[q.id] || {};
     const editing = !!S.editing[q.id];
     const art = h("article", { class: "q", "data-q": q.id });
-    if ((q.one_pager || []).length) art.append(onePager(q.one_pager));
+    if ((q.one_pager || []).length) art.append(onePager(q.one_pager, q.id));
     const caption = S.study ? [q.topic, q.title].filter(Boolean).join(" · ") + (q.bonus ? " · bonus" : "")
       : q.title + (q.reversible === false ? " · hard to undo" : "");
     art.append(h("p", { class: "caption", text: caption }), h("h1", { tabindex: "-1", id: "q-h" }, q.question));
@@ -451,7 +506,7 @@
       art.append(h("section", { class: "look", "aria-labelledby": "look-h" }, h("h2", { id: "look-h", text: "What to look for" }), h("ul", null, items)));
       S.lookTimes.sort((x, y) => x - y);
     }
-    if ((q.media || []).length) art.append(h("div", { class: "media" }, q.media.map((m, i) => mediaEl(m, i === 0))));
+    if ((q.media || []).length) art.append(questionMedia(q));
     if (!editing) {
       art.append(h("div", { class: "readonly" }, h("span", { text: "You answered: " + answerText(q) }),
         h("button", { type: "button", class: "btn small", text: "Change", onclick: () => { S.editing[q.id] = true; render(false); $("#ans input, #ans textarea, #ans button", main)?.focus(); } })));
@@ -828,6 +883,7 @@
     const el = document.activeElement;
     const onControl = el && ["INPUT", "BUTTON", "VIDEO", "AUDIO", "A", "SUMMARY"].includes(el.tagName);
     const k = e.key;
+    if (el?.tagName === "SELECT") return;
     if (/^[1-9]$/.test(k) && S.view === "question") {
       const input = S.keyInputs[+k - 1];
       if (input && !input.disabled) { input.click(); input.focus(); e.preventDefault(); }

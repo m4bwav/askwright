@@ -13,6 +13,8 @@ foreground prints one JSON line when it is ready and then keeps serving until st
   ask.py add <set> <file.json>          add questions to a set (a reroll round), linting first
   ask.py inline <set>                   a chat version of a small set, plus an AskUserQuestion mapping
   ask.py stop <set>                     stop the set's server (by its PID, after it answers a ping)
+  ask.py dashboard [--detach] [--open] shared questions inbox for every registered session
+  ask.py register <set>                 register a question set created before the dashboard
   ask.py grade <set> [--apply FILE]     study sets: list written answers to grade, or write the grades back
   ask.py figure <spec.json> <out.svg>   draw a figure (graph, forces, shapes) to look at before using it
 
@@ -25,6 +27,7 @@ import argparse
 import base64
 import copy
 import datetime
+import hashlib
 import json
 import os
 import random
@@ -44,7 +47,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-VERSION = "0.2.0"
+VERSION = "0.4.0"
 PAGE = Path(__file__).resolve().parent / "page"
 KINDS = ("choice", "multi", "compare", "rank", "text", "scale", "confirm")
 MODES = ("decide", "study")
@@ -64,10 +67,13 @@ MIME = {
 }
 KIND_OF_EXT = {e: m.split("/")[0] for e, m in MIME.items() if not m.startswith("text/")}
 PAGE_FILES = {"/app.js": ("app.js", "text/javascript; charset=utf-8"), "/app.css": ("app.css", "text/css; charset=utf-8")}
+PAGE_FILES.update({"/dashboard.js": ("dashboard.js", "text/javascript; charset=utf-8"),
+                   "/dashboard.css": ("dashboard.css", "text/css; charset=utf-8")})
 MAGIC = ((b"\x89PNG\r\n\x1a\n", "png"), (b"\xff\xd8\xff", "jpg"), (b"GIF87a", "gif"), (b"GIF89a", "gif"))
 CSP = ("default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; "
        "connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
 EVENT_TYPES = ("visit", "pause", "done")
+SNOOZE_SECONDS = (3600, 14400, 86400, 259200, 604800)
 
 POSITION = re.compile(r"^(left|right|top|bottom|middle|centre|center|first|second|third|[a-e]|option\s*\d+|"
                       r"choice\s*\d+|\d+|yes|no|y|n|ok|okay|sure)$")
@@ -145,6 +151,115 @@ def append_event(d, ev):
     ev = dict({"t": now()}, **ev)
     with open(Path(d) / "events.jsonl", "a", encoding="utf-8") as f:
         f.write(json.dumps(ev, ensure_ascii=False) + "\n")
+
+
+def state_dir():
+    return Path(os.environ.get("ASKWRIGHT_HOME") or Path.home() / ".askwright").expanduser().resolve()
+
+
+def register_set(path):
+    d, _ = load_set(path)
+    # One atomic file per canonical path: simultaneous agents cannot overwrite each other's registrations.
+    sid = hashlib.sha256(os.path.normcase(str(d)).encode("utf-8")).hexdigest()
+    folder = state_dir() / "sessions"
+    folder.mkdir(parents=True, exist_ok=True)
+    write_json_atomic(folder / (sid + ".json"), {"path": str(d)})
+    return sid
+
+
+def registered_set(sid):
+    if not isinstance(sid, str) or not re.fullmatch(r"[0-9a-f]{64}", sid):
+        raise AskError("unknown session")
+    f = state_dir() / "sessions" / (sid + ".json")
+    try:
+        record = json.loads(f.read_text(encoding="utf-8"))
+        if not isinstance(record, dict) or not isinstance(record.get("path"), str):
+            raise ValueError("expected a session path")
+        return Path(record["path"])
+    except (OSError, ValueError) as e:
+        raise AskError(f"cannot read registered session {sid}: {e}")
+
+
+def session_state(sid):
+    f = state_dir() / "session-state" / (sid + ".json")
+    try:
+        state = json.loads(f.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return {"state": "inbox", "snoozed_until": None}
+    except (OSError, ValueError) as e:
+        raise AskError(f"cannot read session state: {e}")
+    if not isinstance(state, dict) or state.get("state") not in ("inbox", "snoozed", "archived"):
+        raise AskError("invalid session state")
+    until = state.get("snoozed_until")
+    if state["state"] == "snoozed":
+        if type(until) not in (int, float) or not 0 < until < 10**12:
+            raise AskError("invalid snooze deadline")
+        if until <= time.time():
+            return {"state": "inbox", "snoozed_until": None}
+    return {"state": state["state"], "snoozed_until": until if state["state"] == "snoozed" else None}
+
+
+def update_session_state(payload):
+    sid, action = payload.get("id"), payload.get("action")
+    registered_set(sid)
+    if action not in ("snooze", "archive", "restore"):
+        raise AskError("unknown session action")
+    state = {"state": "inbox", "snoozed_until": None}
+    if action == "snooze":
+        seconds = payload.get("seconds")
+        if type(seconds) is not int or seconds not in SNOOZE_SECONDS:
+            raise AskError("choose a snooze duration of 1 hour, 4 hours, 1 day, 3 days or 1 week")
+        state.update(state="snoozed", snoozed_until=time.time() + seconds)
+    elif action == "archive":
+        state["state"] = "archived"
+    folder = state_dir() / "session-state"
+    folder.mkdir(parents=True, exist_ok=True)
+    write_json_atomic(folder / (sid + ".json"), state)
+    return {"ok": True, **state}
+
+
+def list_sessions():
+    rows = []
+    for f in sorted((state_dir() / "sessions").glob("*.json")):
+        row = {"id": f.stem, "state": "inbox", "snoozed_until": None}
+        try:
+            path = registered_set(f.stem)
+            row.update(session_state(f.stem))
+            row["path"] = str(path)
+            d, data = load_set(path)
+            row["path"] = str(d)
+            for field in ("title", "context", "asked_by", "product", "session"):
+                if field in data and not isinstance(data[field], str):
+                    raise AskError(f"{field} must be text")
+            st = summarize(d, check_server=False)
+            pending = set().union(*(st[k] for k in ("unanswered", "unsure", "note_only", "stale")))
+            row.update(path=str(d), title=data.get("title") or d.name, context=data.get("context") or "",
+                       asked_by=data.get("asked_by") or "", product=data.get("product") or "",
+                       session=data.get("session") or "", pending=len(pending),
+                       answered=len(st["answered"]), waiting=len(st["waiting"]),
+                       unsure=len(st["unsure"]), note_only=len(st["note_only"]), stale=len(st["stale"]),
+                       done=st["done"], paused=st["paused"],
+                       next_questions=[{"id": q["id"], "question": q["question"]}
+                                       for q in data.get("questions", []) if isinstance(q, dict)
+                                       and q.get("id") in pending][:5])
+        except (AskError, OSError, ValueError, TypeError, AttributeError) as e:
+            row["error"] = str(e)
+        rows.append(row)
+    rows.sort(key=lambda row: (-row.get("pending", 0), row.get("title", "").casefold(), row["id"]))
+    return {"ok": True, "sessions": rows}
+
+
+def open_session(sid):
+    d = registered_set(sid)
+    r = subprocess.run([sys.executable, str(Path(__file__).resolve()), "serve", str(d), "--detach"],
+                       capture_output=True, text=True, encoding="utf-8", timeout=90)
+    try:
+        result = json.loads(r.stdout)
+    except ValueError:
+        raise AskError("session server returned no JSON: " + (r.stderr or r.stdout)[-1500:])
+    if r.returncode or not result.get("ok"):
+        raise AskError(result.get("error") or "session server failed")
+    return {"ok": True, "url": result["url"]}
 
 
 # ---------------------------------------------------------------- media paths
@@ -392,6 +507,9 @@ def lint_set(d, data, probe=True):
         E("set-id", "the set needs an id of letters, digits, '-', '_' or '.'")
     if not str(data.get("title") or "").strip():
         E("set-title", "the set needs a title")
+    for field in ("product", "session"):
+        if field in data and not isinstance(data[field], str):
+            E("session-metadata", f"{field} must be text")
     if data.get("mode", "decide") not in MODES:
         E("mode", 'mode must be "decide" (the default) or "study" (a quiz)')
     study = is_study(data)
@@ -492,6 +610,18 @@ def lint_set(d, data, probe=True):
                 W("leading", "the question leads the reader; ask it neutrally", qid)
 
         check_media(q.get("media"), qid, "media")
+        layout = q.get("media_layout", "auto")
+        if layout not in ("auto", "gallery", "stack"):
+            E("media-layout", "media_layout must be auto, gallery or stack", qid)
+        media = q.get("media")
+        if isinstance(media, list):
+            image_count = sum(1 for m in media if isinstance(m, dict) and
+                              media_type(m.get("src", ""), m.get("type")) == "image")
+            if layout == "gallery" and image_count != len(media):
+                E("media-layout", "gallery supports images only; keep a comparison together in one image", qid)
+            if status == "open" and layout == "stack" and image_count >= 4:
+                W("long-media", "stacking four or more images makes a long page; use a gallery for examples "
+                  "of one decision, or split independent decisions into smaller questions", qid)
         has_media = bool(q.get("media")) or any(isinstance(o, dict) and o.get("media") for o in q.get("options") or [])
         look = q.get("look_for")
         if look is not None and (not isinstance(look, list) or not all(isinstance(x, str) for x in look)):
@@ -825,7 +955,7 @@ def server_info(d, check=True):
     return info
 
 
-def summarize(d):
+def summarize(d, check_server=True):
     d, data = load_set(d)
     qs = [q for q in data.get("questions") or [] if isinstance(q, dict)]
     by_id = {q.get("id"): q for q in qs}
@@ -846,7 +976,7 @@ def summarize(d):
             out["stale"].append(qid)
     marks = [e for e in load_events(d) if e.get("type") in ("done", "pause", "added", "submit", "retake")]
     last = marks[-1] if marks else None
-    info = server_info(d)
+    info = server_info(d) if check_server else None
     if info:
         info.pop("token", None)
     shown = sum(len(out[k]) for k in ("answered", "unsure", "note_only", "unanswered"))
@@ -1019,7 +1149,8 @@ def sniff_image(data):
 
 class Server(ThreadingHTTPServer):
     daemon_threads = True
-    allow_reuse_address = False  # on Windows SO_REUSEADDR lets a second server take a busy port
+    # Unix needs reuse after TIME_WAIT; Windows must keep exclusive ownership of a listening port.
+    allow_reuse_address = os.name != "nt"
     allow_reuse_port = False
 
     def server_bind(self):
@@ -1040,6 +1171,18 @@ def make_server(set_dir, port=0):
     srv.token = secrets.token_urlsafe(24)
     srv.lock = threading.Lock()
     srv.last_good = data
+    p = srv.server_address[1]
+    srv.allowed_hosts = {f"127.0.0.1:{p}", f"localhost:{p}"}
+    srv.allowed_origins = {f"http://127.0.0.1:{p}", f"http://localhost:{p}"}
+    return srv
+
+
+def make_dashboard_server(port=0):
+    srv = Server(("127.0.0.1", port), Handler)
+    srv.set_dir = state_dir() / "dashboard"
+    srv.token = secrets.token_urlsafe(24)
+    srv.lock = threading.Lock()
+    srv.dashboard = True
     p = srv.server_address[1]
     srv.allowed_hosts = {f"127.0.0.1:{p}", f"localhost:{p}"}
     srv.allowed_origins = {f"http://127.0.0.1:{p}", f"http://localhost:{p}"}
@@ -1148,8 +1291,9 @@ class Handler(BaseHTTPRequestHandler):
         if not self.host_ok():
             return self.fail(403, "wrong Host header")
         path = urllib.parse.urlsplit(self.path).path
-        if path in ("/", "/index.html"):
-            html = (PAGE / "index.html").read_text(encoding="utf-8").replace("__ASK_TOKEN__", self.server.token)
+        if path in ("/", "/index.html", "/sessions"):
+            name = "dashboard.html" if path == "/sessions" or getattr(self.server, "dashboard", False) else "index.html"
+            html = (PAGE / name).read_text(encoding="utf-8").replace("__ASK_TOKEN__", self.server.token)
             return self.send_bytes(200, html.encode("utf-8"), "text/html; charset=utf-8",
                                    {"Content-Security-Policy": CSP, "Referrer-Policy": "no-referrer"})
         if path in PAGE_FILES:
@@ -1157,15 +1301,20 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_bytes(200, (PAGE / name).read_bytes(), ctype)
         if path == "/favicon.ico":
             return self.send_bytes(204, b"", "image/x-icon")
-        if path.startswith("/m/"):
+        if path.startswith("/m/") and not getattr(self.server, "dashboard", False):
             return self.media(path)
         if path.startswith("/api/"):
             if not self.token_ok():
                 return self.fail(403, "missing or wrong token")
-            if path == "/api/set":
+            if not self.origin_ok():
+                return self.fail(403, "wrong origin")
+            if path == "/api/sessions":
+                return self.send_json(200, list_sessions())
+            if path == "/api/set" and not getattr(self.server, "dashboard", False):
                 return self.send_json(200, page_set(self.server))
             if path == "/api/ping":
-                return self.send_json(200, {"ok": True, "pid": os.getpid(), "set_dir": str(self.server.set_dir)})
+                return self.send_json(200, {"ok": True, "pid": os.getpid(), "set_dir": str(self.server.set_dir),
+                                            "dashboard": getattr(self.server, "dashboard", False)})
         self.fail(404, "not found")
 
     def media(self, path):
@@ -1235,6 +1384,9 @@ class Handler(BaseHTTPRequestHandler):
         if not self.token_ok() or not self.origin_ok():
             return self.fail(403, "missing or wrong token or origin")
         path = urllib.parse.urlsplit(self.path).path
+        allowed = ("/api/open", "/api/session-state") if getattr(self.server, "dashboard", False) else (
+            "/api/open", "/api/session-state", "/api/answer", "/api/event", "/api/attachment",
+            "/api/submit", "/api/retake")
         try:
             n = int(self.headers.get("Content-Length", ""))
         except ValueError:
@@ -1250,6 +1402,8 @@ class Handler(BaseHTTPRequestHandler):
                 left -= len(chunk)
             return self.fail(413, f"too large (limit {max(1, cap // (1024 * 1024))} MB)")
         body = self.rfile.read(n)
+        if path not in allowed:
+            return self.fail(404, "not found")
         if path == "/api/attachment":
             return self.attachment(body)
         try:
@@ -1258,6 +1412,22 @@ class Handler(BaseHTTPRequestHandler):
                 raise ValueError("expected an object")
         except ValueError as e:
             return self.fail(400, f"bad JSON: {e}")
+        if path == "/api/session-state":
+            try:
+                with self.server.lock:
+                    result = update_session_state(payload)
+                return self.send_json(200, result)
+            except AskError as e:
+                return self.fail(400, str(e))
+            except OSError as e:
+                return self.fail(500, f"cannot save session state: {e}")
+        if path == "/api/open":
+            try:
+                with self.server.lock:
+                    result = open_session(payload.get("id"))
+                return self.send_json(200, result)
+            except (AskError, OSError, subprocess.SubprocessError) as e:
+                return self.fail(400, str(e))
         if path == "/api/answer":
             return self.answer(payload)
         if path in ("/api/submit", "/api/retake"):
@@ -1387,11 +1557,13 @@ def self_check(srv):
             if srv.token not in r.read().decode("utf-8"):
                 out["error"] = "the page has no token"
                 return out
-        req = urllib.request.Request(base + "/api/set", headers={"X-Ask-Token": srv.token})
+        dashboard = getattr(srv, "dashboard", False)
+        req = urllib.request.Request(base + ("/api/sessions" if dashboard else "/api/set"),
+                                     headers={"X-Ask-Token": srv.token})
         with opener.open(req, timeout=10) as r:
             st = json.loads(r.read().decode("utf-8"))
             out["api"] = r.status
-        urls = [m["url"] for q in st["questions"] if q.get("status", "open") == "open"
+        urls = [m["url"] for q in st.get("questions", []) if q.get("status", "open") == "open"
                 for m in q.get("media") or [] if m.get("url") and not m["url"].startswith("data:")]
         out["media"] = "none"
         if urls:
@@ -1427,16 +1599,23 @@ def cmd_new(a):
         return emit({"ok": False, "error": f"{f} already exists"})
     sid = a.id or re.sub(r"[^A-Za-z0-9_.-]+", "-", d.name).strip("-") or "set"
     d.mkdir(parents=True, exist_ok=True)
-    write_json_atomic(f, {"askwright": 1, "id": sid, "title": a.title, "context": "", "asked_by": "",
+    write_json_atomic(f, {"askwright": 1, "id": sid, "title": a.title, "context": "", "asked_by": a.asked_by,
+                          "product": a.product, "session": a.session,
                           "media_roots": [], "questions": []})
+    register_set(d)
     return emit({"ok": True, "path": str(f.resolve()), "next": "add questions (references/schema.md), then lint"})
 
 
 def detach(a):
-    d, _ = load_set(a.set)
-    cmd = [sys.executable, str(Path(__file__).resolve()), "serve", str(d), "--port", str(a.port)]
+    dashboard = a.cmd == "dashboard"
+    d = state_dir() / "dashboard" if dashboard else load_set(a.set)[0]
+    d.mkdir(parents=True, exist_ok=True)
+    cmd = [sys.executable, str(Path(__file__).resolve()), a.cmd]
+    if not dashboard:
+        cmd.append(str(d))
+    cmd.extend(["--port", str(a.port)])
     for flag in ("force", "no_probe", "open"):
-        if getattr(a, flag):
+        if getattr(a, flag, False):
             cmd.append("--" + flag.replace("_", "-"))
     log = open(d / "server.log", "ab")
     kw = {"stdin": subprocess.DEVNULL, "stdout": log, "stderr": log, "cwd": str(d)}
@@ -1462,38 +1641,79 @@ def detach(a):
     return emit({"ok": False, "error": "the server did not report ready in 30 s", "pid": proc.pid})
 
 
+def cmd_register(a):
+    return emit({"ok": True, "id": register_set(a.set), "path": str(load_set(a.set)[0])})
+
+
+def show_existing(info, open_browser=False):
+    info = dict(info)
+    info.pop("token", None)
+    if open_browser:
+        import webbrowser
+        webbrowser.open(info["url"])
+    return emit(dict(info, ok=True, already_running=True))
+
+
+def cmd_dashboard(a):
+    d = state_dir() / "dashboard"
+    if a.stop:
+        return stop_server(d)
+    info = server_info(d)
+    if info and info.get("alive"):
+        return show_existing(info, a.open)
+    if a.detach:
+        return detach(a)
+    d.mkdir(parents=True, exist_ok=True)
+    # Preserve the bookmark across restarts unless the caller requests a particular port.
+    port = a.port or (info or {}).get("port", 0)
+    try:
+        srv = make_dashboard_server(port)
+    except OSError as e:
+        return emit({"ok": False, "error": f"cannot listen on 127.0.0.1:{port}: {e}"})
+    return run_server(srv, d, [], a.open)
+
+
 def cmd_serve(a):
     d, data = load_set(a.set)
     info = server_info(d)
     if info and info.get("alive"):
-        info.pop("token", None)
-        return emit(dict(info, ok=True, already_running=True))
+        register_set(d)
+        return show_existing(dict(info, dashboard_url=info["url"] + "sessions"), a.open)
     errs, warns = lint_set(d, data, probe=not a.no_probe)
     if errs and not a.force:
         return emit({"ok": False, "error": "lint failed; fix the errors or pass --force", "errors": errs,
                      "warnings": warns})
+    register_set(d)
     if a.detach:
         return detach(a)
     try:
         srv = make_server(d, a.port)
     except OSError as e:
         return emit({"ok": False, "error": f"cannot listen on 127.0.0.1:{a.port}: {e}"})
+    return run_server(srv, d, warns, a.open)
+
+
+def run_server(srv, d, warns, open_browser):
     t = threading.Thread(target=srv.serve_forever, daemon=True)
     t.start()
     check = self_check(srv)
     if not check["ok"]:
         srv.shutdown()
+        srv.server_close()
         return emit({"ok": False, "error": check.get("error"), "check": check})
     port = srv.server_address[1]
     info = {"url": f"http://127.0.0.1:{port}/", "pid": os.getpid(), "port": port, "set_dir": str(d),
             "started": now(), "token": srv.token}
+    dashboard = getattr(srv, "dashboard", False)
+    info["dashboard_url"] = info["url"] if dashboard else info["url"] + "sessions"
     write_json_atomic(d / "server.json", info)
-    append_event(d, {"type": "serve", "port": port, "pid": os.getpid()})
+    if not dashboard:
+        append_event(d, {"type": "serve", "port": port, "pid": os.getpid()})
     shown = dict(info, ok=True, warnings=warns, check=check)
     shown.pop("token")
     emit(shown)
     sys.stdout.flush()
-    if a.open:
+    if open_browser:
         import webbrowser
         webbrowser.open(info["url"])
     if hasattr(signal, "SIGTERM"):
@@ -1505,28 +1725,34 @@ def cmd_serve(a):
         pass
     finally:
         srv.shutdown()
+        srv.server_close()
         cur = server_info(d, check=False)
-        if cur and cur.get("pid") == os.getpid():
-            (d / "server.json").unlink()
+        if not dashboard and cur and cur.get("pid") == os.getpid():
+            (d / "server.json").unlink(missing_ok=True)
     return 0
 
 
 def cmd_stop(a):
     d, _ = load_set(a.set)
+    return stop_server(d)
+
+
+def stop_server(d):
     info = server_info(d, check=False)
     if not info:
         return emit({"ok": True, "stopped": False, "note": "no server.json: nothing is serving this set"})
     p = ping(info)
-    if not p or p.get("pid") != info.get("pid"):
-        (d / "server.json").unlink()
-        return emit({"ok": True, "stopped": False, "note": "the server was not running; removed a stale server.json"})
+    if not p or p.get("pid") != info.get("pid") or p.get("set_dir") != str(d):
+        if d != state_dir() / "dashboard":
+            (d / "server.json").unlink(missing_ok=True)
+        return emit({"ok": True, "stopped": False, "note": "the server was not running"})
     os.kill(info["pid"], signal.SIGTERM)  # by PID only, and only after the server proved it owns that PID
     for _ in range(50):
         if not ping(info, timeout=0.3):
             break
         time.sleep(0.1)
-    if (d / "server.json").exists():
-        (d / "server.json").unlink()
+    if d != state_dir() / "dashboard" and (d / "server.json").exists():
+        (d / "server.json").unlink(missing_ok=True)
     return emit({"ok": True, "stopped": True, "pid": info["pid"]})
 
 
@@ -1721,6 +1947,9 @@ def main(argv=None):
     s.add_argument("dir")
     s.add_argument("--title", required=True)
     s.add_argument("--id")
+    s.add_argument("--asked-by", default="")
+    s.add_argument("--product", default="")
+    s.add_argument("--session", default="")
     for name in ("lint", "serve"):
         s = sub.add_parser(name)
         s.add_argument("set")
@@ -1761,10 +1990,18 @@ def main(argv=None):
     s.add_argument("--no-probe", action="store_true")
     for name in ("inline", "stop"):
         sub.add_parser(name).add_argument("set")
+    sub.add_parser("register", help="add an existing set to the shared dashboard").add_argument("set")
+    s = sub.add_parser("dashboard", help="serve the shared session dashboard")
+    s.add_argument("--port", type=int, default=0)
+    s.add_argument("--detach", action="store_true")
+    s.add_argument("--open", action="store_true")
+    s.add_argument("--stop", action="store_true")
     a = p.parse_args(argv)
     try:
         return globals()["cmd_" + a.cmd](a)
     except AskError as e:
+        return emit({"ok": False, "error": str(e)})
+    except (OSError, subprocess.SubprocessError) as e:
         return emit({"ok": False, "error": str(e)})
 
 

@@ -38,7 +38,8 @@ steps 1 and 2 below are for decision sets.
 ## Step 1: write the set
 
 One folder per set, `<project>/ask/<set-id>/` unless the project already keeps review files somewhere (then put
-it beside them). Start it with `ask.py new <folder> --title "<what this round decides>"`, then add questions.
+it beside them). Start it with `ask.py new <folder> --title "<what this round decides>" --product "<your agent product>" --session "<session name or id>" --asked-by "<your role>"`, then add questions.
+Use the actual product and session, never invent them; omit unknown metadata.
 Media stays where it is: list its folders in `media_roots` and refer to files by name. A graph, a force diagram or a
 simple drawing needs no file: a media item `{"figure": {...}, "alt": "..."}` is drawn by ask.py (schema.md, Media).
 
@@ -58,6 +59,19 @@ Kinds: `choice`, `multi`, `compare` (takes side by side: `sides` says which take
 and a clip with a known fixed order gets `false`: keep the lint warning or remake the pair in random order), `rank`, `text`, `scale`, `confirm`. A question that only
 matters after another answer gets `show_if`. A major decision gets a `one_pager` (text, facts, a pros and cons
 table, images, a chart) above it. Keep a set to 12 open questions or fewer.
+
+### Keep long reviews compact
+
+Ask one comparison per independent frame, take or edit before recommending a model or workflow.
+Each case states the requested result, links sources and has visible **Good / Keep / Reject** checks:
+success, what must stay fixed, and specific defects with locations. Offer "Both meet the request" and
+"Neither meets the request", distinct from uncertainty. Collect picks and notes before proposing policy.
+Use galleries for supporting views of one case or an explicitly requested aggregate judgment.
+Three images use a gallery automatically; `media_layout: "gallery"` handles two tall images.
+Keep comparison candidates together; independent picks get separate questions, at most 12 per round.
+Put optional detail in the collapsed `one_pager` and shared facts in a short table.
+Use `media_layout: "stack"` only when simultaneous viewing matters more than length.
+Check desktop and phone widths: readable cases, reachable answers.
 
 ## Step 2: review, then lint
 
@@ -83,6 +97,11 @@ URL with one line on what the set decides and how many questions it has. If a se
 `serve` returns its URL instead of starting another. Add `--open` to open their browser. The server only ever
 listens on 127.0.0.1; serving to another machine is not supported.
 
+`new` and `serve` register sets in the shared inbox. Share `dashboard_url` alongside the question URL.
+`ask.py dashboard --detach` starts or reuses an independent master page; `--stop` stops only that page.
+Register older sets with `ask.py register <set>`. All products share `~/.askwright` unless
+`ASKWRIGHT_HOME` overrides it. The master's counts update from disk; stopped question pages reopen from it.
+
 ## Step 4: wait without guessing
 
 Silence is never an answer. Either ask the person to say "done" in chat when they have answered, or wait in the
@@ -103,6 +122,8 @@ python <this folder>/scripts/ask.py read <set>        # every answer
 ```
 
 Report in one or two lines before acting: "6 answered, 1 note only (g08-arrow), 2 not answered (q11, q12)".
+- For a review round, summarize the per-case picks, failures and notes before recommending a model or workflow.
+  Wins alone do not prove brief fit. Ask for a separate policy approval only after explaining what the cases show.
 - `note_only`: they wrote a note but picked nothing. It is not a choice; act on the note only if it clearly
   decides the question, otherwise ask again.
 - `unsure` and unanswered questions stay open. Never fill them with your guess.

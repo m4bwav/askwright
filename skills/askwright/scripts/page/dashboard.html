@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="ask-token" content="__ASK_TOKEN__">
+<title>askwright | All sessions</title>
+<link rel="stylesheet" href="/dashboard.css">
+<script src="/dashboard.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#sessions">Skip to sessions</a>
+<main>
+  <header>
+    <p class="brand">askwright</p>
+    <h1>Questions for you</h1>
+    <p>Every registered session on this computer. Open a session to review its questions.</p>
+    <p id="summary" role="status">Loading sessions...</p>
+  </header>
+  <nav id="views" aria-label="Session lists">
+    <button type="button" data-view="inbox" aria-pressed="true">Inbox</button>
+    <button type="button" data-view="snoozed" aria-pressed="false">Snoozed</button>
+    <button type="button" data-view="archived" aria-pressed="false">Archive</button>
+  </nav>
+  <form id="filters" role="search" aria-label="Find question sessions">
+    <div><label for="search">Find a session</label><input id="search" type="search" placeholder="Title, project or agent"></div>
+    <div><label for="product">Product</label><select id="product"><option value="">All products</option></select></div>
+    <label class="check"><input id="show-all" type="checkbox"> All sessions, including answered</label>
+    <button id="refresh" type="button">Refresh</button>
+  </form>
+  <p id="error" role="alert" hidden></p>
+  <p id="action-status" role="status"></p>
+  <section id="sessions" aria-label="Question sessions" tabindex="-1"></section>
+  <footer>Counts refresh every 5 seconds. Notes without a pick and "not sure" still need your attention.</footer>
+</main>
+<noscript>This dashboard needs JavaScript to load sessions.</noscript>
+</body>
+</html>

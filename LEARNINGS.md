@@ -6,6 +6,30 @@ Write an entry the moment a real signal happens: a user correction, the same err
 
 ## Active
 
+### L-012 · 2026-10-25 · Keep image reviews compact and split decisions at their real boundaries `compact-review-cases`
+- Trigger: a real review question stacked ten comparison sheets vertically; the owner asked for case-by-case slides and collapsible background.
+- Hypothesis: one question per page still demands excessive scrolling when every example and all background are expanded together.
+- Rule: choose the unit of judgment before using a gallery (L-014). A gallery is for supporting views or an explicitly requested aggregate judgment, not a substitute for individual review picks. Keep comparisons together, start background collapsed, and check desktop and phone layouts with real media.
+- Evidence: user request, C-20261025-2; page and lint regression tests cover gallery navigation and background disclosure.
+- Scope: skill
+- Status: active · helpful 1 · harmful 0 · last_confirmed 2026-10-25
+
+### L-014 · 2026-10-25 · Collect frame judgments before asking for a model-policy decision `evidence-before-policy`
+- Trigger: after a long image review became a gallery, the owner still lacked per-frame success/failure explanations and asked why the page requested one model decision instead of individual frame picks.
+- Hypothesis: the layout was improved without changing the premature decision granularity; general business context displaced concrete visual inspection instructions.
+- Rule: review one frame/pair per question with the requested change, source references, and Good / Keep / Reject checks tied to visible objects and locations. Offer both-usable and neither-usable outcomes. Summarize the resulting picks and failure patterns before recommending a model role or asking for policy approval.
+- Evidence: user correction, C-20261025-3; frame-review outcome checker and the corrected individual-review rounds.
+- Scope: skill
+- Status: active · helpful 1 · harmful 0 · last_confirmed 2026-10-25
+
+### L-013 · 2026-10-25 · A refused eval sandbox is a harness block, not a skill verdict `eval-sandbox-required`
+- Trigger: the compact-review eval initially lacked tool grants; granting its declared shell tool caused the Windows runner to refuse all three runs because its sandbox backend was unavailable.
+- Hypothesis: model-level outcomes cannot be measured when the runner cannot safely grant the tools the case requires.
+- Rule: grant declared tools explicitly, keep the sandbox requirement, and report unavailable-backend runs as blocked. Do not weaken sandbox settings or count infrastructure refusals as measured skill failures. Run deterministic repository and browser checks separately.
+- Evidence: T-20261025-1; the eval runner reported sandbox required but unavailable before execution.
+- Scope: repo:askwright
+- Status: active · helpful 0 · harmful 0 · last_confirmed 2026-10-25
+
 ### L-001 · 2026-10-24 · Drain the request body before answering 413 `drain-before-413`
 - Trigger: the oversized-upload test got ConnectionAbortedError on Windows instead of a 413: the server replied and closed while the client was still sending.
 - Hypothesis: closing a socket with unread data makes Windows reset the connection, so the response is lost.

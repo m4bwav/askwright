@@ -15,6 +15,11 @@ every question page is as good as the best one, instead of whatever the agent im
   "what to look for" turn into "Play from 6.0 s" buttons.
 - Video, audio and images in the question. Takes compared side by side show "Left" and "Right" until you pick,
   then reveal which take was where.
+- Image-heavy questions show one case at a time, with Previous/Next, a case selector and a full-size image link.
+  Three or more images use this automatically; `media_layout` can request a gallery or a simultaneous stack.
+- Background starts collapsed, with an expand/collapse control. Independent decisions still get separate
+  questions. Batch evaluations collect frame-by-frame picks first, with specific Good / Keep / Reject checks;
+  the agent recommends an overall model or workflow afterward.
 - The agent's guess under the options. A confident guess is shown; an unsure one waits behind "Show my guess",
   and the agent learns whether you opened it before you picked. Nothing is ever pre-selected.
 - "Not sure, ask me later" and "Something else" on every question.
@@ -86,6 +91,44 @@ The [wiki](https://github.com/m4bwav/askwright/wiki) has every command with its 
 format, every lint rule with its message, recipes and an FAQ. [skills/askwright/references/schema.md](skills/askwright/references/schema.md)
 lists every field.
 
+## One inbox for all sessions
+
+Open a master page for every registered question set on this computer:
+
+    python skills/askwright/scripts/ask.py dashboard --detach --open
+
+The command returns a local URL you can bookmark. Calling it again reuses the running dashboard.
+After a restart it reuses its previous port, unless you pass `--port`. Restart the command after rebooting.
+If that port is occupied, the command reports an error rather than changing your bookmark.
+
+Sets register automatically when agents create or serve them, across projects and agent products.
+The default view shows sessions needing attention. Use All sessions to include answered rounds, or filter
+by product and search by title, folder or agent. Counts refresh every five seconds from the answer files.
+Notes without a pick, "not sure" and answers to changed questions still count as needing attention.
+Conditional questions waiting on another answer are counted separately.
+
+Each session card has an expandable preview of its next five questions needing attention, in question order.
+The Snooze dropdown hides that session for 1 hour, 4 hours, 1 day, 3 days or 1 week.
+It returns to the inbox when that time expires. Open Snoozed to bring it back early with Unsnooze.
+Archive moves a session to the Archive list until you choose Unarchive.
+All sessions includes answered sessions in the inbox; snoozed and archived sessions remain in their own lists.
+These choices survive page and server restarts, and agents registering a set again do not reset them.
+They change only dashboard organization, never questions, answers or server processes.
+
+Open questions reuses a running question page or starts it again if it stopped. Existing answers stay in place.
+Each question page also has an All sessions link, and `serve` returns its `dashboard_url`.
+The independent master page stays up when individual question servers stop.
+
+For older sets, run `ask.py register <set>`. Registration does not move or change the set.
+Set `product`, `session` and `asked_by` in the question data to identify the originating agent, or pass
+`--product`, `--session` and `--asked-by` when using `new`. Unknown metadata stays blank.
+Older askwright installations must be updated to register automatically.
+
+The registry and dashboard server details live in `~/.askwright`, outside your repositories.
+All products running under the same user share it; `ASKWRIGHT_HOME` selects a different location.
+Missing or unreadable sets show an error on the dashboard. askwright does not scan your disk for question sets.
+Stop the independent dashboard with `ask.py dashboard --stop`; this leaves question pages running.
+
 ## ask.py
 
 | Command | What it does |
@@ -101,6 +144,8 @@ lists every field.
 | `grade <set>` | Study sets: lists written answers with their rubric; `--apply <file>` writes grades back. |
 | `figure <spec> <out.svg>` | Draws a figure spec (graph, forces, shapes) to an SVG file to look at. |
 | `stop <set>` | Stops the set's server by its PID, after the server answers a ping proving it owns that PID. |
+| `register <set>` | Adds an existing set to the shared local dashboard, deduplicated by its resolved folder. |
+| `dashboard` | Serves the shared session inbox. Supports `--detach`, `--open`, `--port N` and `--stop`. |
 
 Every command prints one JSON object, except `--version` (plain text) and a usage mistake (argparse text on
 standard error, exit code 2).

@@ -8,6 +8,55 @@ Entry shape: `### T-YYYYMMDD-n · date · harness · env · passed/total`, then 
 
 ## Runs
 
+### T-20261026-4 · 2026-10-26 · cross-platform CI follow-up · Windows, Python · local regressions passed
+- PR #19 CI found that Linux and macOS could not reopen the bookmarked port after closing a connection. Ubuntu Python 3.9 also exposed concurrent server-info cleanup.
+- Allow address reuse on Unix only; retain Windows exclusive binding and refusal of simultaneous listeners everywhere. Server-info cleanup tolerates another process already removing the file.
+- Added regressions for immediate same-port restart while refusing a second live listener, and for removal of server.json between the stop command's existence check and unlink.
+- Offline suite: 88 tests, 87 passed and one existing Windows symlink-rights skip. Structure and budget checks passed. The integrated browser suite's 34 passes are unchanged; cross-platform confirmation remains with CI.
+- led to: C-20261026-4
+
+### T-20261026-3 · 2026-10-26 · upstream integration and added regressions · Windows, Python, Chrome · application checks passed
+- Combined offline suite: 86 tests, 85 passed and one existing Windows symlink-rights skip. All upstream study-mode, grading, retake and figure tests are retained.
+- Added three regressions: study preview payloads omit answer keys, dashboard organization leaves quiz attempts unchanged, and unsupported POST bodies are consumed before another request on the same connection. The last case covers a Windows connection reset found during integration.
+- Combined browser suite: 34 passed, retaining study review, figure, header/footer, gallery and dashboard checks. Both JavaScript syntax checks and the repository structure check passed.
+- Budget: 222 KB install, 10,103-byte skill body and description about 164 tokens. Install ceiling is 240 KB for the combined features; the skill body still fits the unchanged 10 KB ceiling.
+- Fresh-agent evaluation remains blocked as previously recorded. Local application checks do not replace model-level evaluation.
+- led to: C-20261026-3
+
+### T-20261026-2 · 2026-10-26 · session previews and organization · Windows, Python, Chrome · application checks passed
+- Offline suite: 64 tests, 63 passed and one existing Windows symlink-rights skip. Previews contain at most five visible pending questions in set order, including stale answers and excluding answered, closed and conditional questions that are not shown.
+- Snooze tests verify all five durations, the instant before expiry and the exact expiry boundary. Archive and restore persist through registration and server restarts, including missing sets. Auth, invalid durations, unknown sessions, corrupt state and write failures are covered. Questions and answers remain byte-for-byte unchanged.
+- Browser suite: 28 passed. Added keyboard-accessible previews that remain expanded during refresh, snooze dropdown and Escape, separate lists, restore actions, persistence through reload, automatic expiry and explicit save failures. Dashboard accessibility checks pass for snoozed and archived views.
+- JavaScript syntax, size budget and README prose checks passed. Install size: 172 KB; skill body unchanged at 9,897 bytes. An appended log line had CRLF endings; normalized the log to LF before the final structure check.
+- Fresh-agent evaluation remains blocked as recorded in T-20261026-1. These additions change the application, not the skill's trigger or question-authoring guidance.
+- led to: C-20261026-2
+
+### T-20261026-1 · 2026-10-26 · shared session dashboard · Windows, Python, Chrome · application checks passed
+- Offline suite: 60 tests, 59 passed and one existing Windows symlink-rights skip. Dashboard cases cover concurrent registration, deduplication, metadata, live counts, stale answers, missing sets, guarded routes, lint failures, process reuse and bookmark preservation.
+- Browser suite: 25 passed. Dashboard cases cover search, product filtering, answered-session visibility, automatic refresh, reopening a stopped page, error messages, phone overflow and accessibility in both themes.
+- The answer-preservation case passed again after adding an exact comparison of the answer file before and after restarting a question server.
+- Structure and JavaScript syntax checks passed. Budget: 162 KB install, 9,897-byte skill body, description about 167 tokens. README prose check: zero strong findings.
+- Fresh-agent suite attempted with three runs and without weakening isolation. The harness rejected an existing case definition with `invalid case.yaml: graders: Required` and reported that its temporary directory could not be sealed on Windows. Agent-level validation is blocked; application tests do not prove future skill invocation.
+- A real dashboard served registered sets and returned authenticated ping and session responses. Registration did not modify question or answer files.
+- led to: C-20261026-1
+
+### T-20261025-2 · 2026-10-25 · per-frame review correction · repository and real-page checks passed
+- Observed wrong outcome in use: the live page collected four model-policy decisions, even after its images became a gallery. The user needed per-frame picks and concrete success/failure guidance instead.
+- Replaced the repaint question with ten individual comparisons and prepared a separate ten-question repeat-seed round. Both sets lint with zero errors or warnings. Each case has its own Good / Keep / Reject checks, source references and both/neither choices. Previous questions and answer data are preserved.
+- Offline suite: 52 tests, 51 passed and one existing Windows symlink-rights skip. Browser suite: 22 passed. The frame-review data checker rejects one aggregate question and vague inspection guidance.
+- Real-page checks on a temporary copy passed at desktop and phone sizes: one comparison per question, concrete criteria visible, no horizontal overflow, Next changes the frame question, background starts collapsed, and no answers were written. The live page was also checked for its new title, question and criteria.
+- Structure, JavaScript syntax and budget checks passed. The new outcome-per-frame-review fresh-agent case is recorded but not run through the native Windows sandbox-blocked harness; it remains pending on a supported runner. Deterministic and real-page checks do not prove future agent behavior.
+- led to: L-014, C-20261025-3
+
+### T-20261025-1 · 2026-10-25 · repository and real-media browser checks · Windows, Python, Chrome · passed; fresh-agent outcome blocked
+- Offline suite: 51 tests, 50 passed and one existing Windows symlink-rights skip. Includes media_layout validation, long-stack warning and the generated-data checker for compact reviews.
+- Full page suite: 21 passed. After the phone-layout adjustment, all seven focused gallery/background tests passed again. The synthetic cases now include long selector labels.
+- Real image-review set on a temporary copy: GenericPageTests passed three checks and skipped the video-only check. A separate desktop/phone run verified case navigation, background expansion/collapse, no answer writes and no horizontal overflow at 1440x1000 and 390x844. Screenshots stayed outside the public repository.
+- Structure and JavaScript syntax checks passed. Budget: 141 KB install, 8,306-byte skill body, description about 167 tokens.
+- The first phone check exposed tall media; a real long-caption case also exposed grid-track overflow. Reduced the phone image-height bound and used shrinkable grid tracks, then repeated the measurements successfully.
+- New outcome-compact-media-review case and deterministic checker added. The initial model run lacked write/shell grants and was stopped. Retrying with declared grants refused all three runs before execution because the native Windows sandbox backend was unavailable. This is an infrastructure block, not a measured skill failure; no sandbox requirement was disabled. Fresh-agent baseline and outcome validation remain open on a supported runner.
+- led to: L-012, L-013, C-20261025-2
+
 ### T-20261025-3 · 2026-10-25 · repository suites + claude plugin eval (triggers, decoys) · Windows 11, Python 3.14, Playwright, Chrome · all passed
 - tests/test_ask.py 67/67 (1 skip, the Windows symlink test): the 48 earlier tests unchanged, plus StudyLintTests, StudyScoreTests, StudyServerTests (key hidden until submit, neutral option ids, submit, 409 after submit, retake keeps attempts, grade round trip, read/status, decision sets refuse study routes) and FigureTests.
 - tests/test_page.py 20/20: the 15 earlier plus StudyPageTests (no key, extras, guess or note before submit; real ids never in the DOM; submit, review, missed-only filter, axe light and dark on the review, reload keeps the review, a grade written to results.json shows at the next poll, try again; review fits a 375 px phone; figure draws under the real CSP; no console errors). `ASKW_SET=tests/fixtures/study` GenericPageTests 3/3 + 1 skip (no video; the media test now skips instead of looping when a set has none).

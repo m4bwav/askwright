@@ -4,6 +4,36 @@ Every change to [README.md](README.md) and its companions, newest first, each wi
 
 Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (IDs or "user request"), `files:` (file and section), and a sentence on what changed. Cite section headings, not line numbers.
 
+### C-20261026-4 · 2026-10-26 · Reopen bookmarked ports on Unix and tolerate stop cleanup races
+- because: PR #19 CI on Linux and macOS
+- files: ask.py (Server binding and server-info cleanup), tests/test_ask.py (exclusive bind and immediate restart)
+- Unix servers can reuse their port after a connection closes, while Windows keeps exclusive address use. Neither platform permits two active listeners on one port. Concurrent stop and server cleanup tolerate an already-removed server.json.
+
+### C-20261026-3 · 2026-10-26 · Integrate upstream study mode and add cross-feature regressions
+- because: user request (tests and completing the pull-request workflow), upstream PRs #14 to #18
+- files: ask.py (study routes, figures in self-check, rejected request bodies), page/app.js, SKILL.md, plugin.json, tests/test_ask.py, scripts/budget.py, merged documentation and metadata
+- Preserve quiz grading and retakes, figure media, study captions and header/footer fixes alongside galleries and the dashboard. Added tests for quiz-key privacy in previews, preserving study attempts through dashboard actions, and rejecting unsupported POST routes without resetting the connection. Condensed the skill while preserving both workflows. The combined install is about 223 KB, so the install ceiling grows from 200 to 240 KB; the per-use skill ceiling stays 10 KB.
+
+### C-20261026-2 · 2026-10-26 · 0.4.0: previews, snooze and archive for session cards
+- because: user request
+- files: ask.py (five-question previews and persistent session-state API), page/dashboard.html, dashboard.js, dashboard.css, README.md, plugin.json, tests/test_ask.py, tests/test_page.py
+- Each session card previews up to five questions needing attention. Snooze hides the session for a chosen duration and returns it automatically. Snoozed and Archive lists have restore controls. State lives outside question sets, survives registration and restarts, and leaves answers untouched.
+
+### C-20261026-1 · 2026-10-26 · 0.3.0: shared question-session inbox
+- because: user request
+- files: ask.py (registry, dashboard, register, session metadata and reopen API), page/dashboard.html, dashboard.js, dashboard.css, index.html, SKILL.md, schema.md, README.md, plugin.json, tests/test_ask.py, tests/test_page.py
+- A master page lists registered sessions across local projects and agent products, with live attention counts, search, product filtering and an All sessions view. Creating or serving a set registers its canonical folder atomically. Stopped question pages reopen with their answers intact. The independent dashboard retains its port for bookmarks and uses the same loopback, Host, Origin and token protections as question pages.
+
+### C-20261025-3 · 2026-10-25 · Review individual cases before deciding model policy
+- because: user correction, L-014 `evidence-before-policy`
+- files: SKILL.md (review granularity and synthesis), writing-questions.md, README.md, LEARNINGS.md, page/app.js, evals/evals.json, evals/check_set.py, tests/test_ask.py, tests/test_page.py
+- Batch reviews now call for one question per frame/pair with Good / Keep / Reject checks and both/neither outcomes. Galleries remain available for supporting views or explicit aggregate judgments. Single-image comparisons retain a full-size link. The agent synthesizes per-case picks before recommending a model/default change.
+
+### C-20261025-2 · 2026-10-25 · Compact image galleries and collapsed background
+- because: user request, L-012 `compact-review-cases`
+- files: page/app.js and app.css (case navigation, bounded images, native background disclosure), ask.py (media_layout and long-media lint), schema.md, writing-questions.md, SKILL.md, tests/test_ask.py, tests/test_page.py, evals/evals.json, README.md, plugin.json
+- Three or more question images use a gallery automatically. Authors can request a gallery for two images or keep a simultaneous stack. Keyboard case navigation does not answer or change questions. Background starts collapsed and remembers expansion during page navigation. Authoring guidance distinguishes examples supporting one decision from independent questions.
+
 ### C-20261025-8 · 2026-10-25 · Header and footer bars whole again; cleaner header on laptop and phone
 - because: user request (2026-10-25: the bars were cut off, "hard to see what question you're on and click the next button"), L-017 `class-name-collision`
 - files: skills/askwright/scripts/page/app.css (header grid, track, notice, footer, phone rules, `.meter`), app.js (`topbar`, `showNotice`, the score meter), index.html (track), tests/test_page.py `test_bars_whole_at_laptop_and_phone_width`, .claude-plugin/plugin.json 0.2.1
@@ -50,6 +80,20 @@ Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (ID
 - ask.py: lint (the plan's rules plus alt text and title length), serve (127.0.0.1, exclusive bind on Windows, Range, token, Host and Origin checks, self-check, --detach), status (--wait-done), read, close, add, inline, new, stop. The page: one question per screen, compare sides revealed after the pick, guess shown or hidden by confidence, notes with pasted images and timecodes, resume line, overview, check answers, keys. Small calls: ai-docs/decisions/2026-10-24-session2-build-calls.md.
 
 ## Release notes
+
+### 0.4.0 (2026-10-26)
+- Expandable previews of the next five questions per session.
+- Snooze dropdown with timed return and an Unsnooze action.
+- Archive list with Unarchive; dashboard organization persists across restarts.
+
+### 0.3.0 (2026-10-26)
+- Shared local dashboard for question sessions across projects and agent products.
+- Automatic registration, live counts, session metadata and reopening stopped pages.
+- Search, product filters and an All sessions view for answered rounds.
+
+- Case-by-case image review with Previous/Next, a case selector and full-size links.
+- Collapsed, expandable background and guidance for splitting long reviews into the right questions.
+- Frame-level Good / Keep / Reject checks and individual picks before aggregate model-policy advice.
 
 ### 0.2.1 (2026-10-25)
 - Fix: the header and footer were squashed into a thin grey strip in 0.2.0, cutting off the question number, Back and Next. The header is also tidier: the title stays on one line, a thin track shows progress, and phones lose the keyboard hints.

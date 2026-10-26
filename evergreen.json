@@ -35,13 +35,33 @@
     }
   ],
   "counts": {
-    "learnings": 0,
-    "changes": 0,
+    "learnings": 3,
+    "changes": 2,
     "research": 0,
-    "tests": 2
+    "tests": 4
   },
   "consolidate_every": 25,
   "tests": {
+    "last_attempt": "2026-10-26",
+    "blocked": [
+      {
+        "id": "suite",
+        "runs": 3,
+        "attempted": false,
+        "reason": "Dashboard-guidance validation attempted: the harness rejected an existing case.yaml with graders: Required and could not seal its temporary directory on Windows. Application and browser tests passed."
+      },
+      {
+        "id": "outcome-per-frame-review",
+        "runs": 3,
+        "attempted": false,
+        "reason": "Fresh-agent validation pending on a sandbox-capable runner; deterministic frame-review and real-page checks passed."
+      },
+      {
+        "id": "outcome-compact-media-review",
+        "runs": 3,
+        "reason": "Native Windows eval sandbox backend unavailable; repository and browser regressions passed."
+      }
+    ],
     "last_run": "2026-10-25T20:05",
     "harness": "claude plugin eval (triggers, decoys; value cases not re-run)",
     "env": "Windows 11, Claude Code",
@@ -50,10 +70,10 @@
     "failed": 0,
     "failing": [],
     "last_failure": {
-      "date": "2026-10-24",
-      "case": "outcome-question-quality",
+      "date": "2026-10-25",
+      "case": "outcome-per-frame-review",
       "class": "wrong-outcome",
-      "note": "1 of 3 runs set sides.randomized: true for a clip whose order the prompt says is fixed"
+      "note": "Observed in use: a gallery still asked for model policy before individual frame judgments. Live review and guidance corrected; fresh-agent validation remains blocked."
     },
     "research_after_days": null
   },

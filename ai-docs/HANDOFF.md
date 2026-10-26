@@ -27,6 +27,6 @@ Nothing half-done. Closed PR #2's old commit stays as is (owner ruling, session 
 - `evals/results/` from `claude plugin eval` holds machine paths and is git-ignored. Delete it before `tests/check_skills.py`, or the guard fails on it.
 
 ## Next single action
-Grade the study set's written answers when they arrive (`ask.py grade`), then: rebase the compact-image-review branch onto main (see above), and ask the owner before tagging 0.2.0 and updating the wiki (pages owed listed in notes/2026-10-24-github-wiki.md, "Owed for 0.2.0").
+The first real study set was graded and closed (see log). Next: rebase the compact-image-review branch onto main (see above), and ask the owner before tagging 0.2.0 and updating the wiki (pages owed listed in notes/2026-10-24-github-wiki.md, "Owed for 0.2.0").
 
 Older next action, still open: Over-ask probe 3 with a clean baseline (outside the owner's profile), or fix the four documented inaccuracies in the next release and update the wiki with its update procedure.

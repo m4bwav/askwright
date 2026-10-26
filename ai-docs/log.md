@@ -41,3 +41,4 @@ Append-only. One line per operation: `## [YYYY-MM-DD] op | title` where op is on
 ## [2026-10-25] use | first real study set (a 7th-grade forces quiz, 20 + 2 bonus) served from the worktree; set and results live outside the repo (owner's private notes)
 ## [2026-10-25] note | another session's uncommitted 0.2.0 work (compact image review, L-012 to L-014) sits in the main clone on feat/compact-image-review; this work used the next free ids and a separate worktree
 ## [2026-10-25] index | rebuilt (12 entries)
+## [2026-10-25] verify | first real study set taken, graded with `ask.py grade` (two written answers) and `grade --apply`, server stopped with `ask.py stop`; the per-topic review worked as designed. The feat/study-mode worktree was removed after PR #14 merged. Still open: tag 0.2.0 on the owner's go, the owed wiki pages, and the compact-image-review rebase.

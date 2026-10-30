@@ -47,7 +47,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-VERSION = "0.6.0"
+VERSION = "0.7.0"
 PAGE = Path(__file__).resolve().parent / "page"
 KINDS = ("choice", "multi", "compare", "rank", "text", "scale", "confirm")
 MODES = ("decide", "study")
@@ -236,6 +236,7 @@ def list_sessions():
             row.update(path=str(d), title=data.get("title") or d.name, context=data.get("context") or "",
                        asked_by=data.get("asked_by") or "", product=data.get("product") or "",
                        session=data.get("session") or "", pending=len(pending),
+                       project=project_of(data), continue_prompt=continue_prompt(d, data),
                        answered=len(st["answered"]), waiting=len(st["waiting"]),
                        unsure=len(st["unsure"]), note_only=len(st["note_only"]), stale=len(st["stale"]),
                        done=st["done"], paused=st["paused"],
@@ -260,6 +261,39 @@ def open_session(sid):
     if r.returncode or not result.get("ok"):
         raise AskError(result.get("error") or "session server failed")
     return {"ok": True, "url": result["url"]}
+
+
+def project_of(data):
+    """The set's project as {"name", "path"} (path may be ""), or None. A plain string is a name."""
+    p = data.get("project")
+    if isinstance(p, str) and p.strip():
+        return {"name": p.strip(), "path": ""}
+    if isinstance(p, dict) and isinstance(p.get("name"), str) and p["name"].strip():
+        return {"name": p["name"].strip(), "path": str(p.get("path") or "")}
+    return None
+
+
+def continue_prompt(d, data):
+    """The text the page's "Copy continue prompt" button copies: the set's own, or one made from the set.
+    The page appends the answer counts at the moment of copying."""
+    own = data.get("continue_prompt")
+    if isinstance(own, str) and own.strip():
+        return own.strip()
+    proj = project_of(data)
+    me = Path(__file__).resolve()
+    py = "python" if os.name == "nt" else "python3"
+    title = data.get("title") or Path(d).name
+    name = proj["name"] if proj else title
+    where = f" (project folder: {proj['path']})" if proj and proj["path"] else ""
+    return (f'Continue {name}{where}. The askwright question set "{title}" in {d} has answers to act on.\n'
+            f'1. Read them: {py} "{me}" read "{d}" (and {py} "{me}" status "{d}" for the counts).\n'
+            f'2. Evaluate each answer against the question and your guess (matched_guess, '
+            f'guess_revealed_before_pick); where the pick differs from the guess, say what that tells you. '
+            f'A note without a pick (note_only) is not a choice; "not sure" and unanswered questions stay open: '
+            f'never fill them with the guess. A stale answer was given to an older version of its question.\n'
+            f'3. Report in one or two lines, then act on the answered questions and close each one you acted on: '
+            f'{py} "{me}" close "{d}" <qid>.\n'
+            f'4. If new questions come up, add them to the set ({py} "{me}" add "{d}" <file>) instead of guessing.')
 
 
 # ---------------------------------------------------------------- media paths
@@ -515,6 +549,14 @@ def lint_set(d, data, probe=True):
         if not (isinstance(bl, dict) and isinstance(bl.get("url"), str)
                 and re.match(r"^https?://", bl["url"]) and str(bl.get("label") or "").strip()):
             E("back-link", 'back_link needs {"url": "http(s)://...", "label": "..."}')
+    if "project" in data:
+        pr = data["project"]
+        if not (isinstance(pr, str) and pr.strip() or isinstance(pr, dict) and isinstance(pr.get("name"), str)
+                and pr["name"].strip() and isinstance(pr.get("path", ""), str) and set(pr) <= {"name", "path"}):
+            E("project", 'project is a name, or {"name": "...", "path": "..."}')
+    if "continue_prompt" in data and not (isinstance(data["continue_prompt"], str)
+                                          and data["continue_prompt"].strip()):
+        E("continue-prompt", "continue_prompt must be text (leave it out for the default prompt)")
     if data.get("mode", "decide") not in MODES:
         E("mode", 'mode must be "decide" (the default) or "study" (a quiz)')
     study = is_study(data)
@@ -563,6 +605,10 @@ def lint_set(d, data, probe=True):
                 else:
                     E("media-outside", f"{where}: {src} is outside the set folder and media_roots", qid)
                 continue
+            if "text" in m and not isinstance(m["text"], str):
+                E("media-text", f"{where}: text (the line being spoken) must be text", qid)
+            if "option" in m and qid in by_id and m["option"] not in option_ids(by_id[qid]):
+                E("media-option", f"{where}: option {m['option']!r} is not one of the question's options", qid)
             if kind == "image" and not str(m.get("alt") or "").strip():
                 W("alt", f"{where}: image {src} has no alt text", qid)
             if probe and kind == "video":
@@ -616,12 +662,16 @@ def lint_set(d, data, probe=True):
 
         check_media(q.get("media"), qid, "media")
         layout = q.get("media_layout", "auto")
-        if layout not in ("auto", "gallery", "stack"):
-            E("media-layout", "media_layout must be auto, gallery or stack", qid)
+        if layout not in ("auto", "gallery", "stack", "listen"):
+            E("media-layout", "media_layout must be auto, gallery, stack or listen", qid)
         media = q.get("media")
         if isinstance(media, list):
             image_count = sum(1 for m in media if isinstance(m, dict) and
                               media_type(m.get("src", ""), m.get("type")) == "image")
+            audio_count = sum(1 for m in media if isinstance(m, dict) and "figure" not in m and
+                              media_type(m.get("src", ""), m.get("type")) == "audio")
+            if layout == "listen" and (not media or audio_count != len(media)):
+                E("media-layout", "the listen bench plays audio only; put video and images in another question", qid)
             if layout == "gallery" and image_count != len(media):
                 E("media-layout", "gallery supports images only; keep a comparison together in one image", qid)
             if status == "open" and layout == "stack" and image_count >= 4:
@@ -1239,6 +1289,7 @@ def page_set(srv):
     answered = [e for e in events if e.get("type") == "answer"]
     ans = load_answers(d)
     out = {"ok": True, "set": {k: data.get(k) for k in ("id", "title", "context", "asked_by", "back_link")},
+           "project": project_of(data), "continue_prompt": continue_prompt(d, data),
            "mode": "study" if is_study(data) else "decide",
            "questions": qs, "answers": ans["answers"], "rev": ans.get("rev", 0), "note": note,
            "last_visit": visits[-1]["t"] if visits else None,
@@ -1608,6 +1659,17 @@ def cmd_new(a):
             "product": a.product, "session": a.session, "media_roots": [], "questions": []}
     if a.back_link:
         data["back_link"] = {"url": a.back_link[0], "label": a.back_link[1]}
+    if a.project_path and not a.project:
+        return emit({"ok": False, "error": "--project-path needs --project NAME"})
+    if a.project:
+        data["project"] = {"name": a.project, "path": a.project_path} if a.project_path else a.project
+    if a.continue_prompt_file:
+        try:
+            data["continue_prompt"] = Path(a.continue_prompt_file).expanduser().read_text(encoding="utf-8").strip()
+        except OSError as e:
+            return emit({"ok": False, "error": f"cannot read --continue-prompt-file: {e}"})
+    elif a.continue_prompt:
+        data["continue_prompt"] = a.continue_prompt
     write_json_atomic(f, data)
     register_set(d)
     return emit({"ok": True, "path": str(f.resolve()), "next": "add questions (references/schema.md), then lint"})
@@ -1957,6 +2019,11 @@ def main(argv=None):
     s.add_argument("--asked-by", default="")
     s.add_argument("--product", default="")
     s.add_argument("--session", default="")
+    s.add_argument("--project", default="", help="the project these questions are for (shown on every page)")
+    s.add_argument("--project-path", default="", help="the project's folder, shown beside its name")
+    cp = s.add_mutually_exclusive_group()
+    cp.add_argument("--continue-prompt", default="", help="text the page's 'Copy continue prompt' button copies")
+    cp.add_argument("--continue-prompt-file", default="", metavar="FILE", help="the same, read from a file")
     s.add_argument("--back-link", nargs=2, metavar=("URL", "LABEL"),
                    help="link in the page header back to the project's own review page")
     for name in ("lint", "serve"):

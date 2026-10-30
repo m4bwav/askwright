@@ -644,6 +644,135 @@ class GalleryPageTests(PageCase):
         self.assertEqual(link.get_attribute("target"), "_blank")
 
 
+class ListenPageTests(PageCase):
+    """0.7.0: the listen bench, audio on options, the project label and the copy-continue-prompt button."""
+
+    def setUp(self):
+        super().setUp()
+        if not getattr(self, "srv", None):
+            return
+        import math
+        import struct
+        import wave
+        for name, hz in (("v1.wav", 330), ("v2.wav", 440), ("v3.wav", 550)):
+            with wave.open(str(self.dir / name), "wb") as w:  # 4 s quiet tones: long enough to switch mid-clip
+                w.setnchannels(1)
+                w.setsampwidth(2)
+                w.setframerate(8000)
+                w.writeframes(b"".join(struct.pack("<h", int(800 * math.sin(2 * math.pi * hz * i / 8000)))
+                                       for i in range(8000 * 4)))
+        _, data = ask.load_set(self.dir)
+        data["project"] = {"name": "Test reel", "path": "/work/reel"}
+        q = next(x for x in data["questions"] if x["id"] == "arrow")
+        q.update(kind="choice", sides=None, media_layout="listen", look_for=["Which voice sounds tired at 2.0 s?"],
+                 media=[{"src": "v1.wav", "label": "Voice one", "text": "We ride at dawn."},
+                        {"src": "v2.wav", "label": "Voice two", "caption": "Slower read"},
+                        {"src": "v3.wav", "label": "Voice three"}])
+        q.pop("sides")
+        q["options"][0]["media"] = [{"src": "v1.wav", "label": "Take 2 voice"}]
+        ask.write_json_atomic(self.dir / "questions.json", data)
+
+    def paused(self):
+        return self.page.evaluate("() => [...document.querySelectorAll('.bench audio')].map(a => a.paused)")
+
+    def test_bench_rows_and_one_clip_at_a_time(self):
+        p = self.open()
+        bench = p.get_by_role("region", name="Listen and compare")
+        self.assertEqual(bench.locator(".bench-row").count(), 3)
+        self.assertEqual(p.locator(".bench audio[controls]").count(), 0)
+        self.assertIn("We ride at dawn.", bench.inner_text())
+        self.assertIn("What to listen for", p.locator(".look h2").text_content())
+        p.get_by_role("button", name="Play Voice one").click()
+        p.wait_for_function("() => !document.querySelectorAll('.bench audio')[0].paused")
+        p.get_by_role("button", name="Play Voice two").click()
+        p.wait_for_function("() => !document.querySelectorAll('.bench audio')[1].paused")
+        self.assertEqual(self.paused(), [True, False, True])
+        self.assertEqual(p.get_by_role("button", name="Pause Voice two").get_attribute("aria-pressed"), "true")
+        self.assertEqual(self.answers(), {})
+        self.assertEqual(self.errors, [])
+
+    def test_shift_number_and_ab_switch_keep_position(self):
+        p = self.open()
+        p.locator("h1").focus()
+        p.keyboard.press("Shift+Digit1")
+        p.wait_for_function("() => document.querySelectorAll('.bench audio')[0].currentTime > 1")
+        self.assertEqual(p.locator("#ans input:checked").count(), 0)  # Shift+1 plays, it does not pick option 1
+        p.keyboard.press("b")
+        p.wait_for_function("() => !document.querySelectorAll('.bench audio')[1].paused")
+        t = p.evaluate("() => document.querySelectorAll('.bench audio')[1].currentTime")
+        self.assertGreater(t, 0.9)
+        self.assertEqual(self.paused(), [True, False, True])
+        p.wait_for_selector(".bench-row.playing[data-clip='1']")
+        p.locator(".bench-seek").nth(2).fill("500")
+        self.assertAlmostEqual(p.evaluate("() => document.querySelectorAll('.bench audio')[2].currentTime"), 2.0, delta=0.2)
+
+    def test_option_sound_plays_without_picking(self):
+        p = self.open()
+        btn = p.get_by_role("button", name="Play the sample for this option: Take 2 voice")
+        btn.click()
+        p.wait_for_function("() => !document.querySelector('.opt-sound audio').paused")
+        self.assertEqual(p.locator("#ans input:checked").count(), 0)
+        p.get_by_role("button", name="Play Voice three").click()
+        p.wait_for_function("() => document.querySelector('.opt-sound audio').paused")
+
+    def test_compare_bench_hides_takes_until_pick(self):
+        _, data = ask.load_set(self.dir)
+        q = next(x for x in data["questions"] if x["id"] == "arrow")
+        q.update(kind="compare", sides={"left": "t2", "right": "t5", "randomized": True},
+                 media=[{"src": "v1.wav", "option": "t2"}, {"src": "v2.wav", "option": "t5"}])
+        ask.write_json_atomic(self.dir / "questions.json", data)
+        p = self.open()
+        self.assertEqual(p.locator(".bench-label").all_inner_texts(), ["Left", "Right"])
+        p.click(".opt[data-oid='t5']")
+        self.wait_saved()
+        self.assertEqual(p.locator(".bench-label").all_inner_texts(), ["Left (Take 2)", "Right (Take 5)"])
+
+    def test_project_label_and_copy_prompt(self):
+        self.ctx.grant_permissions(["clipboard-read", "clipboard-write"], origin=self.url.rstrip("/"))
+        p = self.open()
+        self.assertEqual(p.locator("#project-line").inner_text().lower(), "project: test reel")
+        self.assertIn("Test reel · Pick the takes", p.locator(".context-line").inner_text())
+        p.click(".opt[data-oid='t5']")
+        self.wait_saved()
+        p.get_by_role("button", name="Copy continue prompt").click()
+        p.wait_for_selector("#toast:not([hidden])")
+        text = p.evaluate("() => navigator.clipboard.readText()")
+        self.assertIn("Continue Test reel (project folder: /work/reel)", text)
+        self.assertIn('read "%s"' % self.dir.resolve(), text)
+        self.assertIn("1 answered", text)
+
+    def test_copy_falls_back_without_clipboard_api(self):
+        p = self.open()
+        p.evaluate("() => { Object.defineProperty(navigator, 'clipboard', {value: {writeText: () => Promise.reject(new Error('no'))}});"
+                   " window.__copied = null; document.execCommand = (c) => { window.__copied = document.activeElement.value; return true; }; }")
+        p.get_by_role("button", name="Copy continue prompt").click()
+        p.wait_for_selector("#toast:not([hidden])")
+        self.assertIn("Continue Test reel", p.evaluate("() => window.__copied"))
+        self.assertNotIn("Could not", p.locator("#toast").inner_text())
+
+    def test_dashboard_card_shows_project_and_copies(self):
+        self.ctx.grant_permissions(["clipboard-read", "clipboard-write"], origin=self.url.rstrip("/"))
+        ask.register_set(self.dir)
+        p = self.page
+        p.goto(self.url + "sessions")
+        card = p.locator("article").first
+        card.wait_for()
+        self.assertIn("Test reel", card.locator(".project").text_content())
+        card.get_by_role("button", name="Copy continue prompt").first.click()
+        p.wait_for_selector("#toast:not([hidden])")
+        self.assertIn("Continue Test reel", p.evaluate("() => navigator.clipboard.readText()"))
+
+    def test_bench_fits_and_passes_axe_on_phone(self):
+        for width, height in ((1100, 900), (390, 844)):
+            with self.subTest(width=width):
+                self.page.set_viewport_size({"width": width, "height": height})
+                p = self.open()
+                self.assertLessEqual(p.evaluate("document.documentElement.scrollWidth"), width)
+                for box in (p.locator(".bench-play").nth(i).bounding_box() for i in range(3)):
+                    self.assertGreaterEqual(box["height"], 44)
+                self.axe("listen bench at %d" % width)
+
+
 class StudyPageTests(PageCase):
     """Study mode (a quiz): no key before submit, the review after it, grading shown at the next poll, try again."""
 

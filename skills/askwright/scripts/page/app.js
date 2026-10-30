@@ -130,6 +130,14 @@
     $("#set-title").textContent = d.set.title || "Questions for you";
     $("#set-title").title = d.set.title || "";
     document.title = (d.set.title || "Questions") + " · askwright";
+    S.project = d.project || null;
+    S.continuePrompt = d.continue_prompt || "";
+    const pl = $("#project-line");
+    pl.hidden = !S.project;
+    if (S.project) {
+      pl.textContent = "Project: " + S.project.name;
+      pl.title = S.project.path || S.project.name;
+    }
     const bl = d.set.back_link;
     if (bl && /^https?:\/\//.test(bl.url || "")) {
       $("#back-link").href = bl.url;
@@ -319,7 +327,45 @@
       h("div", { class: "row" }, keep, go)));
     keep.focus();
   }
-  function stopMedia() { main.querySelectorAll("video, audio").forEach((m) => m.pause()); }
+  function stopMedia() { document.querySelectorAll("video, audio").forEach((m) => m.pause()); }
+  // One sound at a time: starting any clip pauses every other one (play events do not bubble, so capture).
+  const solo = (el) => document.querySelectorAll("video, audio").forEach((m) => { if (m !== el) m.pause(); });
+  const toggle = (el) => { if (el.paused) { solo(el); el.play().catch(() => {}); } else el.pause(); };
+  document.addEventListener("play", (e) => solo(e.target), true);
+
+  // ------------------------------------------------------------ continue prompt
+  function statusLine() {
+    const counts = { answered: 0, unsure: 0, note_only: 0, unanswered: 0 };
+    shown().forEach((q) => counts[st(q)]++);
+    const parts = [counts.answered + " answered", counts.unsure + " not sure", counts.note_only + " note only",
+      counts.unanswered + " not answered"];
+    return "Status when copied (" + new Date().toLocaleString() + "): " + parts.join(", ") + ".";
+  }
+  async function copyText(text) {
+    try { await navigator.clipboard.writeText(text); return true; } catch (e) { /* fall back below */ }
+    const ta = h("textarea", { class: "visually-hidden", readonly: true, "aria-hidden": "true" });
+    ta.value = text;
+    document.body.append(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    ta.remove();
+    return ok;
+  }
+  function toast(text, bad) {
+    const t = $("#toast");
+    t.textContent = text;
+    t.classList.toggle("bad", !!bad);
+    t.hidden = false;
+    clearTimeout(S.toastTimer);
+    S.toastTimer = setTimeout(() => { t.hidden = true; }, 4000);
+  }
+  async function copyPrompt() {
+    await flush();
+    const text = (S.continuePrompt || "") + (S.study ? "" : "\n" + statusLine());
+    const ok = await copyText(text);
+    toast(ok ? "Copied the continue prompt. Paste it into your agent's chat." : "Could not copy; your browser blocked the clipboard.", !ok);
+  }
 
   // ------------------------------------------------------------ render
   function topbar() {
@@ -364,6 +410,7 @@
     S.lookTimes = [];
     S.lookIdx = -1;
     S.tcOffer = null;
+    S.bench = null;
     if (submitted()) S.view = "review";  // a submitted attempt is read-only: its review is the only screen
     if (S.view === "review") renderReview();
     else if (S.view === "overview") renderOverview();
@@ -390,8 +437,99 @@
     return h("figure", null, el, capt ? h("figcaption", { text: capt }) : null);
   }
 
+  const fmtD = (t) => (isFinite(t) ? Math.floor(t / 60) + ":" + String(Math.floor(t % 60)).padStart(2, "0") : "–");
+  const clipName = (q, m, i) => (m.option ? shownLabel(q, m.option, done(q)) : m.label || "Clip " + (i + 1));
+  // Listen bench: every clip of an audio-only question in one panel, one play button, seek bar and duration each.
+  function listenBench(q) {
+    const items = q.media || [];
+    const region = h("section", { class: "media bench", role: "region", "aria-label": "Listen and compare" });
+    const clips = [];
+    S.bench = { clips, active: 0 };
+    items.forEach((m, i) => {
+      if (m.missing) { region.append(h("p", { class: "missing", text: "Missing file: " + m.missing })); return; }
+      const audio = h("audio", { preload: "metadata", src: m.url });
+      const name = h("span", { class: "bench-label", "data-oid": m.option || null, text: clipName(q, m, i) });
+      const play = h("button", { type: "button", class: "bench-play", "aria-pressed": "false",
+        "aria-label": "Play " + name.textContent }, h("span", { class: "icon", "aria-hidden": "true", text: "▶" }));
+      const seekBar = h("input", { type: "range", min: "0", max: "1000", step: "1", value: "0", class: "bench-seek",
+        "aria-label": "Position in " + name.textContent, "aria-valuetext": "0:00" });
+      const time = h("span", { class: "bench-time", text: "0:00 / –" });
+      const idx = clips.length;
+      const sync = () => {
+        const dur = audio.duration;
+        seekBar.value = String(isFinite(dur) && dur ? Math.round((audio.currentTime / dur) * 1000) : 0);
+        seekBar.setAttribute("aria-valuetext", fmtD(audio.currentTime) + " of " + fmtD(dur));
+        time.textContent = fmtD(audio.currentTime) + " / " + fmtD(dur);
+      };
+      const state = () => {
+        const on = !audio.paused;
+        play.setAttribute("aria-pressed", String(on));
+        play.setAttribute("aria-label", (on ? "Pause " : "Play ") + name.textContent);
+        play.firstChild.textContent = on ? "❚❚" : "▶";
+        row.classList.toggle("playing", on);
+        if (on) S.bench.active = idx;
+      };
+      audio.addEventListener("loadedmetadata", sync);
+      audio.addEventListener("timeupdate", sync);
+      ["play", "pause", "ended"].forEach((ev) => audio.addEventListener(ev, state));
+      play.addEventListener("click", () => { S.bench.active = idx; toggle(audio); });
+      seekBar.addEventListener("input", () => {
+        if (isFinite(audio.duration)) audio.currentTime = (seekBar.value / 1000) * audio.duration;
+        S.bench.active = idx;
+      });
+      const row = h("div", { class: "bench-row", "data-clip": String(idx) },
+        h("span", { class: "bench-n", "aria-hidden": "true", text: idx < 9 ? "⇧" + (idx + 1) : "" }), play,
+        h("div", { class: "bench-body" }, h("p", { class: "bench-head" }, name, time),
+          m.caption ? h("p", { class: "bench-cap", text: m.caption }) : null,
+          m.text ? h("blockquote", { class: "bench-text" }, h("span", { class: "visually-hidden", text: "Line spoken: " }), m.text) : null,
+          seekBar), audio);
+      clips.push({ audio, row });
+      region.append(row);
+    });
+    if (clips.length > 1) {
+      region.append(h("div", { class: "bench-tools" },
+        h("button", { type: "button", class: "btn small", onclick: () => abSwitch() }, "Switch to the next clip at the same point ", h("kbd", { text: "b" })),
+        h("span", { class: "hint", text: "Only one clip plays at a time. Shift+1 to Shift+" + Math.min(9, clips.length) + " play a clip." })));
+    }
+    return region;
+  }
+  function benchPlay(i) {
+    const c = S.bench && S.bench.clips[i];
+    if (!c) return;
+    S.bench.active = i;
+    toggle(c.audio);
+  }
+  // A/B: the next clip starts at the same fraction of its length the current one had reached.
+  function abSwitch() {
+    const b = S.bench;
+    if (!b || b.clips.length < 2) return;
+    const cur = b.clips[b.active].audio;
+    const frac = isFinite(cur.duration) && cur.duration ? cur.currentTime / cur.duration : 0;
+    cur.pause();
+    b.active = (b.active + 1) % b.clips.length;
+    const nx = b.clips[b.active].audio;
+    if (isFinite(nx.duration)) nx.currentTime = frac * nx.duration;
+    toggle(nx);
+    b.clips[b.active].row.querySelector(".bench-play").focus();
+  }
+  // Audio on an option: a small play button beside it (a button inside a label does not pick the option).
+  function optionSound(q, o, m) {
+    if (m.missing) return h("span", { class: "missing", text: "Missing file: " + m.missing });
+    const audio = h("audio", { preload: "none", src: m.url });
+    const btn = h("button", { type: "button", class: "btn small opt-play", "aria-pressed": "false",
+      "aria-label": "Play the sample for this option" + (m.label ? ": " + m.label : "") }, "▶ Play");
+    const state = () => { btn.setAttribute("aria-pressed", String(!audio.paused)); btn.firstChild.textContent = audio.paused ? "▶ Play" : "❚❚ Pause"; };
+    ["play", "pause", "ended"].forEach((ev) => audio.addEventListener(ev, state));
+    btn.addEventListener("click", (e) => { e.preventDefault(); toggle(audio); });
+    return h("span", { class: "opt-sound" }, btn, m.text ? h("span", { class: "cons", text: "“" + m.text + "”" }) : null, audio);
+  }
+
   function questionMedia(q) {
     const items = q.media || [];
+    if (items.length && (q.media_layout === "listen" ||
+      (!q.media_layout || q.media_layout === "auto") && items.every((m) => m.type === "audio" || (m.missing && !m.type)))) {
+      return listenBench(q);
+    }
     const imagesOnly = items.every((m) => m.type === "image");
     const gallery = imagesOnly && items.length > 1 &&
       (q.media_layout === "gallery" || (!q.media_layout || q.media_layout === "auto") && items.length >= 3);
@@ -496,20 +634,25 @@
     if (!q) { S.view = "finish"; return renderFinish(); }
     const a = S.answers[q.id] || {};
     const editing = !!S.editing[q.id];
+    S.bench = null;
     const art = h("article", { class: "q", "data-q": q.id });
-    if ((q.one_pager || []).length) art.append(onePager(q.one_pager, q.id));
-    const caption = S.study ? [q.topic, q.title].filter(Boolean).join(" · ") + (q.bonus ? " · bonus" : "")
-      : q.title + (q.reversible === false ? " · hard to undo" : "");
-    art.append(h("p", { class: "caption", text: caption }), h("h1", { tabindex: "-1", id: "q-h" }, q.question));
+    // Reading order: where this is (project, set), what is asked, why it matters, what decides it, then the answer.
+    const where = [S.project && S.project.name, S.set && S.set.title].filter(Boolean).join(" · ");
+    if (where) art.append(h("p", { class: "context-line", text: where }));
+    const caption = S.study ? [q.topic, q.title].filter(Boolean).join(" · ") + (q.bonus ? " · bonus" : "") : q.title;
+    art.append(h("p", { class: "caption" }, caption,
+      !S.study && q.reversible === false ? h("span", { class: "tag warn", text: "hard to undo" }) : null),
+    h("h1", { tabindex: "-1", id: "q-h" }, q.question));
     if (q.hint) art.append(h("p", { class: "hint", text: q.hint }));
     if (q.why) art.append(h("section", { class: "why", "aria-labelledby": "why-h" }, h("h2", { id: "why-h", text: "Why this matters" }), h("p", { text: q.why })));
+    if ((q.one_pager || []).length) art.append(onePager(q.one_pager, q.id));
     if ((q.look_for || []).length) {
       const items = q.look_for.map((t) => {
         const times = [...t.matchAll(/(\d+(?:\.\d+)?)\s*s\b/g)].map((m) => parseFloat(m[1]));
         S.lookTimes.push(...times);
         return h("li", null, t, times.map((x) => h("button", { type: "button", class: "btn small", text: "Play from " + fmtT(x), onclick: () => seek(x, true) })));
       });
-      art.append(h("section", { class: "look", "aria-labelledby": "look-h" }, h("h2", { id: "look-h", text: "What to look for" }), h("ul", null, items)));
+      art.append(h("section", { class: "look", "aria-labelledby": "look-h" }, h("h2", { id: "look-h", text: (q.media || []).length && q.media.every((m) => m.type === "audio") ? "What to listen for" : "What to look for" }), h("ul", null, items)));
       S.lookTimes.sort((x, y) => x - y);
     }
     if ((q.media || []).length) art.append(questionMedia(q));
@@ -574,7 +717,7 @@
     const chosen = multi ? a.choices || [] : [a.choice];
     for (const o of q.options) {
       const row = optRow(multi ? "checkbox" : "radio", name, o.id, shownLabel(q, o.id, reveal), o.consequence, chosen.includes(o.id), n++);
-      if ((o.media || []).length) row.querySelector(".txt").append(...o.media.map((m) => mediaEl(m)));
+      if ((o.media || []).length) row.querySelector(".txt").append(...o.media.map((m) => (m.type === "audio" ? optionSound(q, o, m) : mediaEl(m))));
       box.append(row);
     }
     if (!S.study) {  // a quiz has no "not sure" or "something else": the review teaches what was missed
@@ -604,6 +747,7 @@
       const oid = row.dataset.oid;
       if (oid !== "unsure" && oid !== "other") row.querySelector(".label").textContent = shownLabel(q, oid, reveal);
     });
+    main.querySelectorAll(".bench-label[data-oid]").forEach((el) => { el.textContent = shownLabel(q, el.dataset.oid, reveal); });
     const g = $("#guess-line", main);
     if (g) g.replaceWith(guessLine(q));
     topbar();
@@ -713,7 +857,7 @@
   // ------------------------------------------------------------ media keys
   const mediaList = () => [...main.querySelectorAll(".media video, .media audio")];
   const playing = () => mediaList().find((m) => !m.paused);
-  function primary() { return mediaList()[0] || null; }
+  function primary() { return (S.bench && S.bench.clips.length ? S.bench.clips[S.bench.active].audio : mediaList()[0]) || null; }
   function seek(t, play) {
     const m = primary();
     if (!m) return;
@@ -878,11 +1022,12 @@
   $("#btn-overview").addEventListener("click", () => leave(() => { S.view = "overview"; render(true); }));
   $("#btn-answered").addEventListener("click", () => { S.showAnswered = !S.showAnswered; topbar(); if (S.view === "overview") render(false); });
   $("#btn-keys").addEventListener("click", () => $("#keys").showModal());
+  $("#btn-copy").addEventListener("click", copyPrompt);
   $("#keys-close").addEventListener("click", () => $("#keys").close());
 
   function typing() {
     const el = document.activeElement;
-    return !!el && (el.tagName === "TEXTAREA" || el.isContentEditable || (el.tagName === "INPUT" && !["radio", "checkbox", "button", "file"].includes(el.type)));
+    return !!el && (el.tagName === "TEXTAREA" || el.isContentEditable || (el.tagName === "INPUT" && !["radio", "checkbox", "button", "file", "range"].includes(el.type)));
   }
   document.addEventListener("keydown", (e) => {
     if (e.ctrlKey || e.metaKey || e.altKey || typing() || $("#keys").open) return;
@@ -890,7 +1035,11 @@
     const onControl = el && ["INPUT", "BUTTON", "VIDEO", "AUDIO", "A", "SUMMARY"].includes(el.tagName);
     const k = e.key;
     if (el?.tagName === "SELECT") return;
-    if (/^[1-9]$/.test(k) && S.view === "question") {
+    if (e.shiftKey && /^Digit[1-9]$/.test(e.code) && S.view === "question" && S.bench) {
+      e.preventDefault();
+      benchPlay(+e.code.slice(5) - 1);
+    } else if (k === "b" && S.view === "question" && S.bench) { e.preventDefault(); abSwitch(); }
+    else if (/^[1-9]$/.test(k) && S.view === "question") {
       const input = S.keyInputs[+k - 1];
       if (input && !input.disabled) { input.click(); input.focus(); e.preventDefault(); }
     } else if (k === "n" || (k === "ArrowRight" && !onControl)) { e.preventDefault(); $("#btn-next").click(); }

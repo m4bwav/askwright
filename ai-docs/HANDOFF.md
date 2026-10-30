@@ -1,6 +1,8 @@
 # Handoff
 
 ## Current state
+2026-10-30: 0.7.0 adds `project` and `continue_prompt` set fields (top bar, context line above each question, dashboard cards, a Copy continue prompt button with counts at copy time), the listen bench for audio-only questions (`media_layout: "listen"`, clip `text` and `option`, Shift+1..9, `b` A/B switch) and option sound buttons, plus a clearer question reading order. Design calls: [decisions/2026-10-30-listen-bench-and-page-design.md](decisions/2026-10-30-listen-bench-and-page-design.md). Tests: T-20261030-1. askwright is not installed as a plugin: agents run ask.py from the main clone, so pulling main there updates the runtime; a dashboard or question server started before the pull keeps serving the old page until restarted (`ask.py dashboard --stop`, then `--detach`).
+
 2026-10-26 integration: PR #19 combines the dashboard/gallery work with upstream study mode, figures and header/footer fixes. T-20261026-3 records 86 offline tests (one Windows skip), 34 browser passes and three new cross-feature/HTTP regressions. Questions, answers and study attempts remain independent of dashboard organization.
 
 2026-10-26 follow-up: 0.4.0 adds session-card previews, timed snooze, Snoozed/Archive lists and restore controls. The local user-wide session state is independent of questions and answers. T-20261026-2 records 64 offline tests (one Windows skip) and 28 browser passes. The owner requested a PR including all current askwright changes, including the earlier image-gallery and per-frame work. No release tag was requested.

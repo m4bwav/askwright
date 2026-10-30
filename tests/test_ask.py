@@ -1302,5 +1302,88 @@ class ContactTests(unittest.TestCase):
             shutil.rmtree(tmp, ignore_errors=True)
 
 
+
+class ProjectAndListenTests(unittest.TestCase):
+    """0.7.0: project label, continue prompt and the listen bench (lint, new, /api/set, dashboard rows)."""
+
+    def test_project_lint(self):
+        for ok in ("Reel", {"name": "Reel"}, {"name": "Reel", "path": "/work/reel"}):
+            self.assertNotIn("project", lint(lambda data, ok=ok: data.update(project=ok))[0])
+        for bad in ("", 3, {"path": "/x"}, {"name": ""}, {"name": "x", "path": 2}, {"name": "x", "url": "y"}):
+            self.assertIn("project", lint(lambda data, bad=bad: data.update(project=bad))[0])
+
+    def test_continue_prompt_lint_and_default(self):
+        self.assertNotIn("continue-prompt", lint(lambda data: data.update(continue_prompt="Carry on."))[0])
+        for bad in ("", "  ", 5, ["x"]):
+            self.assertIn("continue-prompt", lint(lambda data, bad=bad: data.update(continue_prompt=bad))[0])
+        s = TempSet(lambda data: data.update(project={"name": "Reel", "path": "/work/reel"}))
+        try:
+            d, data = ask.load_set(s.dir)
+            text = ask.continue_prompt(d, data)
+            self.assertIn("Continue Reel (project folder: /work/reel)", text)
+            self.assertIn(str(Path(ask.__file__).resolve()), text)
+            self.assertIn('read "%s"' % d, text)
+            self.assertIn("matched_guess", text)
+            self.assertIn("close", text)
+            data["continue_prompt"] = "  My own prompt.  "
+            self.assertEqual(ask.continue_prompt(d, data), "My own prompt.")
+        finally:
+            s.cleanup()
+
+    def test_listen_layout_and_clip_fields(self):
+        def bench(q):
+            q.update(media=[{"src": "tone.wav", "label": "Voice A", "text": "Hello there."},
+                            {"src": "tone.wav", "label": "Voice B", "option": "tone"}], media_layout="listen")
+        errs = lint(qmod("music", bench))[0]
+        self.assertFalse({"media-layout", "media-text", "media-option"} & errs, errs)
+        self.assertIn("media-layout", lint(qmod("music", lambda q: q.update(
+            media=[{"src": "tone.wav"}, {"src": "swatch.png", "alt": "x"}], media_layout="listen")))[0])
+        self.assertIn("media-option", lint(qmod("music", lambda q: q.update(
+            media=[{"src": "tone.wav", "option": "nope"}])))[0])
+        self.assertIn("media-text", lint(qmod("music", lambda q: q.update(
+            media=[{"src": "tone.wav", "text": 3}])))[0])
+        self.assertIn("media-layout", lint(qmod("music", lambda q: q.update(media_layout="sideways")))[0])
+
+    def test_new_sets_project_and_prompt(self):
+        tmp = Path(tempfile.mkdtemp(prefix="askw-new-"))
+        try:
+            nd = tmp / "a"
+            code, d = run_cli("new", nd, "--title", "Voices", "--project", "Reel", "--project-path", "/work/reel",
+                              "--continue-prompt", "Read the voice picks.")
+            self.assertEqual(code, 0, d)
+            data = json.loads((nd / "questions.json").read_text(encoding="utf-8"))
+            self.assertEqual(data["project"], {"name": "Reel", "path": "/work/reel"})
+            self.assertEqual(data["continue_prompt"], "Read the voice picks.")
+            f = tmp / "prompt.txt"
+            f.write_text("From a file.\n", encoding="utf-8")
+            code, d = run_cli("new", tmp / "b", "--title", "B", "--project", "Reel", "--continue-prompt-file", f)
+            data = json.loads((tmp / "b" / "questions.json").read_text(encoding="utf-8"))
+            self.assertEqual((data["project"], data["continue_prompt"]), ("Reel", "From a file."))
+            code, d = run_cli("new", tmp / "c", "--title", "C", "--project-path", "/x")
+            self.assertFalse(d["ok"])
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    def test_api_set_and_sessions_carry_project_and_prompt(self):
+        home = tempfile.TemporaryDirectory(prefix="askw-proj-")
+        s = TempSet(lambda data: data.update(project="Reel"))
+        try:
+            with mock.patch.dict(os.environ, {"ASKWRIGHT_HOME": home.name}):
+                srv = ask.make_server(s.dir, port=0)
+                try:
+                    out = ask.page_set(srv)
+                finally:
+                    srv.server_close()
+                self.assertEqual(out["project"], {"name": "Reel", "path": ""})
+                self.assertIn("Continue Reel.", out["continue_prompt"])
+                ask.register_set(s.dir)
+                row = ask.list_sessions()["sessions"][0]
+                self.assertEqual(row["project"]["name"], "Reel")
+                self.assertEqual(row["continue_prompt"], out["continue_prompt"])
+        finally:
+            s.cleanup()
+            home.cleanup()
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=1)

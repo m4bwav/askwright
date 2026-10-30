@@ -77,6 +77,16 @@ the question-evaluation research (QAS-99 adapted, R-T11); models under-flag poin
 - Tell the person they can type a note while the clip plays: the clip pauses and the note can be tied to that
   time; they can paste or drop a screenshot into the note.
 
+## Voice comparisons
+
+- Put every candidate voice of one line in one question's `media`, audio only: the page shows a listen bench (one
+  row per clip, one clip at a time, an A/B switch that keeps the position). Use the same line, the same length
+  and the same loudness for every clip, or the louder one wins.
+- Give each clip `text` (the line spoken) and a `label` that names the voice; for a blind pick use `kind: "compare"`
+  with `sides` and `option` on each clip, and labels stay "Left"/"Right" until the pick.
+- `look_for` names what to listen for, with times: "The pause after 'dawn' at 2.0 s: natural or clipped?".
+- Several lines read by one voice per option: put each option's sample in its `media`; it plays from a button.
+
 ## One-pagers (major decisions only)
 
 Use one when the choice costs real time or money or is hard to undo. Keep it to what decides the choice:

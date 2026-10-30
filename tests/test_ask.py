@@ -1272,5 +1272,35 @@ class StudyServerTests(unittest.TestCase):
         self.assertIn("study set", d["reason"])
 
 
+class ContactTests(unittest.TestCase):
+    def test_contact_sheet(self):
+        try:
+            from PIL import Image
+        except ImportError:
+            self.skipTest("Pillow is optional; contact.py needs it")
+        tmp = Path(tempfile.mkdtemp())
+        try:
+            srcs = []
+            for i, color in enumerate(((255, 0, 0), (0, 255, 0), (0, 0, 255))):
+                p = tmp / f"c{i}.png"
+                Image.new("RGB", (10, 30), color).save(p)
+                srcs.append(p)
+            out = tmp / "sheet.png"
+            r = subprocess.run([sys.executable, str(SCRIPTS / "contact.py"), out, *srcs, "--scale", "3",
+                                "--labels", "A", "B", "C"], capture_output=True, text=True)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            sheet = Image.open(out).convert("RGB")
+            self.assertEqual(sheet.width, 3 * (30 + 16))
+            # every candidate is in the one image, scaled crisp, in order
+            ys = sheet.height - 20
+            self.assertEqual([sheet.getpixel((8 + 15 + i * 46, ys)) for i in range(3)],
+                             [(255, 0, 0), (0, 255, 0), (0, 0, 255)])
+            bad = subprocess.run([sys.executable, str(SCRIPTS / "contact.py"), out, *srcs, "--labels", "A"],
+                                 capture_output=True, text=True)
+            self.assertNotEqual(bad.returncode, 0)
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=1)

@@ -4,6 +4,11 @@ Every change to [README.md](README.md) and its companions, newest first, each wi
 
 Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (IDs or "user request"), `files:` (file and section), and a sentence on what changed. Cite section headings, not line numbers.
 
+### C-20261029-2 · 2026-10-29 · 0.6.0: contact.py and moving an existing review page onto sets
+- because: user request (turn long pick pages into askwright screens), L-019, L-020, L-021
+- files: scripts/contact.py (new), references/bridging.md (new), references/schema.md (Media items), tests/test_ask.py (ContactTests), LEARNINGS.md, plugin.json, ask.py VERSION
+- contact.py puts candidates side by side in one labelled image (Pillow, optional); bridging.md says how to move a project's long review page onto sets and sync answers back to its picks file.
+
 ### C-20261029-1 · 2026-10-29 · back_link: a top-bar link back to the project's own review page
 - because: user request (askwright pages opened from a project's pick page should lead back to it)
 - files: ask.py (lint, /api/set, `new --back-link`), page/index.html and app.js (top bar), references/schema.md (The set), SKILL.md (Step 1), tests/test_ask.py (test_back_link), plugin.json 0.5.0

@@ -60,7 +60,9 @@ png, jpg, gif, webp, svg, avif). `start` (seconds) cues a video when it loads. I
 up in the set folder first, then in each media root.
 
 A gallery item is one complete case. Keep a side-by-side comparison in one image so changing cases does not
-hide one of its candidates. `label` names a case in the selector; `caption` explains what to compare.
+hide one of its candidates; `scripts/contact.py out.png a.png b.png --labels ... --scale 3` makes one (Pillow).
+Moving a project's existing long review page onto sets, with answers synced back to its picks file:
+[bridging.md](bridging.md). `label` names a case in the selector; `caption` explains what to compare.
 Navigation, a case counter and a full-size link appear around the active image. Galleries do not auto-advance
 or record choices. Left/Right arrows inside the gallery change cases, not questions.
 

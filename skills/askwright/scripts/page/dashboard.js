@@ -44,12 +44,18 @@ function render() {
   const inView = rows.filter(row => (row.state || "inbox") === view);
   const visible = inView.filter(row => (view !== "inbox" || showAll.checked || row.pending > 0 || row.error) &&
     (!product.value || row.product === product.value) &&
-    [row.title, row.path, row.context, row.product, row.session, row.asked_by, row.error]
+    [row.title, row.path, row.context, row.product, row.session, row.asked_by, row.error,
+      row.project && row.project.name, row.project && row.project.path]
       .join(" ").toLowerCase().includes(term));
   sessions.replaceChildren();
   for (const row of visible) {
     const card = node("article", "");
     card.dataset.session = row.id;
+    if (row.project) {
+      const proj = node("p", `Project: ${row.project.name}`, "project");
+      if (row.project.path) proj.title = row.project.path;
+      card.append(proj);
+    }
     card.append(node("h2", row.title || "Unavailable session"));
     if (row.error) {
       card.append(node("p", row.error, "session-error"));
@@ -94,8 +100,13 @@ function render() {
       button.dataset.focus = `${row.id}:open`;
       button.setAttribute("aria-label", `Open questions: ${row.title}`);
       button.addEventListener("click", () => open(row, button));
+      const copy = node("button", "Copy continue prompt", "copy");
+      copy.type = "button";
+      copy.dataset.focus = `${row.id}:copy`;
+      copy.setAttribute("aria-label", `Copy continue prompt: ${row.title}`);
+      copy.addEventListener("click", () => copyPrompt(row));
       const actions = node("div", "", "actions");
-      actions.append(button);
+      actions.append(button, copy);
       card.append(actions);
     }
     const actions = card.querySelector(".actions") || node("div", "", "actions");
@@ -141,6 +152,35 @@ function render() {
     const control = Array.from(sessions.querySelectorAll("[data-focus]")).find(el => el.dataset.focus === focused);
     if (control) control.focus();
   }
+}
+
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); return true; } catch (e) { /* fall back below */ }
+  const area = document.createElement("textarea");
+  area.value = text;
+  area.setAttribute("readonly", "");
+  area.className = "visually-hidden";
+  document.body.append(area);
+  area.select();
+  let ok = false;
+  try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+  area.remove();
+  return ok;
+}
+
+async function copyPrompt(row) {
+  const counts = `Status when copied (${new Date().toLocaleString()}): ${row.answered} answered, ${row.unsure} not sure, ` +
+    `${row.note_only} note only, ${Math.max(0, row.pending - row.unsure - row.note_only)} not answered or changed.`;
+  const ok = await copyText(`${row.continue_prompt || ""}
+${counts}`);
+  const status = document.querySelector("#action-status");
+  status.textContent = ok ? `Copied the continue prompt for ${row.title}. Paste it into your agent's chat.` :
+    "Could not copy; your browser blocked the clipboard.";
+  const toast = document.querySelector("#toast");
+  toast.textContent = status.textContent;
+  toast.hidden = false;
+  clearTimeout(copyPrompt.timer);
+  copyPrompt.timer = setTimeout(() => { toast.hidden = true; }, 4000);
 }
 
 function actionButton(row, label, action, seconds) {

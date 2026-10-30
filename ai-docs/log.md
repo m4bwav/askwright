@@ -59,3 +59,5 @@ Append-only. One line per operation: `## [YYYY-MM-DD] op | title` where op is on
 ## [2026-10-29] update | 0.5.0 back_link: a set can link its top bar back to the project's own review page (`new --back-link URL LABEL`); first user SpaceDeckBuilder2's art pick pages. C-20261029-1; tests 88 passed 1 skip, page 34 passed, live serve check of the header link and /api/set.
 
 ## [2026-10-29] update | 0.6.0: scripts/contact.py (candidates side by side in one labelled image, Pillow optional) and references/bridging.md (moving a project's long review page onto sets, answers synced back to its picks file), from converting a game project's 55-item pick pages; L-019 to L-021, C-20261029-2; tests 89 passed 1 skip.
+
+## [2026-10-30] update | 0.7.0: project label and Copy continue prompt (question page top bar and dashboard cards), listen bench for voice comparisons (Shift+1..9, b for A/B at the same point, option sound buttons), clearer question reading order. C-20261030-1, T-20261030-1, decisions/2026-10-30-listen-bench-and-page-design.md.

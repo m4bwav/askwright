@@ -16,6 +16,8 @@ A set is one folder holding `questions.json`. The server writes `answers.json`, 
 | `product` | no | Agent product name, as text (for example, "Copilot" or "Codex"). Used to filter the shared dashboard. |
 | `session` | no | Session name or id, as text, so separate sessions of one product are distinguishable. |
 | `back_link` | no | `{"url": "http(s)://...", "label": "..."}`: a link in the top bar back to the project's own review page (a pick page, a contact sheet), beside "All sessions". `ask.py new --back-link URL LABEL` sets it. |
+| `project` | no | The project the questions are for: a name, or `{"name": "...", "path": "..."}`. Shown in the top bar, above every question and on the session card. `ask.py new --project NAME [--project-path DIR]` sets it. |
+| `continue_prompt` | no | Text the "Copy continue prompt" button copies (top bar and session card). Without it the button copies a default: read the answers with `ask.py read` (absolute paths), evaluate them against your guesses, act, close. The page adds the answer counts at the moment of copying. `ask.py new --continue-prompt TEXT` or `--continue-prompt-file FILE`. |
 | `media_roots` | no | Folders that hold media, relative to the set folder or absolute. Media outside the set folder and these roots is refused. |
 | `questions` | yes | The questions in the order the page walks them. |
 
@@ -32,7 +34,7 @@ A set is one folder holding `questions.json`. The server writes `answers.json`, 
 | `hint` | no | One extra line under the question. |
 | `reversible` | no | `false` marks a decision that is hard to undo ("· hard to undo" beside the title); give such questions a `one_pager`. |
 | `media` | no | List of media items (below), shown under "What to look for". |
-| `media_layout` | no | `auto` (default), `gallery` or `stack`. Auto shows three or more image-only items as one case at a time; one or two remain stacked. Gallery explicitly enables case navigation, including for two tall images, and supports images only. Stack keeps every item visible together; four or more images produce a long-page warning. |
+| `media_layout` | no | `auto` (default), `gallery`, `stack` or `listen`. Auto shows audio-only media as a listen bench and three or more image-only items as one case at a time; one or two images remain stacked. Listen (audio only) asks for the bench explicitly. Gallery explicitly enables case navigation, including for two tall images, and supports images only. Stack keeps every item visible together; four or more images produce a long-page warning. |
 | `options` | all kinds but `text` | At least two `{id, label, consequence?, media?}`. Ids `unsure` and `other` are reserved. |
 | `guess` | yes | Your answer: see "Guesses". |
 | `sides` | `compare` | `{"left": "<option id>", "right": "<option id>", "randomized": true}`: which take sits where in the side-by-side media. `randomized` is `true` only when the sides were drawn at random; a fixed order is `false` (the lint warns). |
@@ -54,6 +56,14 @@ and the page shows it as an image (no file is written; `ask.py figure <spec.json
   "label": "push"}]`; `dir` is right, left, up or down, and several forces one way sit side by side.
 - `shapes`: `width`, `height` and `items` of `rect` (x, y, w, h), `circle` (x, y, r), `line` and `arrow` (x1, y1, x2,
   y2) and `text` (x, y, text), each with an optional `label`, `color` and `fill`.
+
+Audio items may add `text` (the line being spoken, shown under the clip) and `option` (the option id the clip is;
+on a `compare` question with `sides` the clip then reads "Left"/"Right" until the pick, like the options).
+
+**Listen bench.** Audio-only media show as one panel: a row per clip with a big play button, its label, caption and
+`text`, a seek bar and the time. One clip plays at a time. "Switch to the next clip at the same point" (key `b`)
+is an A/B toggle; Shift+1 to Shift+9 play clip N (1 to 9 still pick options). Audio in an option's `media` shows as
+a small Play button beside the option and does not pick it.
 
 `type` is inferred from the extension (video: mp4, m4v, webm, mov; audio: mp3, m4a, wav, ogg, opus, flac; image:
 png, jpg, gif, webp, svg, avif). `start` (seconds) cues a video when it loads. Images need `alt`. `src` is looked

@@ -11,8 +11,13 @@ every question page is as good as the best one, instead of whatever the agent im
 
 ## What you get on the page
 
-- One question per screen, with the question as the heading, why it matters, and what to look for. Times in
-  "what to look for" turn into "Play from 6.0 s" buttons.
+- One question per screen, read top to bottom: the project and set it belongs to, the question as the heading,
+  why it matters, and what to look or listen for. Times in "what to look for" turn into "Play from 6.0 s" buttons.
+- The project's name in the top bar and a "Copy continue prompt" button: it copies a prompt that tells an agent to
+  read the answers (with absolute paths), check them against its guesses and act on them, plus the counts so far.
+- A listen bench for voices and sounds: one row per clip with a big play button, the line spoken, a seek bar and
+  the time; one clip plays at a time, `b` switches to the next clip at the same point, Shift+1 to Shift+9 play
+  clip N. Blind voice picks show "Left"/"Right" until you pick. A sample on an option plays from a small button.
 - Video, audio and images in the question. Takes compared side by side show "Left" and "Right" until you pick,
   then reveal which take was where.
 - Image-heavy questions show one case at a time, with Previous/Next, a case selector and a full-size image link.
@@ -107,6 +112,7 @@ by product and search by title, folder or agent. Counts refresh every five secon
 Notes without a pick, "not sure" and answers to changed questions still count as needing attention.
 Conditional questions waiting on another answer are counted separately.
 
+Each card names its project and has "Open questions" and "Copy continue prompt" buttons.
 Each session card has an expandable preview of its next five questions needing attention, in question order.
 The Snooze dropdown hides that session for 1 hour, 4 hours, 1 day, 3 days or 1 week.
 It returns to the inbox when that time expires. Open Snoozed to bring it back early with Unsnooze.
@@ -133,7 +139,7 @@ Stop the independent dashboard with `ask.py dashboard --stop`; this leaves quest
 
 | Command | What it does |
 |---|---|
-| `new <dir> --title T` | Writes an empty set. |
+| `new <dir> --title T` | Writes an empty set. `--project NAME`, `--project-path DIR`, `--continue-prompt TEXT` (or `--continue-prompt-file FILE`), `--back-link URL LABEL`, `--product`, `--session`, `--asked-by`. |
 | `lint <set>` | Checks the set: questions end in `?`, every question says why, review questions say what to look for, options name actions rather than "left" or "yes", every question carries a guess with a confidence, media exists and sits inside the allowed folders, superseded questions are not left open. Warnings for two asks in one, leading words, a guess that is always the first option, over 12 open questions, and video that is not H.264/AAC (when ffprobe is installed). |
 | `serve <set>` | Lints, then serves the page on 127.0.0.1 after fetching the page, the API and a clip with a Range request itself. `--detach` returns at once; `--open` opens your browser. |
 | `status <set>` | Counts and lists; `--wait-done --timeout S` waits for "All done". |

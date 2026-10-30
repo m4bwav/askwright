@@ -39,7 +39,8 @@ steps 1 and 2 below are for decision sets.
 
 One folder per set, `<project>/ask/<set-id>/` unless the project already keeps review files somewhere (then put
 it beside them). Start it with `ask.py new <folder> --title "<what this round decides>" --product "<your agent product>" --session "<session name or id>" --asked-by "<your role>"`, then add questions.
-Use the actual product and session, never invent them; omit unknown metadata. `--back-link URL LABEL` links back to a project review page.
+Use the actual product and session, never invent them; omit unknown metadata. Add `--project NAME --project-path DIR`
+(shown on every page and session card); `--back-link` and `--continue-prompt`: schema.md.
 Media stays where it is: list its folders in `media_roots` and refer to files by name. A graph, a force diagram or a
 simple drawing needs no file: a media item `{"figure": {...}, "alt": "..."}` is drawn by ask.py (schema.md, Media).
 
@@ -66,12 +67,11 @@ Ask one comparison per independent frame, take or edit before recommending a mod
 Each case states the requested result, links sources and has visible **Good / Keep / Reject** checks:
 success, what must stay fixed, and specific defects with locations. Offer "Both meet the request" and
 "Neither meets the request", distinct from uncertainty. Collect picks and notes before proposing policy.
-Use galleries for supporting views of one case or an explicitly requested aggregate judgment.
-Three images use a gallery automatically; `media_layout: "gallery"` handles two tall images.
+Galleries hold supporting views of one case; three images get one automatically, `media_layout: "gallery"` two.
+Voices or sounds to compare: audio-only media becomes a listen bench (writing-questions.md, Voice comparisons).
 Keep comparison candidates together; independent picks get separate questions, at most 12 per round.
 Put optional detail in the collapsed `one_pager` and shared facts in a short table.
 Use `media_layout: "stack"` only when simultaneous viewing matters more than length.
-Check desktop and phone widths: readable cases, reachable answers.
 
 ## Step 2: review, then lint
 

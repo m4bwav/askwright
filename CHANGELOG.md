@@ -4,6 +4,11 @@ Every change to [README.md](README.md) and its companions, newest first, each wi
 
 Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (IDs or "user request"), `files:` (file and section), and a sentence on what changed. Cite section headings, not line numbers.
 
+### C-20261030-1 · 2026-10-30 · 0.7.0: project label, copy continue prompt, listen bench, clearer question pages
+- because: user request ("make a special area for playing sounds for voice comparison ... list what project this is for and a button to copy a prompt to continue the project and evaluate the answers ... clean up the design"), T-20261030-1
+- files: ask.py (lint rules project, continue-prompt, media-text, media-option, media_layout listen; /api/set and /api/sessions carry project and continue_prompt; `new --project --project-path --continue-prompt --continue-prompt-file`), page/index.html, app.js, app.css (project line, copy button and toast, listen bench, option sound buttons, Shift+1..9 and b keys, question reading order), page/dashboard.* (project and copy button per card), references/schema.md, references/writing-questions.md (Voice comparisons), SKILL.md (Step 1, compact reviews), README.md, scripts/budget.py (install ceiling 280 KB), tests, plugin.json
+- Design calls: ai-docs/decisions/2026-10-30-listen-bench-and-page-design.md.
+
 ### C-20261029-2 · 2026-10-29 · 0.6.0: contact.py and moving an existing review page onto sets
 - because: user request (turn long pick pages into askwright screens), L-019, L-020, L-021
 - files: scripts/contact.py (new), references/bridging.md (new), references/schema.md (Media items), tests/test_ask.py (ContactTests), LEARNINGS.md, plugin.json, ask.py VERSION

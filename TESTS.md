@@ -8,6 +8,12 @@ Entry shape: `### T-YYYYMMDD-n · date · harness · env · passed/total`, then 
 
 ## Runs
 
+### T-20261030-1 · 2026-10-30 · 0.7.0 repository suites · Windows, Python 3.14, Chrome · passed
+- tests/test_ask.py 95 tests, 94 passed and one existing Windows symlink skip (5 new: project and continue_prompt lint, default prompt with absolute paths, listen layout and clip fields, `new` flags, /api/set and dashboard rows).
+- tests/test_page.py 42 passed (8 new ListenPageTests: one clip at a time, Shift+N and the A/B switch keeping position, seek bar, option sound without picking, compare clips hidden as Left/Right until the pick, project line and clipboard copy with counts, execCommand fallback, dashboard card copy, axe and no horizontal scroll at 1100 and 390 px).
+- check_skills 0 problems; budget: install 247 KB (yellow, ceiling now 280 KB), SKILL.md body about 10.2 KB (yellow), description about 164 tokens.
+- led to: C-20261030-1
+
 ### T-20261026-4 · 2026-10-26 · cross-platform CI follow-up · Windows, Python · local regressions passed
 - PR #19 CI found that Linux and macOS could not reopen the bookmarked port after closing a connection. Ubuntu Python 3.9 also exposed concurrent server-info cleanup.
 - Allow address reuse on Unix only; retain Windows exclusive binding and refusal of simultaneous listeners everywhere. Server-info cleanup tolerates another process already removing the file.

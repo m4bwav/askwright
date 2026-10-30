@@ -130,6 +130,12 @@
     $("#set-title").textContent = d.set.title || "Questions for you";
     $("#set-title").title = d.set.title || "";
     document.title = (d.set.title || "Questions") + " · askwright";
+    const bl = d.set.back_link;
+    if (bl && /^https?:\/\//.test(bl.url || "")) {
+      $("#back-link").href = bl.url;
+      $("#back-link").textContent = bl.label;
+      $("#back-link").hidden = false;
+    }
     if (S.firstLoad) {
       S.firstLoad = false;
       if (submitted()) { S.view = "review"; render(false); return; }

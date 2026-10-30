@@ -15,6 +15,7 @@ A set is one folder holding `questions.json`. The server writes `answers.json`, 
 | `asked_by` | no | Who is asking and when ("the film session, 2026-10-24"). |
 | `product` | no | Agent product name, as text (for example, "Copilot" or "Codex"). Used to filter the shared dashboard. |
 | `session` | no | Session name or id, as text, so separate sessions of one product are distinguishable. |
+| `back_link` | no | `{"url": "http(s)://...", "label": "..."}`: a link in the top bar back to the project's own review page (a pick page, a contact sheet), beside "All sessions". `ask.py new --back-link URL LABEL` sets it. |
 | `media_roots` | no | Folders that hold media, relative to the set folder or absolute. Media outside the set folder and these roots is refused. |
 | `questions` | yes | The questions in the order the page walks them. |
 

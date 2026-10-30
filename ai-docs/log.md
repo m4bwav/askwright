@@ -55,3 +55,5 @@ Append-only. One line per operation: `## [YYYY-MM-DD] op | title` where op is on
 ## [2026-10-25] fix | 0.2.1 (branch fix/page-bars, worktree askwright-bars): header and footer bars were squashed by the study meter's `.bar` rule (L-017 `class-name-collision`); meter renamed, header and footer cleaned up for laptop and phone, regression test added. C-20261025-8.
 ## [2026-10-26] verify | T-20261026-3: integrated upstream study/figure/layout work into PR #19; 86 offline tests with one existing Windows skip and 34 browser tests passed. Three added regressions cover preview privacy, study-attempt preservation and rejected-request connection reuse.
 ## [2026-10-26] verify | T-20261026-4: addressed PR #19 CI failures with Unix port reuse and race-safe server-info cleanup; 88 offline tests with one existing Windows skip, structure and budget checks passed locally.
+
+## [2026-10-29] update | 0.5.0 back_link: a set can link its top bar back to the project's own review page (`new --back-link URL LABEL`); first user SpaceDeckBuilder2's art pick pages. C-20261029-1; tests 88 passed 1 skip, page 34 passed, live serve check of the header link and /api/set.

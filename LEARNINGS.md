@@ -150,6 +150,30 @@ Write an entry the moment a real signal happens: a user correction, the same err
 - Scope: repo:askwright
 - Status: active · helpful 1 · harmful 0 · last_confirmed 2026-10-29
 
+### L-019 · 2026-10-29 · `long-pick-page`: a scrolling page of every candidate is too long to answer
+- Trigger: the owner opened a 26-item pick page and a 30-card review sheet (each item 4 to 8 candidate images, one long scroll), answered one item in six days, and asked for them to become askwright screens
+- Hypothesis: the items were hard to judge; the page length was the blocker, since nothing showed progress or let the owner stop and come back on the same item
+- Rule: when a project already has a long review page, move its items onto sets (references/bridging.md): one item per screen, candidates in one labelled image (scripts/contact.py), sets of about 10, answers synced back to the project's picks file so its tools are unchanged
+- Evidence: 5 sets from 55 items, round trip tested on a copy of the picks file; the owner's request on 2026-10-29
+- Scope: skill
+- Status: active · helpful 1 · harmful 0 · last_confirmed 2026-10-29
+
+### L-020 · 2026-10-29 · `placeholder-guess`: a converted set first shipped "no guess made" on every question
+- Trigger: a bridge script filled the required guess with a placeholder for every item that had no earlier pick
+- Hypothesis: guessing 40 image picks was too costly; one montage per 10 items took three image reads and gave real guesses, and showed two items where every candidate missed the owner's earlier note
+- Rule: look at the candidates and write real low-confidence guesses (a qid -> guess file); put the owner's earlier notes in `hint`; a re-roll that still misses the note gets the "re-render" guess
+- Evidence: 42 guesses from three montages; two re-roll rounds found against the owner's notes
+- Scope: skill
+- Status: active · helpful 1 · harmful 0 · last_confirmed 2026-10-29
+
+### L-021 · 2026-10-29 · `contact-label-overlap`: fixed-size labels collided over narrow, tall candidates
+- Trigger: 26 px labels ("1 (s11)") ran into each other over 80 px wide tower sprites; pixel art at 1x was also too small to judge
+- Hypothesis: none needed; the label width did not depend on the cell
+- Rule: size labels from the cell width and scale pixel art up (3x, nearest) in the contact image; contact.py does both
+- Evidence: test_contact_sheet
+- Scope: skill
+- Status: active · helpful 1 · harmful 0 · last_confirmed 2026-10-29
+
 <!-- Example (delete once you have a real entry):
 ### L-001 · 2026-10-24 · One-line lesson in plain words
 - Trigger: what happened, with dates or counts

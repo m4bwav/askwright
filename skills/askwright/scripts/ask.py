@@ -47,7 +47,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-VERSION = "0.4.0"
+VERSION = "0.5.0"
 PAGE = Path(__file__).resolve().parent / "page"
 KINDS = ("choice", "multi", "compare", "rank", "text", "scale", "confirm")
 MODES = ("decide", "study")
@@ -510,6 +510,11 @@ def lint_set(d, data, probe=True):
     for field in ("product", "session"):
         if field in data and not isinstance(data[field], str):
             E("session-metadata", f"{field} must be text")
+    if "back_link" in data:
+        bl = data["back_link"]
+        if not (isinstance(bl, dict) and isinstance(bl.get("url"), str)
+                and re.match(r"^https?://", bl["url"]) and str(bl.get("label") or "").strip()):
+            E("back-link", 'back_link needs {"url": "http(s)://...", "label": "..."}')
     if data.get("mode", "decide") not in MODES:
         E("mode", 'mode must be "decide" (the default) or "study" (a quiz)')
     study = is_study(data)
@@ -1233,7 +1238,7 @@ def page_set(srv):
     visits = [e for e in events if e.get("type") == "visit"]
     answered = [e for e in events if e.get("type") == "answer"]
     ans = load_answers(d)
-    out = {"ok": True, "set": {k: data.get(k) for k in ("id", "title", "context", "asked_by")},
+    out = {"ok": True, "set": {k: data.get(k) for k in ("id", "title", "context", "asked_by", "back_link")},
            "mode": "study" if is_study(data) else "decide",
            "questions": qs, "answers": ans["answers"], "rev": ans.get("rev", 0), "note": note,
            "last_visit": visits[-1]["t"] if visits else None,
@@ -1599,9 +1604,11 @@ def cmd_new(a):
         return emit({"ok": False, "error": f"{f} already exists"})
     sid = a.id or re.sub(r"[^A-Za-z0-9_.-]+", "-", d.name).strip("-") or "set"
     d.mkdir(parents=True, exist_ok=True)
-    write_json_atomic(f, {"askwright": 1, "id": sid, "title": a.title, "context": "", "asked_by": a.asked_by,
-                          "product": a.product, "session": a.session,
-                          "media_roots": [], "questions": []})
+    data = {"askwright": 1, "id": sid, "title": a.title, "context": "", "asked_by": a.asked_by,
+            "product": a.product, "session": a.session, "media_roots": [], "questions": []}
+    if a.back_link:
+        data["back_link"] = {"url": a.back_link[0], "label": a.back_link[1]}
+    write_json_atomic(f, data)
     register_set(d)
     return emit({"ok": True, "path": str(f.resolve()), "next": "add questions (references/schema.md), then lint"})
 
@@ -1950,6 +1957,8 @@ def main(argv=None):
     s.add_argument("--asked-by", default="")
     s.add_argument("--product", default="")
     s.add_argument("--session", default="")
+    s.add_argument("--back-link", nargs=2, metavar=("URL", "LABEL"),
+                   help="link in the page header back to the project's own review page")
     for name in ("lint", "serve"):
         s = sub.add_parser(name)
         s.add_argument("set")

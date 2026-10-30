@@ -39,7 +39,7 @@ steps 1 and 2 below are for decision sets.
 
 One folder per set, `<project>/ask/<set-id>/` unless the project already keeps review files somewhere (then put
 it beside them). Start it with `ask.py new <folder> --title "<what this round decides>" --product "<your agent product>" --session "<session name or id>" --asked-by "<your role>"`, then add questions.
-Use the actual product and session, never invent them; omit unknown metadata.
+Use the actual product and session, never invent them; omit unknown metadata. `--back-link URL LABEL` links back to a project review page.
 Media stays where it is: list its folders in `media_roots` and refer to files by name. A graph, a force diagram or a
 simple drawing needs no file: a media item `{"figure": {...}, "alt": "..."}` is drawn by ask.py (schema.md, Media).
 

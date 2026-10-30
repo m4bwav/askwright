@@ -925,6 +925,17 @@ class CliTests(unittest.TestCase):
         self.assertEqual((data["id"], data["askwright"]), ("fresh", 1))
         self.assertEqual(run_cli("new", nd, "--title", "Again")[0], 1)
 
+    def test_back_link(self):
+        nd = self.s.tmp / "ask" / "linked"
+        code, d = run_cli("new", nd, "--title", "Linked", "--back-link", "http://127.0.0.1:8765/", "Pick page")
+        self.assertEqual(code, 0, d)
+        data = json.loads((nd / "questions.json").read_text(encoding="utf-8"))
+        self.assertEqual(data["back_link"], {"url": "http://127.0.0.1:8765/", "label": "Pick page"})
+        ok = lambda data: data.update(back_link={"url": "http://127.0.0.1:8765/", "label": "Pick page"})
+        self.assertNotIn("back-link", lint(ok)[0])
+        for bad in ({"url": "javascript:alert(1)", "label": "x"}, {"url": "http://x/"}, "http://x/"):
+            self.assertIn("back-link", lint(lambda data, bad=bad: data.update(back_link=bad))[0])
+
     def test_serve_detach_status_stop(self):
         code, d = run_cli("serve", self.s.dir, "--detach", "--no-probe")
         self.assertEqual(code, 0, d)

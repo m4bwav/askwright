@@ -4,6 +4,11 @@ Every change to [README.md](README.md) and its companions, newest first, each wi
 
 Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (IDs or "user request"), `files:` (file and section), and a sentence on what changed. Cite section headings, not line numbers.
 
+### C-20261029-1 · 2026-10-29 · back_link: a top-bar link back to the project's own review page
+- because: user request (askwright pages opened from a project's pick page should lead back to it)
+- files: ask.py (lint, /api/set, `new --back-link`), page/index.html and app.js (top bar), references/schema.md (The set), SKILL.md (Step 1), tests/test_ask.py (test_back_link), plugin.json 0.5.0
+- A set may carry `back_link: {url, label}`; the page shows it beside "All sessions". The lint accepts only http(s) URLs with a label.
+
 ### C-20261026-4 · 2026-10-26 · Reopen bookmarked ports on Unix and tolerate stop cleanup races
 - because: PR #19 CI on Linux and macOS
 - files: ask.py (Server binding and server-info cleanup), tests/test_ask.py (exclusive bind and immediate restart)

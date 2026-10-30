@@ -142,6 +142,14 @@ Write an entry the moment a real signal happens: a user correction, the same err
 - Scope: skill
 - Status: active · helpful 1 · harmful 0 · last_confirmed 2026-10-25
 
+### L-018 · 2026-10-29 · `skill-body-budget`: a two-line SKILL.md addition failed CI on every OS
+- Trigger: PR #20 failed the size budget on all six jobs; two lines on `--back-link` put the SKILL.md body at 10279 bytes (red). Python 3.9 on ubuntu-latest also failed: the image is Ubuntu 26.04 and has no 3.9 build
+- Hypothesis: the tests were broken; the body is already at the budget edge, and the runner image moved
+- Rule: run `python scripts/budget.py` before pushing a SKILL.md change and put detail in references/schema.md, not SKILL.md. Python 3.9 runs on ubuntu-24.04 (matrix exclude/include, as pixelwright does)
+- Evidence: budget 10164 bytes (yellow) after a one-line version; CI 7/7 on PR #20
+- Scope: repo:askwright
+- Status: active · helpful 1 · harmful 0 · last_confirmed 2026-10-29
+
 <!-- Example (delete once you have a real entry):
 ### L-001 · 2026-10-24 · One-line lesson in plain words
 - Trigger: what happened, with dates or counts

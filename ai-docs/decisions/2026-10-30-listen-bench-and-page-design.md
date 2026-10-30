@@ -26,7 +26,9 @@ clear what each question asks and why. Calls made while building, each small eno
 - D8 Question page reading order: context line (project · set title), the question title as a coloured eyebrow
   with "hard to undo" as a tag, the question as the heading, "Why this matters" in a tinted block, "What to look
   for" (or "What to listen for" on audio questions), then background (moved below the why: it supports the
-  question instead of preceding it), media, options with consequences, guess, note.
+  question instead of preceding it), media, options with consequences, guess, note. On a phone the context line
+  is hidden (the top bar already shows project and set) and the blocks sit closer, so the answers stay reachable:
+  the first CI run put the answer box 18 px past the gallery test's limit on Linux fonts.
 - D9 Top bar: a small uppercase project line above the set title; "Copy continue prompt" shortens to "Copy prompt"
   on a phone so the bar does not overflow.
 - D10 Dashboard cards: project eyebrow, title, meta, counts, then "Open questions" and "Copy continue prompt"; the

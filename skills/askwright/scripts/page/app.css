@@ -287,7 +287,12 @@ dialog::backdrop { background: rgb(0 0 0 / .5); }
 
 @media (max-width: 40rem) {
   .check > div { grid-template-columns: 1fr; }
-  h1 { font-size: 1.35rem; }
+  h1 { font-size: 1.35rem; margin-bottom: .6rem; }
+  .why, .look { margin: .6rem 0; }
+  .why { padding: .5rem .7rem; }
+  .context-line { display: none; }
+  .onepager { margin-bottom: .75rem; }
+  .media { margin: .75rem 0; }
   .top .bar { grid-template-areas: "project project" "title title" "progress links"; column-gap: .5rem; padding-top: .35rem; padding-bottom: 0; }
   .top-links { justify-content: flex-end; }
   .progress .counts, .link kbd, #btn-keys, .link .wide { display: none; }

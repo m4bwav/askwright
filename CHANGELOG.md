@@ -4,6 +4,10 @@ Every change to [README.md](README.md) and its companions, newest first, each wi
 
 Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (IDs or "user request"), `files:` (file and section), and a sentence on what changed. Cite section headings, not line numbers.
 
+### C-20261031-3 · 2026-10-31 · 0.11.0: sortable dashboard columns, newest first by default
+- because: user request ("Make this columns sortable and default to the last updated desc"), T-20261031-3
+- files: page/dashboard.js (Title, Project, Last updated and Action headers are sort buttons with aria-sort and an arrow; default Last updated descending; a new column starts newest-first for time, A to Z for text, open before done for Action; ties fall back to title; rows without a value stay last; the choice is remembered in localStorage when available), page/dashboard.css (sort buttons; on phones the header becomes a sort bar without Action), page/dashboard.html (Unavailable sessions count no longer spaced as "( 1 )"), tests/test_page.py (test_columns_sort_newest_first_by_default), plugin.json, ask.py VERSION
+
 ### C-20261031-2 · 2026-10-31 · 0.10.1: dark-mode visual tests; one dark palette; dashboard plurals
 - because: continue prompt (dark-mode screenshots, wider polish), T-20261031-2
 - files: tests/test_visual.py (test_dark_mode_pages_are_dark_and_readable: question, dashboard and project pages at desktop and phone in dark mode, body must be dark and visible text at least 4.5:1), page/dashboard.css (the phone Last updated cell was 2.0:1 in dark mode, found by the new test), page/app.css (question page dark palette moved from neutral grey to the dashboard's blue-grey so every page matches), page/dashboard.js (summary says "1 question needs ... 1 session"), TESTS.md, plugin.json, ask.py VERSION

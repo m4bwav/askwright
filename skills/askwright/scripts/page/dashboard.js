@@ -13,6 +13,13 @@ let opening = false;
 let changing = false;
 let view = "inbox";
 const expanded = new Set();
+// Column sort, newest first by default; remembered per browser when storage allows.
+const columns = [["title", "Title"], ["project", "Project"], ["updated", "Last updated"], ["action", "Action"]];
+let sort = {key: "updated", dir: "desc"};
+try {
+  const saved = JSON.parse(localStorage.getItem("askwright-sort") || "null");
+  if (saved && columns.some(([key]) => key === saved.key) && ["asc", "desc"].includes(saved.dir)) sort = saved;
+} catch (e) { /* storage unavailable: keep the default */ }
 const previews = new Set();
 const snoozeOptions = [[3600, "1 hour"], [14400, "4 hours"], [86400, "1 day"],
   [259200, "3 days"], [604800, "1 week"]];
@@ -54,12 +61,24 @@ function render() {
     [row.title, row.path, row.context, row.product, row.session, row.asked_by, row.error,
       row.project && row.project.name, row.project && row.project.path]
       .join(" ").toLowerCase().includes(term));
+  visible.sort(compare);
   sessions.replaceChildren();
   const table = node("table", "", "sessions");
   const head = node("tr", "");
-  for (const label of ["Title", "Project", "Last updated", "Action"]) {
-    const th = node("th", label);
+  for (const [key, label] of columns) {
+    const th = node("th", "");
     th.scope = "col";
+    const on = sort.key === key;
+    th.setAttribute("aria-sort", on ? (sort.dir === "asc" ? "ascending" : "descending") : "none");
+    const button = node("button", label, "sort");
+    button.type = "button";
+    button.dataset.focus = `sort:${key}`;
+    button.dataset.sort = key;
+    const arrow = node("span", on ? (sort.dir === "asc" ? "▲" : "▼") : "", "arrow");
+    arrow.setAttribute("aria-hidden", "true");
+    button.append(arrow);
+    button.addEventListener("click", () => setSort(key));
+    th.append(button);
     head.append(th);
   }
   const thead = node("thead", "");
@@ -396,4 +415,26 @@ function needs(n) {
 
 function plural(n, word) {
   return `${n} ${word}${n === 1 ? "" : "s"}`;
+}
+
+function setSort(key) {
+  // A new column starts in its natural order: newest first for times, A to Z for text, open before done.
+  sort = sort.key === key ? {key, dir: sort.dir === "asc" ? "desc" : "asc"} : {key, dir: key === "updated" ? "desc" : "asc"};
+  try { localStorage.setItem("askwright-sort", JSON.stringify(sort)); } catch (e) { /* not remembered */ }
+  render();
+}
+
+function sortValue(row, key) {
+  if (key === "title") return (row.title || "").toLowerCase();
+  if (key === "project") return row.project ? row.project.name.toLowerCase() : null;
+  if (key === "updated") return row.error ? null : (Date.parse(row.last_worked) || null);
+  return row.error ? null : (isDone(row) ? 1 : 0);
+}
+
+function compare(a, b) {
+  const x = sortValue(a, sort.key), y = sortValue(b, sort.key);
+  // Rows without a value (no project, unavailable) stay at the bottom in both directions.
+  if (x === null || y === null) return x === y ? 0 : x === null ? 1 : -1;
+  const order = x < y ? -1 : x > y ? 1 : 0;
+  return (sort.dir === "asc" ? order : -order) || (a.title || "").localeCompare(b.title || "");
 }

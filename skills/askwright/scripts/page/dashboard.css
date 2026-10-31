@@ -27,6 +27,10 @@ table.sessions td { padding: 6px 14px; vertical-align: middle; border-top: 1px s
 table.sessions tbody:first-of-type tr.row td { border-top: 0; }
 tr.row:hover td { background: #f0f4f8; }
 td.title { width: 52%; }
+.sort { all: unset; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; text-transform: inherit; letter-spacing: inherit; }
+.sort:hover { text-decoration: underline; }
+.sort:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.sort .arrow { font-size: .7rem; }
 td.updated, td.action { white-space: nowrap; }
 td.action { text-align: right; }
 td.action button { min-height: 36px; padding: 6px 14px; }
@@ -77,7 +81,10 @@ section h2 { font-size: 1.15rem; margin: 28px 0 12px; }
 .sets { display: grid; gap: 14px; }
 .set-card h3 { margin: 0 0 8px; font-size: 1.15rem; }
 @media (max-width: 640px) {
-  table.sessions thead { display: none; }
+  table.sessions thead { display: block; border-bottom: 1px solid #e3e9ef; }
+  table.sessions thead tr { display: flex; flex-wrap: wrap; gap: 0 4px; padding: 4px 0; }
+  table.sessions thead th { border: 0; padding: 8px 10px; }
+  table.sessions thead th:last-child { display: none; }
   table.sessions tr.row { display: grid; grid-template-columns: 1fr auto; }
   table.sessions tr.row td { border-top: 0; padding: 4px 12px; }
   table.sessions tbody { display: block; border-top: 1px solid #e3e9ef; padding: 6px 0; }

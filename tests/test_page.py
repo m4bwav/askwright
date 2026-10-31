@@ -283,6 +283,10 @@ class DashboardPageTests(PageCase):
         p = self.open()
         (self.dir / "questions.json").unlink()
         p.locator("#refresh").click()
+        p.wait_for_selector("#show-broken")  # unavailable sessions are hidden until asked for
+        p.wait_for_function("() => document.querySelector('#broken-count').textContent === '1'")
+        self.assertEqual(p.locator(".session-error").count(), 0)
+        p.check("#show-broken")
         p.wait_for_selector(".session-error")
         self.assertIn("no questions.json", p.locator(".session-error").inner_text())
         p.route("**/api/open", lambda route: route.fulfill(

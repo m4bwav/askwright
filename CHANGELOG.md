@@ -4,6 +4,11 @@ Every change to [README.md](README.md) and its companions, newest first, each wi
 
 Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (IDs or "user request"), `files:` (file and section), and a sentence on what changed. Cite section headings, not line numbers.
 
+### C-20261030-5 · 2026-10-30 · 0.9.1: the dashboard hides unavailable sessions by default
+- because: user request ("hide Unavailable Sessions by default")
+- files: page/dashboard.html and dashboard.js (an "Unavailable sessions (N)" checkbox, off by default, shown only when there are some), tests/test_page.py (test_empty_missing_and_failed_requests), README.md, plugin.json, ask.py VERSION
+- Sessions whose set cannot be read (moved, deleted or broken questions.json) no longer fill the lists; they stay registered and appear when the box is ticked.
+
 ### C-20261030-4 · 2026-10-30 · 0.9.0: click a picture, clip or sound to pick its option
 - because: user request ("when I have to choose between different images/videos/sounds I can click on the picture or resource as a means of selecting left, right or whatever"), T-20261030-3
 - files: page/app.js (mediaOption, sidePicks, pickFromMedia, pickable, markPicks; question media, gallery slides and listen-bench rows), page/app.css (pickable outline, Pick buttons, two to four pictures side by side), references/schema.md (Media items), tests/test_page.py (ClickMediaTests), plugin.json, ask.py VERSION

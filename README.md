@@ -117,6 +117,7 @@ by product and search by title, folder or agent. Counts refresh every five secon
 Notes without a pick, "not sure" and answers to changed questions still count as needing attention.
 Conditional questions waiting on another answer are counted separately.
 
+Unavailable sessions (a set whose folder moved or was deleted) are hidden; a checkbox with their count shows them.
 A Projects strip above the lists links each project's page. Each card links its project, shows when it was last
 worked on, and has "Open questions" and "Copy continue prompt" buttons.
 Each session card has an expandable preview of its next five questions needing attention, in question order.

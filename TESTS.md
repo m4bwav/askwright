@@ -12,6 +12,10 @@ From the repository root: `python tests/check_skills.py`, `python tests/test_ask
 
 ## Runs
 
+### T-20261031-3 · 2026-10-31 · 0.11.0 sortable columns · Windows, Python 3.14, Chrome · passed
+- tests/test_page.py DashboardPageTests 8 passed (new test_columns_sort_newest_first_by_default: default order, toggling, title sort, remembered after reload, phone sort bar without overflow); full suites in the PR run; dashboard screenshots at desktop, phone and dark inspected by eye.
+- led to: C-20261031-3
+
 ### T-20261031-2 · 2026-10-31 · 0.10.1 dark mode · Windows, Python 3.14, Chrome · passed
 - tests/test_visual.py 5 passed (new dark-mode test failed first on the phone dashboard's Last updated cell at 2.02:1, fixed); dark screenshots of question, dashboard and project pages inspected by eye.
 - led to: C-20261031-2

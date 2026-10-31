@@ -195,6 +195,32 @@ class DashboardPageTests(PageCase):
         self.assertTrue(p.evaluate("document.documentElement.scrollWidth <= window.innerWidth"))
         self.assertEqual(self.errors, [])
 
+    def test_columns_sort_newest_first_by_default(self):
+        for folder, when in ((self.dir, "2026-01-01T00:00:00Z"), (self.other, "2026-06-01T00:00:00Z")):
+            _, data = ask.load_set(folder)
+            data["updated"] = when
+            for q in data["questions"]:
+                q["updated"] = when
+            ask.write_json_atomic(folder / "questions.json", data)
+        p = self.open()
+        names = lambda: p.locator("#sessions .name").all_text_contents()
+        self.assertEqual(names(), ["Site review", "Film review"])
+        self.assertEqual(p.locator("th[aria-sort=descending] button").get_attribute("data-sort"), "updated")
+        p.click("[data-sort=updated]")
+        self.assertEqual(names(), ["Film review", "Site review"])
+        p.click("[data-sort=title]")
+        self.assertEqual(names(), ["Film review", "Site review"])
+        p.click("[data-sort=title]")
+        self.assertEqual(names(), ["Site review", "Film review"])
+        self.assertEqual(p.locator("th[aria-sort=descending] button").get_attribute("data-sort"), "title")
+        p.reload()
+        p.wait_for_selector("#sessions tbody")
+        self.assertEqual(names(), ["Site review", "Film review"], "sort is remembered")
+        p.set_viewport_size({"width": 390, "height": 844})
+        self.assertTrue(p.locator("[data-sort=updated]").is_visible(), "sort bar on a phone")
+        self.assertTrue(p.evaluate("document.documentElement.scrollWidth <= window.innerWidth"))
+        self.assertEqual(self.errors, [])
+
     def test_done_set_quick_action_copies_prompt(self):
         self.ctx.grant_permissions(["clipboard-read", "clipboard-write"], origin=self.url.rstrip("/"))
         p = self.open()

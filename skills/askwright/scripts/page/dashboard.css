@@ -43,7 +43,6 @@ article h2 { font-size: 1.25rem; margin: 0 0 10px; }
 article p { margin: 8px 0; line-height: 1.5; }
 .meta, .path { color: #46586e; font-size: .9rem; }
 .count { font-weight: 700; color: #244b79; }
-.project { margin: 0 0 4px; font-size: .8rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #46586e; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); max-width: calc(100% - 32px); padding: 12px 18px; border-radius: 8px; background: #182536; color: #fff; font-weight: 600; box-shadow: 0 4px 14px #0004; }
 .open { background: #244b79; color: #fff; border-color: #244b79; }
@@ -62,8 +61,6 @@ summary { cursor: pointer; min-height: 44px; padding: 10px 0; font-weight: 600; 
 .snooze-menu { position: absolute; z-index: 1; min-width: 150px; padding: 6px; display: grid; gap: 4px; background: #fff; border: 1px solid #65768b; border-radius: 6px; box-shadow: 0 4px 12px #0003; }
 .snooze-menu button { text-align: left; }
 a { color: #1d4f8c; }
-.project a { color: inherit; text-decoration-thickness: 1px; text-underline-offset: 3px; }
-.project a:hover { color: #1d4f8c; }
 .when time { border-bottom: 1px dotted currentColor; }
 .projects { padding: 4px 0 20px; }
 .projects h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; color: #46586e; margin: 0 0 8px; }
@@ -109,8 +106,8 @@ section h2 { font-size: 1.15rem; margin: 28px 0 12px; }
   .toggle, .toggle:hover { background: none; color: #e4ebf3; }
   .badge { background: #26446b; color: #cfe1ff; }
   .badge.done { background: #1f4a2c; color: #bfeccb; }
-  .brand, .meta, .path, footer, .project, .projects h2, .facts dt { color: #b4c4d8; }
-  a, .project a:hover { color: #a6caff; }
+  .brand, .meta, .path, footer, .projects h2, .facts dt { color: #b4c4d8; }
+  a { color: #a6caff; }
   .projects li { background: #1d2939; border-color: #65768b; }
   .places code { background: #2a3749; }
   .toast { background: #e4ebf3; color: #121923; }

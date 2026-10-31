@@ -1,6 +1,6 @@
 {
   "name": "askwright",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "An evergreen skill for the moments an AI agent needs a person to decide things: the agent writes its questions as data, ask.py lints them (real questions, a reason, what to look for, options that name actions, a guess with a confidence) and serves them on 127.0.0.1 one question per screen, with video, audio and images, side-by-side takes on random sides, the agent's guess shown or hidden by confidence, notes with pasted screenshots and timecodes, a resume point and a check-answers screen. Study mode turns a set into a quiz: the server keeps the answer key, scores on submit, and shows a review with a score per topic and why each option is right or wrong; written answers wait for the agent's grading. Answers land in the set folder and ask.py reads them back, never treating silence or a bare note as a choice. Standard-library Python, no network.",
   "author": {
     "name": "Mark Rogers",

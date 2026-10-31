@@ -74,6 +74,12 @@ def copy_set(src_dir):
     return tmp
 
 
+def more_menu(p):
+    """Under 70rem the secondary top-bar links sit in the More menu: open it when it is shown."""
+    if p.locator("#more").is_visible():
+        p.click("#more > summary")
+
+
 class PageCase(unittest.TestCase):
     SET = FIX / "good"
 
@@ -268,6 +274,7 @@ class DashboardPageTests(PageCase):
         p.wait_for_selector("[data-q]", timeout=60000)
         self.assertTrue(ask.server_info(self.dir)["alive"])
         self.assertEqual(self.errors, [])
+        more_menu(p)
         p.get_by_role("link", name="All sessions", exact=True).click()
         p.wait_for_selector("article")
         self.assertEqual(p.locator("article").count(), 2)
@@ -516,7 +523,7 @@ class FixturePageTests(PageCase):
         p = self.open()
         for width in (1100, 390):
             p.set_viewport_size({"width": width, "height": 800})
-            p.wait_for_function("w => document.querySelector('#more').hidden === (w > 896)", arg=width)  # 56rem
+            p.wait_for_function("w => document.querySelector('#more').hidden === (w > 1120)", arg=width)  # 70rem
             got = p.evaluate("""() => [...document.querySelectorAll('.top .bar, .bottom .bar')].map(b => ({
                 h: b.getBoundingClientRect().height, clipped: b.scrollHeight > b.clientHeight + 1,
                 kids: [...b.querySelectorAll('button:not([hidden])')].filter(k => getComputedStyle(k).display !== 'none' && k.checkVisibility())
@@ -737,6 +744,7 @@ class ListenPageTests(PageCase):
         self.assertIn("Test reel · Pick the takes", p.locator(".context-line").inner_text())
         p.click(".opt[data-oid='t5']")
         self.wait_saved()
+        more_menu(p)
         p.get_by_role("button", name="Copy continue prompt").click()
         p.wait_for_selector("#toast:not([hidden])")
         text = p.evaluate("() => navigator.clipboard.readText()")
@@ -748,6 +756,7 @@ class ListenPageTests(PageCase):
         p = self.open()
         p.evaluate("() => { Object.defineProperty(navigator, 'clipboard', {value: {writeText: () => Promise.reject(new Error('no'))}});"
                    " window.__copied = null; document.execCommand = (c) => { window.__copied = document.activeElement.value; return true; }; }")
+        more_menu(p)
         p.get_by_role("button", name="Copy continue prompt").click()
         p.wait_for_selector("#toast:not([hidden])")
         self.assertIn("Continue Test reel", p.evaluate("() => window.__copied"))

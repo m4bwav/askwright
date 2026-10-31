@@ -28,7 +28,7 @@ except ImportError:  # pragma: no cover
 
 FIX = ROOT / "tests" / "fixtures"
 SHOTS = Path(os.environ.get("ASKW_SHOTS") or ROOT / "tests" / "screenshots")
-WIDTHS = {"desktop": (1280, 860), "laptop": (1000, 760), "phone": (390, 844)}
+WIDTHS = {"desktop": (1280, 860), "laptop": (1000, 760), "phone": (390, 844), "small": (340, 700)}
 LONG = "Director 0.14.0 wave limit and dual switch playtest review for the Workshop build"
 _pw = _browser = _why = None
 _home = _env = None
@@ -136,6 +136,8 @@ class VisualCase(unittest.TestCase):
                 p = self.page(name)
                 p.goto(self.url)
                 p.wait_for_selector("[data-q]")
+                p.click(".opt >> nth=0")  # one answer brings the Show answered chip
+                p.wait_for_selector("#save-status:has-text('Saved')")
                 got = p.evaluate(TOPBAR)
                 self.shot(p, "topbar-" + name, clip_top=True)
                 self.shot(p, "question-" + name)
@@ -146,7 +148,7 @@ class VisualCase(unittest.TestCase):
                 self.assertEqual(len(got["chipHeights"]), 1, "chips of different heights: %s" % got)
                 self.assertLessEqual(got["rightmost"], got["vw"], got)
                 self.assertFalse(got["pageScrollX"], got)
-                if name != "phone":
+                if name in ("desktop", "laptop"):
                     self.assertLess(got["height"], 70, "the top bar is more than one row: %s" % got)
 
     def test_more_menu_holds_secondary_links_on_phone(self):

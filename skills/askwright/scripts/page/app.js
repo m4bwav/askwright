@@ -1032,15 +1032,22 @@
   $("#btn-keys").addEventListener("click", () => $("#keys").showModal());
   $("#btn-copy").addEventListener("click", () => { $("#more").open = false; copyPrompt(); });
   // Narrow screens: the secondary links move into the More menu (same elements, so ids and handlers stay).
-  const narrow = window.matchMedia("(max-width: 56rem)");
+  // On a phone the Show answered toggle goes into the menu as well.
+  const narrow = window.matchMedia("(max-width: 70rem)");
+  const phone = window.matchMedia("(max-width: 40rem)");
   const placeLinks = () => {
     const nav = $("#top-links"), menu = $("#more-menu"), more = $("#more");
-    for (const el of document.querySelectorAll(".chip.secondary")) (narrow.matches ? menu : nav).insertBefore(el, narrow.matches ? null : more);
+    for (const el of document.querySelectorAll(".chip.secondary, .chip.phone-secondary")) {
+      const inMenu = el.classList.contains("secondary") ? narrow.matches : phone.matches;
+      if (inMenu) menu.append(el);
+      else nav.insertBefore(el, el.id === "btn-answered" ? $("#btn-overview") : more);
+    }
     more.hidden = !narrow.matches;
     if (!narrow.matches) more.open = false;
   };
   placeLinks();
   narrow.addEventListener("change", placeLinks);
+  phone.addEventListener("change", placeLinks);
   document.addEventListener("click", (e) => { if (!$("#more").contains(e.target)) $("#more").open = false; });
   $("#keys-close").addEventListener("click", () => $("#keys").close());
 

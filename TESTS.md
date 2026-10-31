@@ -12,6 +12,10 @@ From the repository root: `python tests/check_skills.py`, `python tests/test_ask
 
 ## Runs
 
+### T-20261031-8 · 2026-10-31 · 0.15.1 tab icons · Windows, Python 3.14, Chrome · passed
+- tests/test_ask.py 101 passed (1 Windows skip; new test_favicons_served_and_linked), tests/test_visual.py 6 passed, check_skills 0 problems, budget yellow (295 KB). Icons rendered at 64 and 16 px and inspected.
+- led to: C-20261031-9
+
 ### T-20261031-7 · 2026-10-31 · 0.15.0 dashboard Projects tab · Windows, Python 3.14, Chrome · passed
 - tests/test_visual.py 6 passed (Projects tab hidden by default, then shown with its count, no horizontal scroll, dark contrast; screenshots inspected: the phone table first lost its column meaning, fixed with compact rows), tests/test_page.py + tests/test_ask.py 148 passed (1 Windows skip), check_skills 0 problems (after converting a CRLF write of dashboard.html back to LF), budget yellow unchanged.
 

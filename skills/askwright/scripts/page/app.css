@@ -239,7 +239,13 @@ legend { font-weight: 700; font-size: 1.05rem; padding: 0; margin-bottom: .5rem;
 .opt:has(input:checked) { background: var(--picked); border-color: var(--accent); }
 .opt:has(input:focus-visible) { outline: 3px solid var(--focus); outline-offset: 2px; }
 .opt input { width: 1.25rem; height: 1.25rem; margin: .15rem 0 0; flex: none; accent-color: var(--accent); }
-.opt .key { flex: none; color: var(--muted); font-size: .85rem; min-width: 1.2rem; }
+.opt .key {
+  flex: none; min-width: 1.4rem; height: 1.4rem; margin-top: .05rem; display: inline-grid; place-items: center;
+  border: 1px solid var(--border); border-radius: 4px; color: var(--muted); font-size: .75rem; line-height: 1;
+}
+.opt:has(input:checked) .key { border-color: var(--accent); color: var(--accent); }
+@media (hover: hover) { fieldset:not(:disabled) .opt:not(:has(input:checked)):hover { border-color: var(--muted); } }
+@media (hover: none) and (pointer: coarse) { .opt .key { display: none; } }
 .opt .txt { display: grid; gap: .1rem; }
 .opt .label { font-weight: 600; }
 .opt .cons, .opt .side { color: var(--muted); font-size: .95rem; }

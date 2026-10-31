@@ -134,6 +134,7 @@
     document.title = (d.set.title || "Questions") + " · askwright";
     S.project = d.project || null;
     S.continuePrompt = d.continue_prompt || "";
+    S.nextPrompt = d.next_prompt || "";
     const pl = $("#project-line");
     pl.hidden = !S.project;
     if (S.project) {
@@ -364,9 +365,13 @@
     clearTimeout(S.toastTimer);
     S.toastTimer = setTimeout(() => { t.hidden = true; }, 4000);
   }
+  // The next-session prompt's Execute line goes last, on its own line, ready to paste into a new session.
+  function nextLine(path) {
+    return path ? "\nThen carry on with the next-session prompt:\nExecute " + path : "";
+  }
   async function copyPrompt() {
     await flush();
-    const text = (S.continuePrompt || "") + (S.study ? "" : "\n" + statusLine());
+    const text = (S.continuePrompt || "") + (S.study ? "" : "\n" + statusLine()) + nextLine(S.nextPrompt);
     const ok = await copyText(text);
     toast(ok ? "Copied the continue prompt. Paste it into your agent's chat." : "Could not copy; your browser blocked the clipboard.", !ok);
   }

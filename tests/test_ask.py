@@ -1330,6 +1330,24 @@ class ProjectAndListenTests(unittest.TestCase):
         finally:
             s.cleanup()
 
+    def test_next_prompt_found_in_project_folder(self):
+        with tempfile.TemporaryDirectory() as proj:
+            s = TempSet(lambda data: data.update(project={"name": "Reel", "path": proj}))
+            try:
+                d, data = ask.load_set(s.dir)
+                self.assertEqual(ask.next_prompt_path(d, data), "")
+                plans = Path(proj) / "ai-docs" / "plans"
+                plans.mkdir(parents=True)
+                old = plans / "2026-01-01-reel-continue-prompt.md"
+                new = plans / "2026-02-01-cut-next-session-prompt.md"
+                old.write_text("old", encoding="utf-8")
+                new.write_text("new", encoding="utf-8")
+                os.utime(old, (1_000_000, 1_000_000))
+                (plans / "notes.md").write_text("not a prompt", encoding="utf-8")
+                self.assertEqual(ask.next_prompt_path(d, data), new.resolve().as_posix())
+            finally:
+                s.cleanup()
+
     def test_listen_layout_and_clip_fields(self):
         def bench(q):
             q.update(media=[{"src": "tone.wav", "label": "Voice A", "text": "Hello there."},

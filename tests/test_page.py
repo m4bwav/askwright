@@ -862,6 +862,10 @@ class ListenPageTests(PageCase):
 
     def test_project_label_and_copy_prompt(self):
         self.ctx.grant_permissions(["clipboard-read", "clipboard-write"], origin=self.url.rstrip("/"))
+        plans = self.dir / "ai-docs" / "plans"
+        plans.mkdir(parents=True)
+        nxt = plans / "2026-10-31-reel-continue-prompt.md"
+        nxt.write_text("Carry on.", encoding="utf-8")
         p = self.open()
         self.assertEqual(p.locator("#project-line").inner_text().lower(), "project: test reel")
         self.assertIn("Test reel · Pick the takes", p.locator(".context-line").inner_text())
@@ -874,6 +878,7 @@ class ListenPageTests(PageCase):
         self.assertIn("Continue Test reel (project folder: /work/reel)", text)
         self.assertIn('read "%s"' % self.dir.resolve(), text)
         self.assertIn("1 answered", text)
+        self.assertTrue(text.endswith("\nExecute " + nxt.resolve().as_posix()), text[-200:])
 
     def test_copy_falls_back_without_clipboard_api(self):
         p = self.open()

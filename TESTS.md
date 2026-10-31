@@ -12,6 +12,10 @@ From the repository root: `python tests/check_skills.py`, `python tests/test_ask
 
 ## Runs
 
+### T-20261031-4 · 2026-10-31 · 0.12.0 side-by-side image halves · Windows, Python 3.14, Chrome · passed
+- tests/test_page.py 49 passed (new test_click_half_of_side_by_side_image_picks_that_side clicks at 80% then 20% of the width), tests/test_ask.py 99 passed (1 Windows skip), tests/test_visual.py 5 passed.
+- led to: C-20261031-4
+
 ### T-20261031-3 · 2026-10-31 · 0.11.0 sortable columns · Windows, Python 3.14, Chrome · passed
 - tests/test_page.py DashboardPageTests 8 passed (new test_columns_sort_newest_first_by_default: default order, toggling, title sort, remembered after reload, phone sort bar without overflow); full suites in the PR run; dashboard screenshots at desktop, phone and dark inspected by eye.
 - led to: C-20261031-3

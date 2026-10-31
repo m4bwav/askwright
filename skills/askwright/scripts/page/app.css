@@ -211,6 +211,12 @@ figcaption { color: var(--muted); font-size: .9rem; margin-top: .25rem; }
 .pickable { text-align: center; }
 .pickable img { margin: 0 auto; }
 .side-picks { display: flex; justify-content: space-between; gap: .75rem; }
+/* A side-by-side picture: the half under the pointer gets a faint accent wash. */
+.side-pickable { position: relative; width: fit-content; max-width: 100%; }
+.side-pickable[data-hover]::after { content: ""; position: absolute; top: 0; bottom: 0; width: 50%; pointer-events: none;
+  background: color-mix(in srgb, var(--accent) 14%, transparent); border: 2px solid var(--accent); border-radius: 6px; }
+.side-pickable[data-hover="left"]::after { left: 0; }
+.side-pickable[data-hover="right"]::after { right: 0; }
 .bench-body .media-pick { align-self: flex-start; }
 .opt-sound { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; margin-top: .25rem; }
 @media (max-width: 40rem) { .bench-row { grid-template-columns: 3.25rem minmax(0, 1fr); } .bench-n { display: none; } }

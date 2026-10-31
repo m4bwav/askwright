@@ -71,3 +71,4 @@ Append-only. One line per operation: `## [YYYY-MM-DD] op | title` where op is on
 ## [2026-10-31] update | 0.10.0: dashboard sessions as a table (Title, Project, Last updated, Action) with expandable rows holding the old card contents; done sets get Copy prompt as the quick action; the finish screen has Copy prompt to continue (owner request). C-20261031-1, T-20261031-1.
 ## [2026-10-31] update | 0.10.1: dark-mode visual test with a contrast check, one dark palette, dashboard plurals. C-20261031-2, T-20261031-2.
 ## [2026-10-31] update | 0.11.0: sortable dashboard columns, Last updated descending by default (owner request); tagged v0.11.0. C-20261031-3, T-20261031-3.
+## [2026-10-31] update | 0.12.0: clicking the left or right half of a single side-by-side image picks that take, with a hover wash on the half (owner request). C-20261031-4, T-20261031-4.

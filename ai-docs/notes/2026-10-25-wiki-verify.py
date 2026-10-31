@@ -19,6 +19,9 @@ import subprocess
 import sys
 import tempfile
 import time
+
+# Keep the sets this script serves off the real dashboard registry (they leaked into ~/.askwright before).
+os.environ.setdefault("ASKWRIGHT_HOME", tempfile.mkdtemp(prefix="askw-verify-home-"))
 import urllib.error
 import urllib.request
 from pathlib import Path

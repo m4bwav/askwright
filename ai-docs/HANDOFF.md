@@ -1,6 +1,8 @@
 # Handoff
 
 ## Current state
+2026-10-31 (visual and projects session 5): 0.14.0. Owner rule: every set has a project, even a made-up name; sets from one continue-prompt chain share it; a chain across projects gets an umbrella project (SKILL.md Step 1; `ask.py new` warns without `--project`). Overview, check-your-answers and study review screens polished and covered by test_visual.py (light/dark, desktop/phone). Still next: the owner's real projects with `ask.py project` (and give existing projectless sets a project), dashboard filters polish. SKILL.md body 10,134 bytes (yellow, ceiling 10,240): trim before adding text. Install size 289 KB near the 300 KB ceiling (C-20261031-1 split proposal).
+
 2026-10-31 (owner request, visual and projects session 4): 0.13.0 (PR #32, tagged v0.13.0). Copy continue prompt now ends with `Execute <absolute path>` of the newest `*continue-prompt*.md` / `*next-session-prompt*.md` found in ai-docs/plans/, plans/ or the folder itself (project path, project dirs, set folder and three parents), served as `next_prompt`. Option numbers became key badges. Dashboard restarted from main; restart running question pages to get it. Still next: wider polish of the overview and study review screens, the owner's real projects with `ask.py project`. Install size near the 300 KB ceiling (C-20261031-1 split proposal).
 
 2026-10-31 (owner request): 0.12.0 a single side-by-side image (`sides` set, one image) picks the left or right take by the half clicked; Pick buttons kept. C-20261031-4, T-20261031-4. Restart running question pages to get it.

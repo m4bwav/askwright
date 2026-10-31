@@ -47,7 +47,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-VERSION = "0.13.0"
+VERSION = "0.14.0"
 PAGE = Path(__file__).resolve().parent / "page"
 KINDS = ("choice", "multi", "compare", "rank", "text", "scale", "confirm")
 MODES = ("decide", "study")
@@ -1867,7 +1867,10 @@ def cmd_new(a):
         data["continue_prompt"] = a.continue_prompt
     write_json_atomic(f, data)
     register_set(d)
-    return emit({"ok": True, "path": str(f.resolve()), "next": "add questions (references/schema.md), then lint"})
+    out = {"ok": True, "path": str(f.resolve()), "next": "add questions (references/schema.md), then lint"}
+    if not a.project:  # every set belongs to a project, even a name made up on the spot
+        out["warning"] = "no --project: give every set a project (reuse the name of related sets; make one up if needed)"
+    return emit(out)
 
 
 def detach(a):

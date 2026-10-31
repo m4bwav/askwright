@@ -285,11 +285,16 @@ async function copyText(text) {
   return ok;
 }
 
+// The next-session prompt's Execute line goes last, on its own line, ready to paste into a new session.
+function nextLine(path) {
+  return path ? `\nThen carry on with the next-session prompt:\nExecute ${path}` : "";
+}
+
 async function copyPrompt(row) {
   const counts = `Status when copied (${new Date().toLocaleString()}): ${row.answered} answered, ${row.unsure} not sure, ` +
     `${row.note_only} note only, ${Math.max(0, row.pending - row.unsure - row.note_only)} not answered or changed.`;
   const ok = await copyText(`${row.continue_prompt || ""}
-${counts}`);
+${counts}${nextLine(row.next_prompt)}`);
   const status = document.querySelector("#action-status");
   status.textContent = ok ? `Copied the continue prompt for ${row.title}. Paste it into your agent's chat.` :
     "Could not copy; your browser blocked the clipboard.";

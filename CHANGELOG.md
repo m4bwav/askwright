@@ -4,6 +4,10 @@ Every change to [README.md](README.md) and its companions, newest first, each wi
 
 Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (IDs or "user request"), `files:` (file and section), and a sentence on what changed. Cite section headings, not line numbers.
 
+### C-20261031-5 · 2026-10-31 · 0.13.0: copied continue prompts end with the next-session prompt's Execute line; option key badges
+- because: user request ("make it so that copy able prompt will check for a next session prompt and continue that if its available"; "the copyable prompt usually says continue the next prompt without providing a copyable link"), continue prompt (wider polish), T-20261031-5
+- files: ask.py (next_session_prompt finds the newest `*continue-prompt*.md` or `*next-session-prompt*.md` in ai-docs/plans/, plans/ or the folder itself, across the project's path, its registered dirs, and the set's folder and three parents; /api/set and dashboard rows carry it as `next_prompt`), page/app.js and page/dashboard.js (the copied text ends with "Then carry on with the next-session prompt:" and `Execute <absolute path>` on its own line, after the status line), page/app.css (option numbers are small key badges aligned with the label, accent when picked, hidden on touch screens; unpicked options show a hover border), tests/test_ask.py (test_next_prompt_found_in_project_folder), tests/test_page.py (test_project_label_and_copy_prompt checks the last line), plugin.json, ask.py VERSION
+
 ### C-20261031-4 · 2026-10-31 · 0.12.0: click either half of a side-by-side image to pick that take
 - because: user request ("I'd like to also be able to click on the image in this case to choose between the two"), T-20261031-4
 - files: page/app.js (sideClickable: a single side-by-side image with `sides` picks the left or right option by which half is clicked; the hovered half is named in the tooltip), page/app.css (.side-pickable: an accent wash over the hovered half, figure fits the image), tests/test_page.py (test_click_half_of_side_by_side_image_picks_that_side), plugin.json, ask.py VERSION. The left/right Pick buttons stay for keyboard users.

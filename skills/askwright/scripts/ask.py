@@ -47,7 +47,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-VERSION = "0.12.0"
+VERSION = "0.13.0"
 PAGE = Path(__file__).resolve().parent / "page"
 KINDS = ("choice", "multi", "compare", "rank", "text", "scale", "confirm")
 MODES = ("decide", "study")
@@ -377,6 +377,7 @@ def list_sessions():
                        asked_by=data.get("asked_by") or "", product=data.get("product") or "",
                        session=data.get("session") or "", pending=len(pending),
                        project=project_of(data), continue_prompt=continue_prompt(d, data),
+                       next_prompt=next_prompt_path(d, data),
                        answered=len(st["answered"]), waiting=len(st["waiting"]),
                        unsure=len(st["unsure"]), note_only=len(st["note_only"]), stale=len(st["stale"]),
                        done=st["done"], paused=st["paused"],
@@ -414,9 +415,43 @@ def project_of(data):
     return None
 
 
+NEXT_PROMPT_GLOBS = ("*continue-prompt*.md", "*next-session-prompt*.md")
+
+
+def next_session_prompt(d, data):
+    """The newest continue or next-session prompt file for the set's work, or None. Looks in the project's
+    folders and in the set's folder and three of its parents: ai-docs/plans/, plans/ and the folder itself."""
+    proj = project_of(data)
+    bases = []
+    if proj and proj["path"]:
+        bases.append(Path(proj["path"]))
+    if proj:
+        try:
+            rec = load_project(proj["slug"])
+        except AskError:
+            rec = None
+        bases += [Path(x) for x in (rec or {}).get("dirs", [])]
+    here = Path(d).resolve()
+    bases += [here, *list(here.parents)[:3]]
+    found = set()
+    for b in bases:
+        for sub in (b / "ai-docs" / "plans", b / "plans", b):
+            for g in NEXT_PROMPT_GLOBS:
+                try:
+                    found.update(f.resolve() for f in sub.glob(g) if f.is_file())
+                except OSError:
+                    continue
+    return max(found, key=lambda f: f.stat().st_mtime) if found else None
+
+
+def next_prompt_path(d, data):
+    f = next_session_prompt(d, data)
+    return f.as_posix() if f else ""
+
+
 def continue_prompt(d, data):
     """The text the page's "Copy continue prompt" button copies: the set's own, or one made from the set.
-    The page appends the answer counts at the moment of copying."""
+    The page appends the answer counts at the moment of copying, then the next_prompt Execute line."""
     own = data.get("continue_prompt")
     if isinstance(own, str) and own.strip():
         return own.strip()
@@ -1438,6 +1473,7 @@ def page_set(srv):
     out = {"ok": True, "set": dict({k: data.get(k) for k in ("id", "title", "context", "asked_by", "back_link")},
                                    **times),
            "project": project_of(data), "continue_prompt": continue_prompt(d, data),
+           "next_prompt": next_prompt_path(d, data),
            "mode": "study" if is_study(data) else "decide",
            "questions": qs, "answers": ans["answers"], "rev": ans.get("rev", 0), "note": note,
            "last_visit": visits[-1]["t"] if visits else None,

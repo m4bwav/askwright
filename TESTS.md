@@ -12,6 +12,10 @@ From the repository root: `python tests/check_skills.py`, `python tests/test_ask
 
 ## Runs
 
+### T-20261031-5 · 2026-10-31 · 0.13.0 next-session prompt line, option key badges · Windows, Python 3.14, Chrome · passed
+- tests/test_ask.py 100 passed (1 Windows skip; new test_next_prompt_found_in_project_folder), tests/test_page.py 49 passed (copy test asserts the text ends with the Execute line), tests/test_visual.py 5 passed, check_skills 0 problems.
+- led to: C-20261031-5
+
 ### T-20261031-4 · 2026-10-31 · 0.12.0 side-by-side image halves · Windows, Python 3.14, Chrome · passed
 - tests/test_page.py 49 passed (new test_click_half_of_side_by_side_image_picks_that_side clicks at 80% then 20% of the width), tests/test_ask.py 99 passed (1 Windows skip), tests/test_visual.py 5 passed.
 - led to: C-20261031-4

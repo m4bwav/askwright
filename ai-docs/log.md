@@ -79,3 +79,4 @@ Append-only. One line per operation: `## [YYYY-MM-DD] op | title` where op is on
 ## [2026-10-31] update | 0.15.1: tab icons per page kind (question set blue ?, dashboard green list, project purple folder), served as SVG; /favicon.ico returns the question icon (owner request). C-20261031-9, T-20261031-8.
 ## [2026-10-31] add | master volume in the page header (slider, mute, keys m and -/=), kept per browser; covers bench, option sounds and native players
 ## [2026-10-31] fix | test_click_half_of_side_by_side_image_picks_that_side hardened: the box was measured before the image laid out, so 80% of it fell in the left half; now waits for decode and re-measures per click.
+## [2026-10-31] release | 0.16.0: master volume (#39) released and tagged. C-20261031-10.

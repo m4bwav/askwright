@@ -5,9 +5,8 @@ description: "Use whenever you need the user to decide things you cannot settle 
 
 # askwright
 
-Puts your questions on a local page, one per screen, and gives you the answers back as files. The page is fixed
-code that is already tested; you write only data (`questions.json`), and the lint checks it before anything is
-served. Never hand-write an HTML decision page when this skill is installed.
+Puts your questions on a local page, one per screen; answers come back as files. The page is fixed, tested code;
+you write only data (`questions.json`), linted before it is served. Never hand-write an HTML decision page.
 
 Script: `scripts/ask.py` in this folder (Python 3.9+, standard library, one JSON object per command). Run it by its
 full path: `python <this folder>/scripts/ask.py` on Windows, `python3` on macOS and Linux. Every field:
@@ -39,8 +38,9 @@ steps 1 and 2 below are for decision sets.
 
 One folder per set, `<project>/ask/<set-id>/` unless the project already keeps review files somewhere (then put
 it beside them). Start it with `ask.py new <folder> --title "<what this round decides>" --product "<your agent product>" --session "<session name or id>" --asked-by "<your role>"`, then add questions.
-Use the actual product and session, never invent them; omit unknown metadata. Add `--project NAME --project-path DIR`
-(every page links its project page; `ask.py project`, `--back-link`, `--continue-prompt`: schema.md).
+Use the actual product and session, never invent them; omit unknown metadata. Every set needs `--project NAME`
+(and `--project-path DIR`), even one made up on the spot; related sets, above all one continue-prompt chain, reuse
+the same name so they group; a chain across projects gets an umbrella project (every page links its project page; `ask.py project`, `--back-link`, `--continue-prompt`: schema.md).
 Media stays where it is: list its folders in `media_roots` and refer to files by name. A graph, a force diagram or a
 simple drawing needs no file: a media item `{"figure": {...}, "alt": "..."}` is drawn by ask.py (schema.md, Media).
 
@@ -91,11 +91,9 @@ Errors block serving; fix them, do not `--force` past them. Warnings are judgmen
 python <this folder>/scripts/ask.py serve <set> --detach
 ```
 
-It lints, binds 127.0.0.1 on a free port, fetches the page, `/api/set` and one media file with a Range request,
-then prints `{"ok": true, "url": ...}` and writes `server.json` (pid, port) next to the set. Give the person the
-URL with one line on what the set decides and how many questions it has. If a server for the set is already up,
-`serve` returns its URL instead of starting another. Add `--open` to open their browser. The server only ever
-listens on 127.0.0.1; serving to another machine is not supported.
+It lints, binds 127.0.0.1 on a free port, self-checks, prints `{"ok": true, "url": ...}` and writes `server.json`.
+Give the person the URL with one line on what the set decides and how many questions. A running server's URL is
+reused. `--open` opens their browser. Only 127.0.0.1; serving to another machine is not supported.
 
 `new` and `serve` register sets in the shared inbox. Share `dashboard_url` alongside the question URL.
 `ask.py dashboard --detach` starts or reuses an independent master page; `--stop` stops only that page.

@@ -378,6 +378,7 @@
 
   // ------------------------------------------------------------ render
   function topbar() {
+    document.body.classList.toggle("no-bottom", S.view === "review");  // Back and Next mean nothing on the score
     if (S.view === "review") {
       $("#progress").textContent = "Attempt " + S.studyInfo.attempt + " · submitted";
       $("#btn-answered").hidden = true;
@@ -1016,6 +1017,7 @@
         S.review = d.review;
         S.studyInfo = Object.assign({}, S.studyInfo, { submitted: true });
         S.view = "review";
+        $("#notice").hidden = true;  // a welcome-back count of questions left is wrong once submitted
         render(true);
         load().catch(() => {});
       } catch (e) { submit.disabled = false; showBanner("Your answers were not submitted: " + e.message + "."); }
@@ -1084,7 +1086,7 @@
     const li = h("li", { class: "rv " + q.status, "data-rq": q.qid });
     li.append(h("p", { class: "caption", text: num + " · " + [q.topic, q.title].filter(Boolean).join(" · ") + (q.bonus ? " · bonus" : "") }),
       h("h3", { text: q.question }),
-      h("p", { class: "verdict " + q.status, text: (q.status === "right" ? "✓ " : q.status === "pending" ? "… " : "✗ ") + VERDICT[q.status] +
+      h("p", { class: "verdict " + q.status, text: (q.status === "right" ? "✓ " : q.status === "pending" ? "… " : q.status === "unanswered" ? "– " : "✗ ") + VERDICT[q.status] +
         (q.kind === "text" && q.grade ? ": " + pts(q.grade.points) + " of " + q.points : "") }));
     if (q.kind === "text") {
       li.append(h("p", { class: "lbl", text: "Your answer" }), h("blockquote", { text: q.text || "(blank)" }));

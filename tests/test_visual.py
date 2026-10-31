@@ -225,6 +225,68 @@ class VisualCase(unittest.TestCase):
                 self.assert_dark(p, "h1, .set-card h3, #facts, #places a")
                 self.shot(p, "project-dark-" + name)
 
+    def test_overview_finish_and_study_review(self):
+        for name in ("desktop", "phone"):
+            for scheme in ("light", "dark"):
+                with self.subTest(width=name, scheme=scheme):
+                    p = self.page(name, scheme)
+                    p.goto(self.url)
+                    p.wait_for_selector("[data-q]")
+                    p.click(".opt >> nth=0")
+                    p.wait_for_selector("#save-status:has-text('Saved')")
+                    p.locator("h1, h2").first.focus()
+                    p.keyboard.press("o")
+                    p.wait_for_selector(".tasks")
+                    self.assert_no_scroll_x(p)
+                    self.shot(p, "overview-%s-%s" % (scheme, name))
+                    if scheme == "dark":
+                        self.assert_dark(p, "h1, .tasks a, .tasks .tag")
+                    p.click("#btn-overview")
+                    p.wait_for_selector(".tasks")
+                    p.click("#btn-next")
+                    p.wait_for_selector("h1:has-text('Check your answers')")
+                    self.assert_no_scroll_x(p)
+                    self.shot(p, "finish-%s-%s" % (scheme, name))
+                    if scheme == "dark":
+                        self.assert_dark(p, "h1, .check dt, .check dd, .continue-box h2")
+        self.study_review()
+
+    def study_review(self):
+        d, data = ask.load_set(FIX / "study")
+        sdir = Path(tempfile.mkdtemp(prefix="askw-visual-study-"))
+        self.addCleanup(shutil.rmtree, sdir, True)
+        data["media_roots"] = [str(r) for r in ask.media_roots(d, data)]
+        (sdir / "questions.json").write_text(json.dumps(data), encoding="utf-8")
+        srv = ask.make_server(sdir, port=0)
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        self.addCleanup(srv.server_close)
+        self.addCleanup(srv.shutdown)
+        url = "http://127.0.0.1:%d/" % srv.server_address[1]
+        for name in ("desktop", "phone"):
+            for scheme in ("light", "dark"):
+                with self.subTest(study=name, scheme=scheme):
+                    p = self.page(name, scheme)
+                    p.goto(url)
+                    p.wait_for_selector("[data-q]")
+                    p.click(".opt >> nth=1")
+                    p.wait_for_selector("#save-status:has-text('Saved')")
+                    p.locator("h2").first.focus()
+                    p.keyboard.press("o")
+                    p.click("#btn-next")
+                    p.wait_for_selector("h1:has-text('Check your answers')")
+                    self.shot(p, "study-finish-%s-%s" % (scheme, name))
+                    p.click("text=Submit my answers")
+                    p.wait_for_selector("h1:has-text('Your score')")
+                    self.assert_no_scroll_x(p)
+                    self.shot(p, "study-review-%s-%s" % (scheme, name))
+                    if scheme == "dark":
+                        self.assert_dark(p, "h1, .score-big, .verdict, .opt-rv .ans, .topics th, .topics td")
+                    p.click("text=Try again")
+                    p.wait_for_selector("[data-q]")
+
+    def assert_no_scroll_x(self, p):
+        self.assertFalse(p.evaluate("() => document.documentElement.scrollWidth > document.documentElement.clientWidth"))
+
     def assert_dark(self, p, selector):
         got = p.evaluate(CONTRAST, selector)
         self.assertLess(got["bodyLum"], 0.2, "body is not dark: %s" % got)

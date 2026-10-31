@@ -427,6 +427,53 @@
     if (focus) { const h1 = $("h1", main); (h1 || main).focus(); window.scrollTo(0, 0); }
   }
 
+  // ------------------------------------------------------------ click a picture, clip or sound to pick its option
+  // Which option a question-level media item stands for: its own `option`, else Left/Right by position on a compare
+  // question with `sides` and two items, else an option whose label or id matches the item's label.
+  function mediaOption(q, m, i) {
+    if (!q || !["choice", "compare", "multi", "scale"].includes(q.kind) || S.study) return null;
+    const ids = (q.options || []).map((o) => o.id);
+    if (m.option && ids.includes(m.option)) return m.option;
+    const items = q.media || [];
+    if (q.sides && items.length === 2 && !items.some((x) => x.option)) return [q.sides.left, q.sides.right][i] || null;
+    const lab = String(m.label || "").trim().toLowerCase();
+    const o = lab && (q.options || []).find((x) => x.id.toLowerCase() === lab || String(x.label || "").trim().toLowerCase() === lab);
+    return o ? o.id : null;
+  }
+  // One side-by-side clip holding both takes: a pick button for each side.
+  function sidePicks(q) {
+    const items = q.media || [];
+    if (!q.sides || items.length !== 1 || items[0].option || S.study) return null;
+    return [["left", q.sides.left], ["right", q.sides.right]].filter(([, oid]) => oid);
+  }
+  function pickFromMedia(q, oid) {
+    const find = () => main.querySelector('#ans .opt[data-oid="' + CSS.escape(oid) + '"] input');
+    if (!S.editing[q.id]) { S.editing[q.id] = true; render(false); }
+    const input = find();
+    if (!input) return;
+    if (input.type === "radio" && input.checked) { input.focus(); return; }
+    input.click();
+    input.focus({ preventScroll: true });
+  }
+  function pickButton(q, oid, text) {
+    return h("button", { type: "button", class: "btn small media-pick", "data-pick": oid,
+      "aria-label": "Pick " + text, onclick: () => pickFromMedia(q, oid) }, "✓ Pick " + text);
+  }
+  // Images pick on click; video and audio keep their own click (play, pause, seek) and get a pick button.
+  function pickable(fig, q, oid, m) {
+    if (!oid || !fig || fig.tagName !== "FIGURE") return fig;
+    fig.classList.add("pickable");
+    fig.dataset.pick = oid;
+    const name = () => shownLabel(q, oid, done(q));
+    if (m.type === "image") {
+      const img = fig.querySelector("img");
+      img.title = "Click to pick " + name();
+      img.addEventListener("click", () => pickFromMedia(q, oid));
+    }
+    fig.append(pickButton(q, oid, name()));
+    return fig;
+  }
+
   function mediaEl(m, primary) {
     if (m.missing) return h("p", { class: "missing", text: "Missing file: " + m.missing });
     let el;
@@ -489,7 +536,8 @@
         h("div", { class: "bench-body" }, h("p", { class: "bench-head" }, name, time),
           m.caption ? h("p", { class: "bench-cap", text: m.caption }) : null,
           m.text ? h("blockquote", { class: "bench-text" }, h("span", { class: "visually-hidden", text: "Line spoken: " }), m.text) : null,
-          seekBar), audio);
+          seekBar,
+          mediaOption(q, m, i) ? pickButton(q, mediaOption(q, m, i), clipName(q, m, i)) : null), audio);
       clips.push({ audio, row });
       region.append(row);
     });
@@ -540,7 +588,9 @@
     const imagesOnly = items.every((m) => m.type === "image");
     const gallery = imagesOnly && items.length > 1 &&
       (q.media_layout === "gallery" || (!q.media_layout || q.media_layout === "auto") && items.length >= 3);
-    if (!gallery) return h("div", { class: "media" }, items.map((m, i) => mediaEl(m, i === 0)),
+    const sides = sidePicks(q);
+    if (!gallery) return h("div", { class: "media" }, items.map((m, i) => pickable(mediaEl(m, i === 0), q, mediaOption(q, m, i), m)),
+      sides ? h("div", { class: "side-picks" }, sides.map(([side, oid]) => pickButton(q, oid, side === "left" ? "the left take" : "the right take"))) : null,
       items.length === 1 && imagesOnly && items[0].url && !items[0].missing
         ? h("a", { class: "link", href: items[0].url, target: "_blank", rel: "noopener noreferrer",
           text: "Open full-size image" }) : null);
@@ -562,7 +612,7 @@
       const focused = document.activeElement;
       index = Math.max(0, Math.min(index, items.length - 1));
       S.mediaIndex[q.id] = index;
-      slide.replaceChildren(mediaEl(items[index], true));
+      slide.replaceChildren(pickable(mediaEl(items[index], true), q, items[index].option ? mediaOption(q, items[index], index) : null, items[index]));
       slide.setAttribute("aria-label", "Case " + (index + 1) + " of " + items.length);
       count.textContent = "Case " + (index + 1) + " of " + items.length;
       select.value = String(index);
@@ -672,6 +722,7 @@
     if (!S.study) art.append(guessArea(q, a), noteArea(q, a, editing));
     art.append(h("div", { id: "leave-prompt" }));
     main.replaceChildren(art);
+    markPicks(q);
   }
 
   function optRow(type, name, value, label, sub, checked, n, extra) {
@@ -756,9 +807,16 @@
       if (oid !== "unsure" && oid !== "other") row.querySelector(".label").textContent = shownLabel(q, oid, reveal);
     });
     main.querySelectorAll(".bench-label[data-oid]").forEach((el) => { el.textContent = shownLabel(q, el.dataset.oid, reveal); });
+    markPicks(q);
     const g = $("#guess-line", main);
     if (g) g.replaceWith(guessLine(q));
     topbar();
+  }
+
+  function markPicks(q) {
+    const a = S.answers[q.id] || {};
+    main.querySelectorAll("[data-pick]").forEach((el) => el.classList.toggle("picked",
+      a.choice === el.dataset.pick || (a.choices || []).includes(el.dataset.pick)));
   }
 
   function guessText(q) {

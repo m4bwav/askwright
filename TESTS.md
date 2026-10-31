@@ -12,6 +12,11 @@ From the repository root: `python tests/check_skills.py`, `python tests/test_ask
 
 ## Runs
 
+### T-20261030-3 · 2026-10-30 · 0.9.0 repository suites · Windows, Python 3.14, Chrome · passed
+- tests/test_page.py 46 passed (4 new ClickMediaTests: clicking the right picture of a two-image compare picks sides.right and outlines it, then the left one switches the pick; a side-by-side clip gets left and right Pick buttons; `option` on bench clips picks from the row's button and reopens an answered question; plain media gets no pick target).
+- tests/test_ask.py 98 passed, one Windows skip; tests/test_visual.py 4 passed; check_skills 0 problems; budget yellow (unchanged).
+- led to: C-20261030-4
+
 ### T-20261030-2 · 2026-10-30 · 0.8.0 repository suites · Windows, Python 3.14, Chrome · passed
 - tests/test_ask.py 99 tests, 98 passed and one existing Windows symlink skip (4 new ProjectAndTimeTests: `ask.py project` create, update, remove and list keeping `created`; a registered set creates its project record and shows on the project page with mtime-fallback times; new, add and close stamp times and add keeps `created`; /projects/<slug>, /api/projects and /api/project routes, 404 for unknown and traversal slugs).
 - tests/test_page.py 42 passed (the bars test now waits for the More-menu move, L-022 `media-query-change-is-async`).

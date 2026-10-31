@@ -654,6 +654,57 @@ class GalleryPageTests(PageCase):
         self.assertEqual(link.get_attribute("target"), "_blank")
 
 
+class ClickMediaTests(PageCase):
+    """0.9.0: click a picture, or the Pick button under a clip or sound, to pick the option it stands for."""
+
+    def with_arrow(self, **fields):
+        _, data = ask.load_set(self.dir)
+        q = next(x for x in data["questions"] if x["id"] == "arrow")
+        q.update(fields)
+        ask.write_json_atomic(self.dir / "questions.json", data)
+        return self.open()
+
+    def test_click_image_picks_its_side(self):
+        p = self.with_arrow(media=[{"src": "swatch.png", "alt": "take A"}, {"src": "swatch.png", "alt": "take B"}])
+        figs = p.locator("figure.pickable")
+        self.assertEqual(figs.count(), 2)
+        figs.nth(1).locator("img").click()
+        self.wait_saved()
+        self.assertEqual(self.answers()["arrow"]["choice"], "t5")  # sides.right
+        self.assertIn("picked", figs.nth(1).get_attribute("class"))
+        figs.nth(0).locator("img").click()
+        self.wait_saved()
+        self.assertEqual(self.answers()["arrow"]["choice"], "t2")
+
+    def test_side_by_side_clip_gets_left_and_right_pick_buttons(self):
+        p = self.open()
+        self.assertEqual(p.locator(".side-picks .media-pick").count(), 2)
+        p.click(".side-picks .media-pick >> nth=1")
+        self.wait_saved()
+        self.assertEqual(self.answers()["arrow"]["choice"], "t5")
+
+    def test_media_option_field_and_answered_question(self):
+        p = self.with_arrow(sides=None, media=[{"src": "tone.wav", "label": "A", "option": "tie"},
+                                               {"src": "tone.wav", "label": "B", "option": "redo"}])
+        p.click(".bench-row >> nth=1 >> .media-pick")
+        self.wait_saved()
+        self.assertEqual(self.answers()["arrow"]["choice"], "redo")
+        p.reload()
+        p.wait_for_selector("[data-q]")
+        p.keyboard.press("o")
+        p.click(".tasks a >> text=The arrow shot")
+        p.click(".bench-row >> nth=0 >> .media-pick")  # an answered question reopens for editing
+        self.wait_saved()
+        self.assertEqual(self.answers()["arrow"]["choice"], "tie")
+
+    def test_no_pick_targets_on_plain_media(self):
+        p = self.open()
+        p.keyboard.press("o")
+        p.click(".tasks a >> text=%s" % next(q["title"] for q in ask.load_set(self.dir)[1]["questions"] if q["id"] == "pace"))
+        p.wait_for_selector("[data-q=pace]")
+        self.assertEqual(p.locator(".pickable, .media-pick").count(), 0)
+
+
 class ListenPageTests(PageCase):
     """0.7.0: the listen bench, audio on options, the project label and the copy-continue-prompt button."""
 

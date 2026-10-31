@@ -199,6 +199,19 @@ figcaption { color: var(--muted); font-size: .9rem; margin-top: .25rem; }
 .bench-text { margin: .1rem 0; padding: .3rem .6rem; border-left: 3px solid var(--border); font-style: italic; }
 .bench-seek { width: 100%; min-height: 28px; accent-color: var(--accent); margin: 0; }
 .bench-tools { display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; }
+/* Media that stands for an option: click the picture (or the Pick button under a clip) to pick it. */
+.pickable { position: relative; border-radius: 8px; outline: 3px solid transparent; outline-offset: 3px; transition: outline-color .15s; }
+.pickable img { cursor: pointer; }
+.pickable:hover { outline-color: var(--border); }
+.pickable.picked, figure.picked { outline-color: var(--accent); }
+.media-pick { margin-top: .4rem; }
+.media-pick.picked, .side-picks .picked { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+/* Two to four pictures to choose between sit side by side (stacked on a phone). */
+.media:has(> figure.pickable:nth-of-type(2)):not(:has(> figure.pickable:nth-of-type(5))) { grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); align-items: start; }
+.pickable { text-align: center; }
+.pickable img { margin: 0 auto; }
+.side-picks { display: flex; justify-content: space-between; gap: .75rem; }
+.bench-body .media-pick { align-self: flex-start; }
 .opt-sound { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; margin-top: .25rem; }
 @media (max-width: 40rem) { .bench-row { grid-template-columns: 3.25rem minmax(0, 1fr); } .bench-n { display: none; } }
 

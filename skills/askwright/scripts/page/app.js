@@ -473,6 +473,22 @@
     fig.append(pickButton(q, oid, name()));
     return fig;
   }
+  // One picture holding both takes side by side: a click on its left or right half picks that side.
+  function sideClickable(fig, q, sides, m) {
+    const img = m.type === "image" && fig && fig.tagName === "FIGURE" && fig.querySelector("img");
+    if (!img) return fig;
+    const at = (e) => { const r = img.getBoundingClientRect(); return e.clientX - r.left < r.width / 2 ? "left" : "right"; };
+    const oidAt = (e) => (sides.find(([side]) => side === at(e)) || [])[1];
+    fig.classList.add("side-pickable");
+    img.addEventListener("mousemove", (e) => {
+      fig.dataset.hover = at(e);
+      img.title = oidAt(e) ? "Click to pick the " + at(e) + " take" : "";
+      img.style.cursor = oidAt(e) ? "pointer" : "";
+    });
+    img.addEventListener("mouseleave", () => { delete fig.dataset.hover; });
+    img.addEventListener("click", (e) => { const oid = oidAt(e); if (oid) pickFromMedia(q, oid); });
+    return fig;
+  }
 
   function mediaEl(m, primary) {
     if (m.missing) return h("p", { class: "missing", text: "Missing file: " + m.missing });
@@ -589,7 +605,7 @@
     const gallery = imagesOnly && items.length > 1 &&
       (q.media_layout === "gallery" || (!q.media_layout || q.media_layout === "auto") && items.length >= 3);
     const sides = sidePicks(q);
-    if (!gallery) return h("div", { class: "media" }, items.map((m, i) => pickable(mediaEl(m, i === 0), q, mediaOption(q, m, i), m)),
+    if (!gallery) return h("div", { class: "media" }, items.map((m, i) => sides ? sideClickable(mediaEl(m, i === 0), q, sides, m) : pickable(mediaEl(m, i === 0), q, mediaOption(q, m, i), m)),
       sides ? h("div", { class: "side-picks" }, sides.map(([side, oid]) => pickButton(q, oid, side === "left" ? "the left take" : "the right take"))) : null,
       items.length === 1 && imagesOnly && items[0].url && !items[0].missing
         ? h("a", { class: "link", href: items[0].url, target: "_blank", rel: "noopener noreferrer",

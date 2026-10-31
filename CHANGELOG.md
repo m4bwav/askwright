@@ -4,6 +4,10 @@ Every change to [README.md](README.md) and its companions, newest first, each wi
 
 Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (IDs or "user request"), `files:` (file and section), and a sentence on what changed. Cite section headings, not line numbers.
 
+### C-20261031-4 · 2026-10-31 · 0.12.0: click either half of a side-by-side image to pick that take
+- because: user request ("I'd like to also be able to click on the image in this case to choose between the two"), T-20261031-4
+- files: page/app.js (sideClickable: a single side-by-side image with `sides` picks the left or right option by which half is clicked; the hovered half is named in the tooltip), page/app.css (.side-pickable: an accent wash over the hovered half, figure fits the image), tests/test_page.py (test_click_half_of_side_by_side_image_picks_that_side), plugin.json, ask.py VERSION. The left/right Pick buttons stay for keyboard users.
+
 ### C-20261031-3 · 2026-10-31 · 0.11.0: sortable dashboard columns, newest first by default
 - because: user request ("Make this columns sortable and default to the last updated desc"), T-20261031-3
 - files: page/dashboard.js (Title, Project, Last updated and Action headers are sort buttons with aria-sort and an arrow; default Last updated descending; a new column starts newest-first for time, A to Z for text, open before done for Action; ties fall back to title; rows without a value stay last; the choice is remembered in localStorage when available), page/dashboard.css (sort buttons; on phones the header becomes a sort bar without Action), page/dashboard.html (Unavailable sessions count no longer spaced as "( 1 )"), tests/test_page.py (test_columns_sort_newest_first_by_default), plugin.json, ask.py VERSION

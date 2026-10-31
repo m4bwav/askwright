@@ -1,6 +1,8 @@
 # Handoff
 
 ## Current state
+2026-10-31 (owner request): 0.12.0 a single side-by-side image (`sides` set, one image) picks the left or right take by the half clicked; Pick buttons kept. C-20261031-4, T-20261031-4. Restart running question pages to get it.
+
 2026-10-31 (visual and projects session 3): 0.10.1 (PR #28) dark-mode visual test (question, dashboard and project pages, body dark, visible text 4.5:1; it caught the phone Last updated cell at 2:1), one blue-grey dark palette on every page, dashboard plurals. 0.11.0 (PR #29, tagged v0.11.0) on the owner's mid-session request: sortable dashboard columns, Last updated newest first by default, remembered per browser, a sort bar on phones. Dashboard restarted from main. Still next for the continue prompt: wider polish of the question body, overview and study review; adding the owner's real projects with `ask.py project`. Install size 285 KB (yellow, ceiling 300 KB): the split proposal in C-20261031-1 is getting closer to needed.
 
 2026-10-31 (owner request, visual and projects session 2): 0.10.0 dashboard table with expandable rows (Title, Project, Last updated, Action; the expanded row holds everything the old card showed), Copy prompt as the quick action for done sets, and Copy prompt to continue on the finish screen and the study review. C-20261031-1, T-20261031-1. Still next for the continue prompt: wider polish (question body, overview, study review), dark-mode screenshots in test_visual.py, adding the owner's real projects with `ask.py project`; restart the dashboard after pulling main (`ask.py dashboard --stop`, then `--detach`).

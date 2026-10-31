@@ -737,6 +737,17 @@ class ClickMediaTests(PageCase):
         self.wait_saved()
         self.assertEqual(self.answers()["arrow"]["choice"], "t2")
 
+    def test_click_half_of_side_by_side_image_picks_that_side(self):
+        p = self.with_arrow(media=[{"src": "swatch.png", "alt": "both takes"}])
+        img = p.locator("figure.side-pickable img")
+        box = img.bounding_box()
+        img.click(position={"x": box["width"] * 0.8, "y": box["height"] / 2})
+        self.wait_saved()
+        self.assertEqual(self.answers()["arrow"]["choice"], "t5")  # sides.right
+        img.click(position={"x": box["width"] * 0.2, "y": box["height"] / 2})
+        self.wait_saved()
+        self.assertEqual(self.answers()["arrow"]["choice"], "t2")
+
     def test_side_by_side_clip_gets_left_and_right_pick_buttons(self):
         p = self.open()
         self.assertEqual(p.locator(".side-picks .media-pick").count(), 2)

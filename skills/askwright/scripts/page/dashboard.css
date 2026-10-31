@@ -106,7 +106,7 @@ section h2 { font-size: 1.15rem; margin: 28px 0 12px; }
   .toggle, .toggle:hover { background: none; color: #e4ebf3; }
   .badge { background: #26446b; color: #cfe1ff; }
   .badge.done { background: #1f4a2c; color: #bfeccb; }
-  .brand, .meta, .path, footer, .projects h2, .facts dt { color: #b4c4d8; }
+  .brand, .meta, .path, footer, .projects h2, .facts dt, td.updated { color: #b4c4d8; }
   a { color: #a6caff; }
   .projects li { background: #1d2939; border-color: #65768b; }
   .places code { background: #2a3749; }

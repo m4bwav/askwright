@@ -117,8 +117,9 @@ function render() {
     "No sessions registered yet. Agents register automatically when they create or serve an askwright set."));
   renderProjects();
   document.querySelector("#summary").textContent =
-    `${inView.reduce((sum, row) => sum + (row.pending || 0), 0)} questions need attention across ` +
-    `${inView.filter(row => row.pending > 0).length} sessions. Showing ${visible.length} of ${inView.length} sessions in this list.`;
+    `${needs(inView.reduce((sum, row) => sum + (row.pending || 0), 0))} attention across ` +
+    `${plural(inView.filter(row => row.pending > 0).length, "session")}. Showing ${visible.length} of ` +
+    `${plural(inView.length, "session")} in this list.`;
   for (const button of document.querySelectorAll("[data-view]")) {
     const key = button.dataset.view;
     const label = {inbox: "Inbox", snoozed: "Snoozed", archived: "Archive"}[key];
@@ -388,3 +389,11 @@ document.querySelector("#refresh").addEventListener("click", refresh);
 window.addEventListener("pageshow", refresh);
 refresh();
 setInterval(refresh, 5000);
+
+function needs(n) {
+  return `${plural(n, "question")} ${n === 1 ? "needs" : "need"}`;
+}
+
+function plural(n, word) {
+  return `${n} ${word}${n === 1 ? "" : "s"}`;
+}

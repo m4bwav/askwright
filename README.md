@@ -15,6 +15,9 @@ every question page is as good as the best one, instead of whatever the agent im
   why it matters, and what to look or listen for. Times in "what to look for" turn into "Play from 6.0 s" buttons.
 - The project's name in the top bar and a "Copy continue prompt" button: it copies a prompt that tells an agent to
   read the answers (with absolute paths), check them against its guesses and act on them, plus the counts so far.
+- A page per project: its description, when it was created and last worked on, its repositories and folders, and
+  its question sets (`ask.py project NAME --description TEXT --repo URL --dir DIR`). Every time on the pages reads
+  "3 hours ago", with the exact time on hover.
 - A listen bench for voices and sounds: one row per clip with a big play button, the line spoken, a seek bar and
   the time; one clip plays at a time, `b` switches to the next clip at the same point, Shift+1 to Shift+9 play
   clip N. Blind voice picks show "Left"/"Right" until you pick. A sample on an option plays from a small button.
@@ -112,7 +115,8 @@ by product and search by title, folder or agent. Counts refresh every five secon
 Notes without a pick, "not sure" and answers to changed questions still count as needing attention.
 Conditional questions waiting on another answer are counted separately.
 
-Each card names its project and has "Open questions" and "Copy continue prompt" buttons.
+A Projects strip above the lists links each project's page. Each card links its project, shows when it was last
+worked on, and has "Open questions" and "Copy continue prompt" buttons.
 Each session card has an expandable preview of its next five questions needing attention, in question order.
 The Snooze dropdown hides that session for 1 hour, 4 hours, 1 day, 3 days or 1 week.
 It returns to the inbox when that time expires. Open Snoozed to bring it back early with Unsnooze.

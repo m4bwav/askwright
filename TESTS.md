@@ -6,7 +6,18 @@ A test passes on evidence (a tool call in the trace, a file, a marker, a log lin
 
 Entry shape: `### T-YYYYMMDD-n · date · harness · env · passed/total`, then one line per failing case (`id · kind · class · what the evidence showed`), then `led to:` (L-, C-, R- ids or none). Newest first. Budget 150 lines; archive older runs to `TESTS-ARCHIVE.md`.
 
+## How to run the repository suites
+
+From the repository root: `python tests/check_skills.py`, `python tests/test_ask.py` and `python scripts/budget.py` (standard library only; CI runs these). The browser suites need `pip install playwright` and an installed Chrome or Edge, and skip with a message without them: `python tests/test_page.py` (behaviour, keyboard, axe) and `python tests/test_visual.py` (top bar, index, question set and project page at 1280, 1000 and 390 px; screenshots in `tests/screenshots/`, git-ignored, or `ASKW_SHOTS=<dir>`). Look at the screenshots after any page change.
+
 ## Runs
+
+### T-20261030-2 · 2026-10-30 · 0.8.0 repository suites · Windows, Python 3.14, Chrome · passed
+- tests/test_ask.py 99 tests, 98 passed and one existing Windows symlink skip (4 new ProjectAndTimeTests: `ask.py project` create, update, remove and list keeping `created`; a registered set creates its project record and shows on the project page with mtime-fallback times; new, add and close stamp times and add keeps `created`; /projects/<slug>, /api/projects and /api/project routes, 404 for unknown and traversal slugs).
+- tests/test_page.py 42 passed (the bars test now waits for the More-menu move, L-022 `media-query-change-is-async`).
+- tests/test_visual.py 4 passed (new): top bar at 1280, 1000 and 390 px with a long title (title one line with the full title on hover, pills one line, chips one baseline and height, nothing past the edge, no page scroll, one row on desktop); More menu on a phone holds Copy continue prompt and All sessions inside the screen; dashboard Projects strip and times, project page name, repos, sets and times at desktop and phone; project link from the question page. Screenshots inspected by eye.
+- check_skills 0 problems; budget: SKILL.md body yellow (10,215 bytes), install yellow.
+- led to: L-022, C-20261030-3
 
 ### T-20261030-1 · 2026-10-30 · 0.7.0 repository suites · Windows, Python 3.14, Chrome · passed
 - tests/test_ask.py 95 tests, 94 passed and one existing Windows symlink skip (5 new: project and continue_prompt lint, default prompt with absolute paths, listen layout and clip fields, `new` flags, /api/set and dashboard rows).

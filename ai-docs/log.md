@@ -61,3 +61,5 @@ Append-only. One line per operation: `## [YYYY-MM-DD] op | title` where op is on
 ## [2026-10-29] update | 0.6.0: scripts/contact.py (candidates side by side in one labelled image, Pillow optional) and references/bridging.md (moving a project's long review page onto sets, answers synced back to its picks file), from converting a game project's 55-item pick pages; L-019 to L-021, C-20261029-2; tests 89 passed 1 skip.
 
 ## [2026-10-30] update | 0.7.0: project label and Copy continue prompt (question page top bar and dashboard cards), listen bench for voice comparisons (Shift+1..9, b for A/B at the same point, option sound buttons), clearer question reading order. C-20261030-1, T-20261030-1, decisions/2026-10-30-listen-bench-and-page-design.md.
+
+## [2026-10-30] update | 0.8.0: project records and pages (`ask.py project`, /projects/<slug>), created/updated on sets, questions and projects (mtime fallback), one-row top bar with pills, chips and a More menu under 56rem, dashboard Projects strip, tests/test_visual.py with screenshots. C-20261030-3, T-20261030-2, L-022, decisions/2026-10-30-projects-and-top-bar.md.

@@ -18,6 +18,7 @@ A set is one folder holding `questions.json`. The server writes `answers.json`, 
 | `back_link` | no | `{"url": "http(s)://...", "label": "..."}`: a link in the top bar back to the project's own review page (a pick page, a contact sheet), beside "All sessions". `ask.py new --back-link URL LABEL` sets it. |
 | `project` | no | The project the questions are for: a name, or `{"name": "...", "path": "..."}`. Shown in the top bar, above every question and on the session card. `ask.py new --project NAME [--project-path DIR]` sets it. |
 | `continue_prompt` | no | Text the "Copy continue prompt" button copies (top bar and session card). Without it the button copies a default: read the answers with `ask.py read` (absolute paths), evaluate them against your guesses, act, close. The page adds the answer counts at the moment of copying. `ask.py new --continue-prompt TEXT` or `--continue-prompt-file FILE`. |
+| `created`, `updated` | no | ISO 8601 times, written by `new`, `add` and `close` (each question carries its own pair too). Sets and questions written before 0.8.0 fall back to questions.json's modification time. Pages show them relative ("3 hours ago"), exact on hover. |
 | `media_roots` | no | Folders that hold media, relative to the set folder or absolute. Media outside the set folder and these roots is refused. |
 | `questions` | yes | The questions in the order the page walks them. |
 
@@ -71,6 +72,10 @@ up in the set folder first, then in each media root.
 
 A gallery item is one complete case. Keep a side-by-side comparison in one image so changing cases does not
 hide one of its candidates; `scripts/contact.py out.png a.png b.png --labels ... --scale 3` makes one (Pillow).
+## Projects
+
+A project record lives in the user-wide registry (`~/.askwright/projects/<slug>.json`, or under `ASKWRIGHT_HOME`), one file per project, keyed by a slug of its name: `{"name", "description", "repos": [URL...], "dirs": [folder...], "created", "updated"}`. `ask.py project NAME [--description TEXT] [--repo URL]... [--dir DIR]... [--remove-repo URL] [--remove-dir DIR]` creates or updates it; `ask.py project` lists every project with its sets. Registering a set whose `project` names a project creates the record if it is missing and adds the set's `path` to `dirs`. The project page (`/projects/<slug>`, on the dashboard and on every question server) shows the name, description, created, last worked on (the newest of the record's update and its sets' last answer, add or update), the repositories, the folders and the question sets.
+
 Moving a project's existing long review page onto sets, with answers synced back to its picks file:
 [bridging.md](bridging.md). `label` names a case in the selector; `caption` explains what to compare.
 Navigation, a case counter and a full-size link appear around the active image. Galleries do not auto-advance

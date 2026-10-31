@@ -7,22 +7,29 @@
 <meta name="ask-token" content="__ASK_TOKEN__">
 <title>Questions for you</title>
 <link rel="stylesheet" href="/app.css">
+<script src="/time.js" defer></script>
 <script src="/app.js" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to the question</a>
 <header class="top">
   <div class="bar">
-    <p class="project-line" id="project-line" hidden></p>
-    <p class="set-title" id="set-title">Loading the questions…</p>
+    <div class="heading">
+      <a class="project-line" id="project-line" hidden></a>
+      <p class="set-title" id="set-title">Loading the questions…</p>
+    </div>
     <p class="progress" id="progress"></p>
-    <nav class="top-links" aria-label="Views">
-      <a class="link" id="back-link" hidden></a>
-      <a class="link" href="/sessions">All sessions</a>
-      <button type="button" class="link" id="btn-copy" aria-label="Copy continue prompt" title="Copy a prompt that tells an agent to read, check and act on these answers">Copy <span class="wide">continue </span>prompt</button>
-      <button type="button" class="link" id="btn-answered" aria-pressed="false" hidden>Show answered</button>
-      <button type="button" class="link" id="btn-overview">All questions <kbd>o</kbd></button>
-      <button type="button" class="link" id="btn-keys">Keys <kbd>?</kbd></button>
+    <nav class="top-links" id="top-links" aria-label="Views">
+      <button type="button" class="chip" id="btn-answered" aria-pressed="false" hidden>Show answered</button>
+      <button type="button" class="chip" id="btn-overview">All questions <kbd>o</kbd></button>
+      <a class="chip secondary" id="back-link" hidden></a>
+      <a class="chip secondary" href="/sessions">All sessions</a>
+      <button type="button" class="chip secondary" id="btn-copy" title="Copy a prompt that tells an agent to read, check and act on these answers">Copy continue prompt</button>
+      <button type="button" class="chip secondary" id="btn-keys">Keys <kbd>?</kbd></button>
+      <details class="more" id="more" hidden>
+        <summary class="chip" aria-label="More actions">More</summary>
+        <div class="more-menu" id="more-menu"></div>
+      </details>
     </nav>
   </div>
   <div class="track" aria-hidden="true"><span id="track-fill"></span></div>

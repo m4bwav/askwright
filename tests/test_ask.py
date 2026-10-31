@@ -1374,7 +1374,7 @@ class ProjectAndListenTests(unittest.TestCase):
                     out = ask.page_set(srv)
                 finally:
                     srv.server_close()
-                self.assertEqual(out["project"], {"name": "Reel", "path": ""})
+                self.assertEqual(out["project"], {"name": "Reel", "path": "", "slug": "reel"})
                 self.assertIn("Continue Reel.", out["continue_prompt"])
                 ask.register_set(s.dir)
                 row = ask.list_sessions()["sessions"][0]
@@ -1383,6 +1383,94 @@ class ProjectAndListenTests(unittest.TestCase):
         finally:
             s.cleanup()
             home.cleanup()
+
+
+class ProjectAndTimeTests(unittest.TestCase):
+    def setUp(self):
+        self.home = tempfile.TemporaryDirectory(prefix="askw-projects-")
+        self.env = mock.patch.dict(os.environ, {"ASKWRIGHT_HOME": self.home.name})
+        self.env.start()
+
+    def tearDown(self):
+        self.env.stop()
+        self.home.cleanup()
+
+    def test_project_command_creates_updates_and_lists(self):
+        code, d = run_cli("project", "Space Deck", "--description", "A card game", "--repo",
+                          "https://github.com/o/space", "--dir", self.home.name)
+        self.assertEqual(code, 0, d)
+        rec = d["project"]
+        self.assertEqual((rec["slug"], rec["description"], rec["repos"]), ("space-deck", "A card game",
+                                                                         ["https://github.com/o/space"]))
+        self.assertTrue(rec["created"] and rec["updated"])
+        code, d = run_cli("project", "Space Deck", "--remove-repo", "https://github.com/o/space")
+        self.assertEqual((d["project"]["repos"], d["project"]["created"]), ([], rec["created"]))
+        code, d = run_cli("project")
+        self.assertEqual([p["slug"] for p in d["projects"]], ["space-deck"])
+
+    def test_sets_attach_to_projects_with_times(self):
+        s = TempSet(lambda data: data.update(project={"name": "Reel", "path": self.home.name}))
+        try:
+            ask.register_set(s.dir)
+            rec = ask.load_project("reel")
+            self.assertEqual(rec["dirs"], [str(Path(self.home.name).resolve())])
+            page = ask.project_page("reel")["project"]
+            self.assertEqual(len(page["sets"]), 1)
+            row = page["sets"][0]
+            self.assertTrue(row["created"] and row["updated"] and page["last_worked"])  # mtime fallback
+            with self.assertRaises(ask.AskError):
+                ask.project_page("../x")
+            with self.assertRaises(ask.AskError):
+                ask.project_page("nope")
+        finally:
+            s.cleanup()
+
+    def test_new_add_close_stamp_times(self):
+        tmp = Path(tempfile.mkdtemp(prefix="askw-times-"))
+        try:
+            code, d = run_cli("new", tmp / "s", "--title", "T")
+            data = json.loads((tmp / "s" / "questions.json").read_text(encoding="utf-8"))
+            self.assertTrue(data["created"] and data["updated"])
+            q = good()["questions"][0]
+            shutil.copytree(FIX / "media", tmp / "media")
+            data["media_roots"] = ["../media"]
+            (tmp / "s" / "questions.json").write_text(json.dumps(data), encoding="utf-8")
+            f = tmp / "q.json"
+            f.write_text(json.dumps(q), encoding="utf-8")
+            code, d = run_cli("add", tmp / "s", f, "--no-probe", "--force")
+            self.assertTrue(d["ok"], d)
+            got = json.loads((tmp / "s" / "questions.json").read_text(encoding="utf-8"))["questions"][0]
+            self.assertTrue(got["created"] and got["updated"])
+            code, d = run_cli("close", tmp / "s", q["id"])
+            after = json.loads((tmp / "s" / "questions.json").read_text(encoding="utf-8"))["questions"][0]
+            self.assertEqual(after["created"], got["created"])
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    def test_project_routes(self):
+        s = TempSet(lambda data: data.update(project="Reel"))
+        srv = ask.make_server(s.dir, port=0)
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        try:
+            ask.register_set(s.dir)
+            port = srv.server_address[1]
+            h = {"Host": "127.0.0.1:%d" % port, "X-Ask-Token": srv.token}
+            c = http.client.HTTPConnection("127.0.0.1", port, timeout=10)
+            for path, want in (("/projects/reel", 200), ("/api/projects", 200), ("/api/project?slug=reel", 200),
+                               ("/api/project?slug=zzz", 404), ("/projects/../x", 404)):
+                c.request("GET", path, headers=h)
+                r = c.getresponse()
+                body = r.read()
+                self.assertEqual(r.status, want, path)
+                if path == "/projects/reel":
+                    self.assertIn(b"/project.js", body)
+            c.close()
+            page = ask.page_set(srv)
+            self.assertTrue(page["set"]["created"] and all(q["created"] for q in page["questions"]))
+        finally:
+            srv.shutdown()
+            srv.server_close()
+            s.cleanup()
 
 
 if __name__ == "__main__":

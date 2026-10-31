@@ -174,6 +174,14 @@ Write an entry the moment a real signal happens: a user correction, the same err
 - Scope: skill
 - Status: active · helpful 1 · harmful 0 · last_confirmed 2026-10-29
 
+### L-022 · 2026-10-30 · `media-query-change-is-async`: a test read the top bar before the menu move ran
+- Trigger: test_bars_whole_at_laptop_and_phone_width resized 1100 to 390 px and measured at once; the secondary chips were still in the row (off screen), so it failed although the page was right
+- Hypothesis: a matchMedia `change` event fires at the next rendering step, after Playwright's set_viewport_size returns
+- Rule: after resizing, wait for the state the media-query handler sets (here `#more` hidden or not) before measuring; layout that JS moves on resize is not there yet
+- Evidence: the same test passed with the wait, and tests/test_visual.py (fresh contexts at each width) passed first time
+- Scope: repo tests
+- Status: active · helpful 1 · harmful 0 · last_confirmed 2026-10-30
+
 <!-- Example (delete once you have a real entry):
 ### L-001 · 2026-10-24 · One-line lesson in plain words
 - Trigger: what happened, with dates or counts

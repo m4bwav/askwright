@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="ask-token" content="__ASK_TOKEN__">
+<title>askwright | Project</title>
+<link rel="stylesheet" href="/dashboard.css">
+<script src="/time.js" defer></script>
+<script src="/project.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#sets">Skip to question sets</a>
+<main>
+  <header>
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="/sessions">All sessions</a></nav>
+    <p class="brand">Project</p>
+    <h1 id="name">Loading…</h1>
+    <p id="description"></p>
+    <dl class="facts" id="facts"></dl>
+  </header>
+  <p id="error" role="alert" hidden></p>
+  <section aria-labelledby="where-h" id="where" hidden>
+    <h2 id="where-h">Where it lives</h2>
+    <ul class="places" id="places"></ul>
+  </section>
+  <section aria-labelledby="sets-h">
+    <h2 id="sets-h">Question sets</h2>
+    <div id="sets" class="sets" tabindex="-1"></div>
+  </section>
+</main>
+<noscript>This page needs JavaScript.</noscript>
+</body>
+</html>

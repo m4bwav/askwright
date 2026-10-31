@@ -6,3 +6,4 @@
 - [2026-10-25-study-mode.md](2026-10-25-study-mode.md): study mode design calls (Q1 to Q10)
 - [2026-10-24-public-scrub.md](2026-10-24-public-scrub.md): keeping private material out of the public repository
 - [2026-10-30-listen-bench-and-page-design.md](2026-10-30-listen-bench-and-page-design.md): 0.7.0 project label, continue prompt, listen bench, page reading order (D1 to D11)
+- [2026-10-30-projects-and-top-bar.md](2026-10-30-projects-and-top-bar.md): 0.8.0 project records, timestamps, one-row top bar, visual tests (P1 to P10)

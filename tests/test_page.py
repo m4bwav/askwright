@@ -516,9 +516,10 @@ class FixturePageTests(PageCase):
         p = self.open()
         for width in (1100, 390):
             p.set_viewport_size({"width": width, "height": 800})
+            p.wait_for_function("w => document.querySelector('#more').hidden === (w > 896)", arg=width)  # 56rem
             got = p.evaluate("""() => [...document.querySelectorAll('.top .bar, .bottom .bar')].map(b => ({
                 h: b.getBoundingClientRect().height, clipped: b.scrollHeight > b.clientHeight + 1,
-                kids: [...b.querySelectorAll('button:not([hidden])')].filter(k => getComputedStyle(k).display !== 'none')
+                kids: [...b.querySelectorAll('button:not([hidden])')].filter(k => getComputedStyle(k).display !== 'none' && k.checkVisibility())
                   .map(k => k.getBoundingClientRect()).every(r => r.height >= 36 && r.right <= innerWidth)}))""")
             self.assertEqual(len(got), 2)
             for bar in got:

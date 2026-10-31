@@ -47,7 +47,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-VERSION = "0.7.0"
+VERSION = "0.8.0"
 PAGE = Path(__file__).resolve().parent / "page"
 KINDS = ("choice", "multi", "compare", "rank", "text", "scale", "confirm")
 MODES = ("decide", "study")
@@ -68,7 +68,9 @@ MIME = {
 KIND_OF_EXT = {e: m.split("/")[0] for e, m in MIME.items() if not m.startswith("text/")}
 PAGE_FILES = {"/app.js": ("app.js", "text/javascript; charset=utf-8"), "/app.css": ("app.css", "text/css; charset=utf-8")}
 PAGE_FILES.update({"/dashboard.js": ("dashboard.js", "text/javascript; charset=utf-8"),
-                   "/dashboard.css": ("dashboard.css", "text/css; charset=utf-8")})
+                   "/dashboard.css": ("dashboard.css", "text/css; charset=utf-8"),
+                   "/project.js": ("project.js", "text/javascript; charset=utf-8"),
+                   "/time.js": ("time.js", "text/javascript; charset=utf-8")})
 MAGIC = ((b"\x89PNG\r\n\x1a\n", "png"), (b"\xff\xd8\xff", "jpg"), (b"GIF87a", "gif"), (b"GIF89a", "gif"))
 CSP = ("default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; "
        "connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
@@ -164,7 +166,140 @@ def register_set(path):
     folder = state_dir() / "sessions"
     folder.mkdir(parents=True, exist_ok=True)
     write_json_atomic(folder / (sid + ".json"), {"path": str(d)})
+    proj = project_of(_)
+    if proj:
+        ensure_project(proj["name"], dirs=[proj["path"]] if proj["path"] else [])
     return sid
+
+
+# ---------------------------------------------------------------- projects and timestamps
+
+def iso_mtime(f):
+    try:
+        t = Path(f).stat().st_mtime
+    except OSError:
+        return None
+    return datetime.datetime.fromtimestamp(t).astimezone().isoformat(timespec="seconds")
+
+
+def stamp(obj, created=None):
+    """Sets obj["updated"] to now, and obj["created"] when missing (to `created`, else now)."""
+    t = now()
+    if not isinstance(obj.get("created"), str):
+        obj["created"] = created or t
+    obj["updated"] = t
+    return obj
+
+
+def set_times(d, data):
+    """created and updated of a set; sets made before 0.8.0 fall back to questions.json's mtime."""
+    m = iso_mtime(Path(d) / "questions.json")
+    c = data.get("created") if isinstance(data.get("created"), str) else m
+    u = data.get("updated") if isinstance(data.get("updated"), str) else m
+    return {"created": c, "updated": u}
+
+
+def parse_time(t):
+    try:
+        v = datetime.datetime.fromisoformat(t)
+        return v.timestamp() if v.tzinfo else v.astimezone().timestamp()
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def project_slug(name):
+    s = re.sub(r"[^a-z0-9]+", "-", str(name).casefold()).strip("-")[:60].strip("-")
+    return s or "p-" + hashlib.sha256(str(name).encode("utf-8")).hexdigest()[:10]
+
+
+def project_file(slug):
+    if not isinstance(slug, str) or not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,80}", slug):
+        raise AskError("unknown project")
+    return state_dir() / "projects" / (slug + ".json")
+
+
+def load_project(slug):
+    f = project_file(slug)
+    try:
+        rec = json.loads(f.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return None
+    except (OSError, ValueError) as e:
+        raise AskError(f"cannot read project {slug}: {e}")
+    if not isinstance(rec, dict) or not isinstance(rec.get("name"), str):
+        raise AskError(f"project {slug} is not a project record")
+    for k in ("repos", "dirs"):
+        rec[k] = [x for x in rec.get(k) or [] if isinstance(x, str)]
+    if not isinstance(rec.get("description"), str):
+        rec["description"] = ""
+    m = iso_mtime(f)
+    for k in ("created", "updated"):
+        if not isinstance(rec.get(k), str):
+            rec[k] = m
+    rec["slug"] = slug
+    return rec
+
+
+def ensure_project(name, description=None, repos=(), dirs=(), remove_repos=(), remove_dirs=()):
+    """Creates or updates the user-wide project record: one file per project, named by its slug."""
+    slug = project_slug(name)
+    f = project_file(slug)
+    old = load_project(slug)
+    rec = dict(old) if old else {"askwright": 1, "name": name.strip(), "description": "", "repos": [], "dirs": []}
+    rec.pop("slug", None)
+    before = json.dumps(rec, sort_keys=True)
+    if description is not None:
+        rec["description"] = description
+    for k, add, drop in (("repos", repos, remove_repos), ("dirs", dirs, remove_dirs)):
+        for x in add:
+            x = str(x).strip()
+            if x and k == "dirs":
+                x = str(Path(x).expanduser().resolve())
+            if x and x not in rec[k]:
+                rec[k].append(x)
+        rec[k] = [x for x in rec[k] if x not in drop]
+    if not old or before != json.dumps(rec, sort_keys=True):
+        stamp(rec)
+        f.parent.mkdir(parents=True, exist_ok=True)
+        write_json_atomic(f, rec)
+    rec["slug"] = slug
+    return rec
+
+
+def list_projects(sessions=None):
+    """Every project record plus projects named only by sets, each with its sets and when it was last worked on."""
+    sessions = list_sessions()["sessions"] if sessions is None else sessions
+    out = {}
+    for f in sorted((state_dir() / "projects").glob("*.json")):
+        try:
+            rec = load_project(f.stem)
+        except AskError:
+            continue
+        if rec:
+            out[rec["slug"]] = dict(rec, sets=[])
+    for row in sessions:
+        proj = row.get("project")
+        if not proj:
+            continue
+        if proj["slug"] not in out:
+            out[proj["slug"]] = {"slug": proj["slug"], "name": proj["name"], "description": "", "repos": [],
+                                 "dirs": [proj["path"]] if proj["path"] else [], "created": row.get("created"),
+                                 "updated": row.get("updated"), "sets": []}
+        out[proj["slug"]]["sets"].append(row)
+    for rec in out.values():
+        times = [t for t in [rec.get("updated")] + [r.get("last_worked") for r in rec["sets"]] if t]
+        rec["last_worked"] = max(times, key=parse_time) if times else None
+        rec["sets"].sort(key=lambda r: parse_time(r.get("last_worked")), reverse=True)
+    rows = sorted(out.values(), key=lambda r: parse_time(r.get("last_worked")), reverse=True)
+    return {"ok": True, "projects": rows}
+
+
+def project_page(slug):
+    project_file(slug)
+    for rec in list_projects()["projects"]:
+        if rec["slug"] == slug:
+            return {"ok": True, "project": rec}
+    raise AskError("unknown project")
 
 
 def registered_set(sid):
@@ -233,6 +368,11 @@ def list_sessions():
                     raise AskError(f"{field} must be text")
             st = summarize(d, check_server=False)
             pending = set().union(*(st[k] for k in ("unanswered", "unsure", "note_only", "stale")))
+            times = set_times(d, data)
+            marks = [e.get("t") for e in load_events(d) if e.get("type") in ("answer", "added", "done", "submit")]
+            marks = [t for t in [times["updated"]] + marks if t]
+            row.update(created=times["created"], updated=times["updated"],
+                       last_worked=max(marks, key=parse_time) if marks else None)
             row.update(path=str(d), title=data.get("title") or d.name, context=data.get("context") or "",
                        asked_by=data.get("asked_by") or "", product=data.get("product") or "",
                        session=data.get("session") or "", pending=len(pending),
@@ -267,9 +407,10 @@ def project_of(data):
     """The set's project as {"name", "path"} (path may be ""), or None. A plain string is a name."""
     p = data.get("project")
     if isinstance(p, str) and p.strip():
-        return {"name": p.strip(), "path": ""}
+        return {"name": p.strip(), "path": "", "slug": project_slug(p.strip())}
     if isinstance(p, dict) and isinstance(p.get("name"), str) and p["name"].strip():
-        return {"name": p["name"].strip(), "path": str(p.get("path") or "")}
+        name = p["name"].strip()
+        return {"name": name, "path": str(p.get("path") or ""), "slug": project_slug(name)}
     return None
 
 
@@ -1288,7 +1429,14 @@ def page_set(srv):
     visits = [e for e in events if e.get("type") == "visit"]
     answered = [e for e in events if e.get("type") == "answer"]
     ans = load_answers(d)
-    out = {"ok": True, "set": {k: data.get(k) for k in ("id", "title", "context", "asked_by", "back_link")},
+    times = set_times(d, data)
+    for q in qs:  # questions written before 0.8.0 carry no times: they take the set's
+        if not isinstance(q.get("created"), str):
+            q["created"] = times["created"]
+        if not isinstance(q.get("updated"), str):
+            q["updated"] = times["updated"]
+    out = {"ok": True, "set": dict({k: data.get(k) for k in ("id", "title", "context", "asked_by", "back_link")},
+                                   **times),
            "project": project_of(data), "continue_prompt": continue_prompt(d, data),
            "mode": "study" if is_study(data) else "decide",
            "questions": qs, "answers": ans["answers"], "rev": ans.get("rev", 0), "note": note,
@@ -1347,8 +1495,10 @@ class Handler(BaseHTTPRequestHandler):
         if not self.host_ok():
             return self.fail(403, "wrong Host header")
         path = urllib.parse.urlsplit(self.path).path
-        if path in ("/", "/index.html", "/sessions"):
+        if path in ("/", "/index.html", "/sessions") or re.fullmatch(r"/projects/[a-z0-9-]+", path):
             name = "dashboard.html" if path == "/sessions" or getattr(self.server, "dashboard", False) else "index.html"
+            if path.startswith("/projects/"):
+                name = "project.html"
             html = (PAGE / name).read_text(encoding="utf-8").replace("__ASK_TOKEN__", self.server.token)
             return self.send_bytes(200, html.encode("utf-8"), "text/html; charset=utf-8",
                                    {"Content-Security-Policy": CSP, "Referrer-Policy": "no-referrer"})
@@ -1366,6 +1516,14 @@ class Handler(BaseHTTPRequestHandler):
                 return self.fail(403, "wrong origin")
             if path == "/api/sessions":
                 return self.send_json(200, list_sessions())
+            if path == "/api/projects":
+                return self.send_json(200, list_projects())
+            if path == "/api/project":
+                slug = urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query).get("slug", [""])[0]
+                try:
+                    return self.send_json(200, project_page(slug))
+                except AskError as e:
+                    return self.fail(404, str(e))
             if path == "/api/set" and not getattr(self.server, "dashboard", False):
                 return self.send_json(200, page_set(self.server))
             if path == "/api/ping":
@@ -1657,6 +1815,7 @@ def cmd_new(a):
     d.mkdir(parents=True, exist_ok=True)
     data = {"askwright": 1, "id": sid, "title": a.title, "context": "", "asked_by": a.asked_by,
             "product": a.product, "session": a.session, "media_roots": [], "questions": []}
+    stamp(data)
     if a.back_link:
         data["back_link"] = {"url": a.back_link[0], "label": a.back_link[1]}
     if a.project_path and not a.project:
@@ -1708,6 +1867,14 @@ def detach(a):
             return emit({"ok": False, "error": "the server exited", "log": tail})
         time.sleep(0.2)
     return emit({"ok": False, "error": "the server did not report ready in 30 s", "pid": proc.pid})
+
+
+def cmd_project(a):
+    if a.list or not a.name:
+        return emit(list_projects())
+    rec = ensure_project(a.name, description=a.description, repos=a.repo, dirs=a.dir, remove_repos=a.remove_repo,
+                         remove_dirs=[str(Path(x).expanduser().resolve()) for x in a.remove_dir])
+    return emit({"ok": True, "project": rec})
 
 
 def cmd_register(a):
@@ -1926,6 +2093,8 @@ def cmd_close(a):
             q.update(status="withdrawn", reason=a.withdrawn)
         else:
             q["status"] = "closed"
+        stamp(q, created=set_times(d, data)["created"])
+    stamp(data, created=set_times(d, data)["created"])
     write_json_atomic(d / "questions.json", data)
     return emit({"ok": True, "closed": a.qids, "status": by_id[a.qids[0]]["status"]})
 
@@ -1946,6 +2115,8 @@ def cmd_add(a):
         if not isinstance(q, dict):
             return emit({"ok": False, "error": "each question must be an object"})
         qid = q.get("id")
+        q.pop("created", None)
+        stamp(q, created=by_id[qid].get("created") if qid in by_id else None)
         if qid in by_id:
             if not a.replace:
                 return emit({"ok": False, "error": f"question {qid} exists; pass --replace to bump its rev"})
@@ -1961,6 +2132,7 @@ def cmd_add(a):
     errs, warns = lint_set(d, data, probe=not a.no_probe)
     if errs and not a.force:
         return emit({"ok": False, "error": "lint failed; nothing was added", "errors": errs, "warnings": warns})
+    stamp(data, created=set_times(d, data)["created"])
     write_json_atomic(d / "questions.json", data)
     append_event(d, {"type": "added", "q": added})
     return emit({"ok": True, "added": added, "warnings": warns})
@@ -2067,6 +2239,14 @@ def main(argv=None):
     for name in ("inline", "stop"):
         sub.add_parser(name).add_argument("set")
     sub.add_parser("register", help="add an existing set to the shared dashboard").add_argument("set")
+    s = sub.add_parser("project", help="create or update a project record; with no name, list projects")
+    s.add_argument("name", nargs="?", default="")
+    s.add_argument("--description")
+    s.add_argument("--repo", action="append", default=[], help="a repository URL (repeat for more)")
+    s.add_argument("--dir", action="append", default=[], help="a local directory (repeat for more)")
+    s.add_argument("--remove-repo", action="append", default=[])
+    s.add_argument("--remove-dir", action="append", default=[])
+    s.add_argument("--list", action="store_true")
     s = sub.add_parser("dashboard", help="serve the shared session dashboard")
     s.add_argument("--port", type=int, default=0)
     s.add_argument("--detach", action="store_true")

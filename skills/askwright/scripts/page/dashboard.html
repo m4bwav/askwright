@@ -7,6 +7,7 @@
 <meta name="ask-token" content="__ASK_TOKEN__">
 <title>askwright | All sessions</title>
 <link rel="stylesheet" href="/dashboard.css">
+<script src="/time.js" defer></script>
 <script src="/dashboard.js" defer></script>
 </head>
 <body>
@@ -18,6 +19,7 @@
     <p>Every registered session on this computer. Open a session to review its questions.</p>
     <p id="summary" role="status">Loading sessions...</p>
   </header>
+  <nav id="projects" class="projects" aria-label="Projects" hidden><h2>Projects</h2><ul></ul></nav>
   <nav id="views" aria-label="Session lists">
     <button type="button" data-view="inbox" aria-pressed="true">Inbox</button>
     <button type="button" data-view="snoozed" aria-pressed="false">Snoozed</button>

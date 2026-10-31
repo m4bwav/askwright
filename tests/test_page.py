@@ -320,6 +320,8 @@ class GenericPageTests(PageCase):
             p.keyboard.press("n")
             p.wait_for_timeout(150)
         self.assertEqual(p.locator("h1").inner_text(), "Check your answers")
+        # A hint left out when everything is answered must not reach the page as the text "null".
+        self.assertNotIn("null", p.locator("main").inner_text())
         self.wait_saved()
         p.get_by_role("button", name="Submit my answers" if study else "All done").focus()
         p.keyboard.press("Enter")

@@ -30,6 +30,8 @@
     for (const kid of kids.flat(3)) if (kid != null && kid !== false) el.append(kid.nodeType ? kid : String(kid));
     return el;
   }
+  // replaceChildren and append are the DOM's own and write null as the text "null"; h() already skips it.
+  const kept = (...kids) => kids.filter((k) => k != null && k !== false);
   const byId = (id) => S.questions.find((q) => q.id === id);
   const isOpen = (q) => (q.status || "open") === "open";
   const fmtT = (t) => (Math.round(t * 10) / 10).toFixed(1) + " s";
@@ -902,7 +904,7 @@
           : "Saved. Come back to this page any time; it opens where you left off.";
       } catch (e) { showBanner("Could not record that: " + e.message + "."); }
     };
-    main.replaceChildren(h("h1", { tabindex: "-1", text: "Check your answers" }),
+    main.replaceChildren(...kept(h("h1", { tabindex: "-1", text: "Check your answers" }),
       h("p", { text: lead.join(", ") + "." }),
       h("dl", { class: "check" }, list.map((q) => h("div", null, h("dt", { text: q.title }), h("dd", { text: answerText(q) }),
         h("dd", null, h("a", { href: "#", onclick: (e) => { e.preventDefault(); goTo(q.id); }, text: done(q) ? "Change" : "Answer", "aria-label": (done(q) ? "Change " : "Answer ") + q.title }))))),
@@ -912,7 +914,7 @@
       h("div", { class: "finish-actions" },
         h("button", { type: "button", class: "btn", text: "I'm done for now", onclick: finish("pause") }),
         h("button", { type: "button", class: "btn primary", text: "All done", onclick: finish("done") })),
-      msg);
+      msg));
   }
 
   // ------------------------------------------------------------ study mode: submit, review, try again
@@ -929,7 +931,7 @@
         load().catch(() => {});
       } catch (e) { submit.disabled = false; showBanner("Your answers were not submitted: " + e.message + "."); }
     } });
-    main.replaceChildren(h("h1", { tabindex: "-1", text: "Check your answers" }),
+    main.replaceChildren(...kept(h("h1", { tabindex: "-1", text: "Check your answers" }),
       h("p", { text: counts.answered + " of " + list.length + " answered." }),
       h("dl", { class: "check" }, list.map((q) => h("div", null, h("dt", { text: q.title }), h("dd", { text: answerText(q) }),
         h("dd", null, h("a", { href: "#", onclick: (e) => { e.preventDefault(); goTo(q.id); }, text: done(q) ? "Change" : "Answer", "aria-label": (done(q) ? "Change " : "Answer ") + q.title }))))),
@@ -944,7 +946,7 @@
           catch (e) { showBanner("Could not record that: " + e.message + "."); }
         } }),
         submit),
-      msg);
+      msg));
   }
 
   const VERDICT = { right: "Right", wrong: "Not right", partial: "Part right", unanswered: "Not answered", pending: "Waiting for grading" };

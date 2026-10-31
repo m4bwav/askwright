@@ -338,6 +338,34 @@
   const toggle = (el) => { if (el.paused) { solo(el); el.play().catch(() => {}); } else el.pause(); };
   document.addEventListener("play", (e) => solo(e.target), true);
 
+  // One volume for every clip: header slider and mute button, kept per browser. A native player's own volume change
+  // moves the master too. Shown only while the page has media.
+  const VOL = { level: 1, muted: false };
+  try { const v = JSON.parse(localStorage.getItem("askwright.volume") || "null"); if (v) Object.assign(VOL, v); } catch (e) {}
+  const volBox = $("#volume"), volIn = $("#vol"), muteBtn = $("#btn-mute");
+  function applyVolume() {
+    // Setting a value it already has fires no volumechange, so the listener below settles after one round.
+    document.querySelectorAll("video, audio").forEach((m) => { m.volume = VOL.level; m.muted = VOL.muted; });
+    volIn.value = String(Math.round(VOL.level * 100));
+    volIn.setAttribute("aria-valuetext", VOL.muted ? "Muted" : Math.round(VOL.level * 100) + "%");
+    const off = VOL.muted || VOL.level === 0;
+    muteBtn.textContent = off ? "🔇" : VOL.level < 0.5 ? "🔉" : "🔊";
+    muteBtn.setAttribute("aria-pressed", String(VOL.muted));
+    muteBtn.setAttribute("aria-label", VOL.muted ? "Unmute" : "Mute");
+    try { localStorage.setItem("askwright.volume", JSON.stringify(VOL)); } catch (e) {}
+  }
+  volIn.addEventListener("input", () => { VOL.level = volIn.value / 100; VOL.muted = false; applyVolume(); });
+  muteBtn.addEventListener("click", () => { VOL.muted = !VOL.muted; if (!VOL.muted && !VOL.level) VOL.level = 0.5; applyVolume(); });
+  document.addEventListener("volumechange", (e) => {
+    if (e.target.volume === VOL.level && e.target.muted === VOL.muted) return;
+    VOL.level = e.target.volume; VOL.muted = e.target.muted; applyVolume();
+  }, true);
+  document.addEventListener("loadstart", (e) => { e.target.volume = VOL.level; e.target.muted = VOL.muted; }, true);
+  new MutationObserver(() => {
+    const has = !!document.querySelector("video, audio");
+    if (volBox.hidden === has) { volBox.hidden = !has; if (has) applyVolume(); }
+  }).observe(document.body, { childList: true, subtree: true });
+
   // ------------------------------------------------------------ continue prompt
   function statusLine() {
     const counts = { answered: 0, unsure: 0, note_only: 0, unanswered: 0 };
@@ -1169,6 +1197,10 @@
     } else if ((k === "[" || k === "]") && S.lookTimes.length) {
       S.lookIdx = (S.lookIdx + (k === "]" ? 1 : -1) + S.lookTimes.length) % S.lookTimes.length;
       seek(S.lookTimes[S.lookIdx], true);
+    } else if (k === "m" && !volBox.hidden) { e.preventDefault(); muteBtn.click(); }
+    else if ((k === "-" || k === "=") && !volBox.hidden) {
+      e.preventDefault();
+      VOL.level = Math.min(1, Math.max(0, Math.round((VOL.level + (k === "=" ? 0.1 : -0.1)) * 20) / 20)); VOL.muted = false; applyVolume();
     } else if (k === "o") { e.preventDefault(); $("#btn-overview").click(); }
     else if (k === "?") { e.preventDefault(); $("#keys").showModal(); }
   });

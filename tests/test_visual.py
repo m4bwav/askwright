@@ -169,9 +169,9 @@ class VisualCase(unittest.TestCase):
             with self.subTest(width=name):
                 p = self.page(name)
                 p.goto(self.url + "sessions")
-                p.wait_for_selector("article")
+                p.wait_for_selector("#sessions tbody")
                 self.assertIn("Madness Workshop", p.locator("#projects").inner_text())
-                self.assertTrue(p.locator("article .when time").first.get_attribute("title"))
+                self.assertTrue(p.locator("#sessions td.updated time").first.get_attribute("title"))
                 self.shot(p, "index-" + name)
                 p.locator("#projects a").first.click()
                 p.wait_for_selector(".set-card")

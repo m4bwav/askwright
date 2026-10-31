@@ -12,6 +12,11 @@ From the repository root: `python tests/check_skills.py`, `python tests/test_ask
 
 ## Runs
 
+### T-20261031-1 · 2026-10-31 · 0.10.0 repository suites · Windows, Python 3.14, Chrome · passed
+- tests/test_page.py 47 passed (dashboard tests moved to the table with row expansion; new test_done_set_quick_action_copies_prompt; keyboard walk checks the finish screen's Copy prompt to continue).
+- tests/test_ask.py 99 run, one Windows skip; tests/test_visual.py 4 passed (index screenshots at desktop and phone inspected by eye); check_skills 0 problems.
+- led to: C-20261031-1
+
 ### T-20261030-3 · 2026-10-30 · 0.9.0 repository suites · Windows, Python 3.14, Chrome · passed
 - tests/test_page.py 46 passed (4 new ClickMediaTests: clicking the right picture of a two-image compare picks sides.right and outlines it, then the left one switches the pick; a side-by-side clip gets left and right Pick buttons; `option` on bench clips picks from the row's button and reopens an answered question; plain media gets no pick target).
 - tests/test_ask.py 98 passed, one Windows skip; tests/test_visual.py 4 passed; check_skills 0 problems; budget yellow (unchanged).

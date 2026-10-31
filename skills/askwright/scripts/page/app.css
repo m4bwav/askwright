@@ -290,6 +290,8 @@ textarea {
 .check dt { font-weight: 700; }
 .check dd { margin: 0; }
 .finish-actions { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1.5rem; }
+.continue-box { margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid var(--border); }
+.continue-box h2 { font-size: 1.1rem; margin: 0 0 .4rem; }
 .done-msg { margin-top: 1rem; font-weight: 600; color: var(--ok-fg); }
 
 /* Study mode: the score and the review. Verdicts carry a word and a mark, never colour alone. */

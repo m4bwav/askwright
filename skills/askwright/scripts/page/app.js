@@ -978,7 +978,11 @@
       h("div", { class: "finish-actions" },
         h("button", { type: "button", class: "btn", text: "I'm done for now", onclick: finish("pause") }),
         h("button", { type: "button", class: "btn primary", text: "All done", onclick: finish("done") })),
-      msg));
+      msg,
+      h("div", { class: "continue-box" },
+        h("h2", { text: "Hand the answers back" }),
+        h("p", { text: "Copy a prompt that tells your agent to read these answers, act on them and carry on with the work the questions were for. Paste it into the agent's chat." }),
+        h("button", { type: "button", class: "btn" + (counts.unanswered + counts.note_only + counts.unsure ? "" : " primary"), id: "finish-copy", text: "Copy prompt to continue", onclick: copyPrompt }))));
   }
 
   // ------------------------------------------------------------ study mode: submit, review, try again
@@ -1047,7 +1051,8 @@
     const missed = rv.questions.filter((q) => q.status !== "right");
     const toggle = h("button", { type: "button", class: "btn", "aria-pressed": String(S.missedOnly), text: S.missedOnly ? "Show every question" : "Show only the ones to fix (" + missed.length + ")",
       onclick: () => { S.missedOnly = !S.missedOnly; render(false); } });
-    kids.push(h("div", { class: "finish-actions" }, again, missed.length && missed.length < rv.questions.length ? toggle : null));
+    kids.push(h("div", { class: "finish-actions" }, again, missed.length && missed.length < rv.questions.length ? toggle : null,
+      S.continuePrompt ? h("button", { type: "button", class: "btn", id: "finish-copy", text: "Copy prompt to continue", onclick: copyPrompt }) : null));
     kids.push(h("h2", { text: "Every question" }));
     const list = S.missedOnly ? missed : rv.questions;
     kids.push(h("ol", { class: "review" }, list.map((q) => reviewItem(q, rv.questions.indexOf(q) + 1))));

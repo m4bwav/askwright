@@ -67,3 +67,5 @@ Append-only. One line per operation: `## [YYYY-MM-DD] op | title` where op is on
 ## [2026-10-30] update | 0.9.0: click a picture (or the Pick button under a clip or sound) to pick its option, on the owner's request. C-20261030-4, T-20261030-3, decisions/2026-10-30-click-media-to-pick.md.
 
 ## [2026-10-30] update | 0.9.1: dashboard hides unavailable sessions behind an "Unavailable sessions (N)" checkbox (owner request). C-20261030-5.
+
+## [2026-10-31] update | 0.10.0: dashboard sessions as a table (Title, Project, Last updated, Action) with expandable rows holding the old card contents; done sets get Copy prompt as the quick action; the finish screen has Copy prompt to continue (owner request). C-20261031-1, T-20261031-1.

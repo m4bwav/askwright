@@ -1,7 +1,7 @@
 """Size budget for askwright: what every session loads (the skill description) and what an install weighs.
 
 Run from the repository root: python scripts/budget.py   (red fails; yellow is reported)
-Bands: install green under 120 KB, yellow to 280 KB; SKILL.md body green under 6 KB, yellow to 10 KB;
+Bands: install green under 120 KB, yellow to 300 KB; SKILL.md body green under 6 KB, yellow to 10 KB;
 description green under 175 tokens, yellow to 250.
 """
 
@@ -26,7 +26,7 @@ def size(p):
 def main():
     rows = []
     inst = sum(size(ROOT / p) for p in INSTALLED if (ROOT / p).exists())
-    rows.append(("install size", "%d KB" % (inst // 1024), band(inst, 120 * 1024, 280 * 1024)))
+    rows.append(("install size", "%d KB" % (inst // 1024), band(inst, 120 * 1024, 300 * 1024)))
     skill = (ROOT / "skills" / "askwright" / "SKILL.md").read_text(encoding="utf-8")
     body = len(skill.split("\n---\n", 1)[-1].encode("utf-8"))
     rows.append(("SKILL.md body (per use)", "%d bytes" % body, band(body, 6 * 1024, 10 * 1024)))

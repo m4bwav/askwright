@@ -58,6 +58,8 @@ and the page shows it as an image (no file is written; `ask.py figure <spec.json
 - `shapes`: `width`, `height` and `items` of `rect` (x, y, w, h), `circle` (x, y, r), `line` and `arrow` (x1, y1, x2,
   y2) and `text` (x, y, text), each with an optional `label`, `color` and `fill`.
 
+Click to pick: on `choice`, `compare`, `multi` and `scale` questions, a media item that stands for an option picks it when clicked (an image) or from the "Pick" button under it (video and audio keep their own click for play and seek). The page links an item to an option by its `option` field, else by position on a `compare` question with `sides` and exactly two items (first = left, second = right), else by a `label` equal to an option's id or label. One side-by-side clip on a `compare` question with `sides` gets "Pick the left take" and "Pick the right take" buttons. Two to four pictures to pick between sit side by side. Clicking on an answered question reopens it for the new pick.
+
 Audio items may add `text` (the line being spoken, shown under the clip) and `option` (the option id the clip is;
 on a `compare` question with `sides` the clip then reads "Left"/"Right" until the pick, like the options).
 

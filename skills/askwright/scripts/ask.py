@@ -47,7 +47,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-VERSION = "0.8.0"
+VERSION = "0.9.0"
 PAGE = Path(__file__).resolve().parent / "page"
 KINDS = ("choice", "multi", "compare", "rank", "text", "scale", "confirm")
 MODES = ("decide", "study")

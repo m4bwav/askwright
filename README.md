@@ -15,6 +15,8 @@ every question page is as good as the best one, instead of whatever the agent im
   why it matters, and what to look or listen for. Times in "what to look for" turn into "Play from 6.0 s" buttons.
 - The project's name in the top bar and a "Copy continue prompt" button: it copies a prompt that tells an agent to
   read the answers (with absolute paths), check them against its guesses and act on them, plus the counts so far.
+- Click to pick: click a picture to choose the option it shows, or the Pick button under a clip or sound (their
+  own click still plays and seeks). A side-by-side clip gets "Pick the left take" and "Pick the right take".
 - A page per project: its description, when it was created and last worked on, its repositories and folders, and
   its question sets (`ask.py project NAME --description TEXT --repo URL --dir DIR`). Every time on the pages reads
   "3 hours ago", with the exact time on hover.

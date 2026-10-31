@@ -249,27 +249,70 @@ function detail(row) {
   return out;
 }
 
+// The Projects tab: one row per project, most open questions first, then most recently worked on.
 function renderProjects() {
-  const nav = document.querySelector("#projects");
+  const panel = document.querySelector("#projects");
   const counts = new Map();
   for (const row of rows) {
     if (!row.project) continue;
-    const c = counts.get(row.project.slug) || {name: row.project.name, sets: 0, pending: 0};
+    const c = counts.get(row.project.slug) || {name: row.project.name, sets: 0, pending: 0, last: null};
     c.sets += 1;
     c.pending += row.pending || 0;
+    if (row.last_worked && (!c.last || Date.parse(row.last_worked) > Date.parse(c.last))) c.last = row.last_worked;
     counts.set(row.project.slug, c);
   }
-  const items = [...counts].sort((a, b) => b[1].pending - a[1].pending || a[1].name.localeCompare(b[1].name));
-  nav.hidden = !items.length;
-  const list = nav.querySelector("ul");
-  list.replaceChildren(...items.map(([slug, c]) => {
-    const li = node("li", "");
+  const items = [...counts].sort((a, b) => b[1].pending - a[1].pending ||
+    (Date.parse(b[1].last) || 0) - (Date.parse(a[1].last) || 0) || a[1].name.localeCompare(b[1].name));
+  document.querySelector("#tab-projects").textContent = `Projects (${items.length})`;
+  if (!items.length) {
+    panel.replaceChildren(node("p", "No projects yet. A set names its project with ask.py new --project.", "empty"));
+    return;
+  }
+  const table = node("table", "", "sessions project-list");
+  const head = node("tr", "");
+  for (const label of ["Project", "Sets", "Open", "Last worked on"]) head.append(node("th", label));
+  const thead = node("thead", "");
+  thead.append(head);
+  const body = node("tbody", "");
+  for (const [slug, c] of items) {
+    const tr = node("tr", "", "row");
+    const name = node("td", "", "title");
     const a = node("a", c.name);
     a.href = "/projects/" + encodeURIComponent(slug);
-    li.append(a, node("span", c.pending ? ` ${c.pending} open` : ` ${c.sets} set${c.sets === 1 ? "" : "s"}`, "meta"));
-    return li;
-  }));
+    name.append(a);
+    const when = node("td", "", "updated");
+    if (c.last) when.append(askTime.el(c.last, ""));
+    tr.append(name, node("td", plural(c.sets, "set"), "num"), node("td", c.pending ? `${c.pending} open` : "none", "num"), when);
+    body.append(tr);
+  }
+  table.append(thead, body);
+  panel.replaceChildren(table);
 }
+
+// Sessions and Projects tabs; the choice is remembered per browser and #projects opens the Projects tab.
+let tab = location.hash === "#projects" ? "projects" : "sessions";
+if (!location.hash) {
+  try { if (localStorage.getItem("askwright-tab") === "projects") tab = "projects"; } catch (e) { /* keep the default */ }
+}
+function showTab(key, focus) {
+  tab = key;
+  for (const button of document.querySelectorAll("[data-tab]")) {
+    const on = button.dataset.tab === key;
+    button.setAttribute("aria-selected", String(on));
+    button.tabIndex = on ? 0 : -1;
+    document.querySelector("#" + button.getAttribute("aria-controls")).hidden = !on;
+    if (on && focus) button.focus();
+  }
+  try { localStorage.setItem("askwright-tab", key); } catch (e) { /* storage unavailable */ }
+}
+for (const button of document.querySelectorAll("[data-tab]")) {
+  button.addEventListener("click", () => showTab(button.dataset.tab));
+  button.addEventListener("keydown", event => {
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+    showTab(tab === "sessions" ? "projects" : "sessions", true);
+  });
+}
+showTab(tab);
 
 async function copyText(text) {
   try { await navigator.clipboard.writeText(text); return true; } catch (e) { /* fall back below */ }

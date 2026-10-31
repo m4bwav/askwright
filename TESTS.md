@@ -12,6 +12,9 @@ From the repository root: `python tests/check_skills.py`, `python tests/test_ask
 
 ## Runs
 
+### T-20261031-7 · 2026-10-31 · 0.15.0 dashboard Projects tab · Windows, Python 3.14, Chrome · passed
+- tests/test_visual.py 6 passed (Projects tab hidden by default, then shown with its count, no horizontal scroll, dark contrast; screenshots inspected: the phone table first lost its column meaning, fixed with compact rows), tests/test_page.py + tests/test_ask.py 148 passed (1 Windows skip), check_skills 0 problems (after converting a CRLF write of dashboard.html back to LF), budget yellow unchanged.
+
 ### T-20261031-6 · 2026-10-31 · 0.14.0 overview, check and study review polish; project warning · Windows, Python 3.14, Chrome · passed
 - tests/test_visual.py 6 passed (new test_overview_finish_and_study_review, light and dark, desktop and phone; screenshots inspected by eye: red "Not answered" tags read as errors, the disabled Back/Next footer sat over the score, a stale welcome-back banner after Try again then submit; all fixed), tests/test_page.py 49 passed, tests/test_ask.py 100 passed (1 Windows skip), check_skills 0 problems, budget yellow (SKILL.md body 10,134 bytes after trimming Step 3).
 - led to: C-20261031-6

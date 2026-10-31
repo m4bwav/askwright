@@ -128,3 +128,21 @@ section h2 { font-size: 1.15rem; margin: 28px 0 12px; }
   #error, .session-error { color: #ffb6b6; }
   :focus-visible { outline-color: #ffbc75; }
 }
+#tabs { display: flex; gap: 4px; border-bottom: 2px solid #ced7e0; margin: 8px 0 20px; }
+#tabs [role=tab] { border: 0; border-bottom: 3px solid transparent; border-radius: 6px 6px 0 0; margin-bottom: -2px; background: none; font-weight: 650; color: #46586e; }
+#tabs [role=tab][aria-selected=true] { color: #182536; border-bottom-color: #244b79; }
+.project-list td.num { white-space: nowrap; }
+.project-list td.title a { font-weight: 650; }
+@media (prefers-color-scheme: dark) {
+  #tabs { border-color: #65768b; }
+  #tabs [role=tab] { color: #b4c4d8; }
+  #tabs [role=tab][aria-selected=true] { color: #eef3f9; border-bottom-color: #a6caff; }
+}
+@media (max-width: 640px) {
+  table.project-list thead { display: none; }
+  table.project-list tbody { padding: 0; }
+  table.project-list tr.row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 14px; padding: 10px 12px; border-top: 1px solid #e3e9ef; }
+  table.project-list tbody tr.row:first-child { border-top: 0; }
+  table.project-list tr.row td { padding: 0; }
+  table.project-list td.title { flex: 1 0 100%; }
+}

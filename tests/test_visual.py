@@ -86,6 +86,24 @@ TOPBAR = """() => {
   };
 }"""
 
+# Dark mode: the body background is dark and every visible text element in `sel` keeps 4.5:1 contrast (WCAG AA).
+CONTRAST = r"""(sel) => {
+  const rgb = c => (c.match(/[\d.]+/g) || []).map(Number);
+  const lum = ([r, g, b]) => { const f = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+    return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
+  const bgOf = el => { for (; el; el = el.parentElement) { const c = rgb(getComputedStyle(el).backgroundColor);
+    if (c.length === 3 || (c.length === 4 && c[3] > 0.5)) return c.slice(0, 3); }
+    return rgb(getComputedStyle(document.documentElement).backgroundColor).slice(0, 3); };
+  const low = [];
+  for (const el of document.querySelectorAll(sel)) {
+    if (!el.getClientRects().length || !el.textContent.trim()) continue;
+    const a = lum(rgb(getComputedStyle(el).color).slice(0, 3)), b = lum(bgOf(el));
+    const r = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+    if (r < 4.5) low.push((el.id || el.className || el.tagName) + " " + r.toFixed(2));
+  }
+  return {bodyLum: lum(bgOf(document.body)), low};
+}"""
+
 
 class VisualCase(unittest.TestCase):
     def setUp(self):
@@ -110,9 +128,9 @@ class VisualCase(unittest.TestCase):
         self.srv.server_close()
         shutil.rmtree(self.dir, ignore_errors=True)
 
-    def page(self, name):
+    def page(self, name, scheme="light"):
         w, h = WIDTHS[name]
-        ctx = _browser.new_context(viewport={"width": w, "height": h})
+        ctx = _browser.new_context(viewport={"width": w, "height": h}, color_scheme=scheme)
         self.addCleanup(ctx.close)
         p = ctx.new_page()
         p.set_default_timeout(10000)
@@ -189,6 +207,28 @@ class VisualCase(unittest.TestCase):
         p.click("#project-line")
         p.wait_for_selector(".set-card")
         self.assertEqual(p.locator("h1").inner_text(), "Madness Workshop")
+
+    def test_dark_mode_pages_are_dark_and_readable(self):
+        for name in ("desktop", "phone"):
+            with self.subTest(width=name):
+                p = self.page(name, scheme="dark")
+                p.goto(self.url)
+                p.wait_for_selector("[data-q]")
+                self.assert_dark(p, "header.top *, [data-q] h2, .opt")
+                self.shot(p, "question-dark-" + name)
+                p.goto(self.url + "sessions")
+                p.wait_for_selector("#sessions tbody")
+                self.assert_dark(p, "h1, #sessions td, #sessions th, #projects a")
+                self.shot(p, "index-dark-" + name)
+                p.locator("#projects a").first.click()
+                p.wait_for_selector(".set-card")
+                self.assert_dark(p, "h1, .set-card h3, #facts, #places a")
+                self.shot(p, "project-dark-" + name)
+
+    def assert_dark(self, p, selector):
+        got = p.evaluate(CONTRAST, selector)
+        self.assertLess(got["bodyLum"], 0.2, "body is not dark: %s" % got)
+        self.assertEqual(got["low"], [], "text below 4.5:1 contrast: %s" % got["low"])
 
 
 if __name__ == "__main__":

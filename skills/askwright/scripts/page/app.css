@@ -19,11 +19,11 @@
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #131316;
-    --fg: #ececf0;
-    --muted: #b4b4bc;
-    --surface: #1f1f24;
-    --border: #8d8d96;
+    --bg: #121923;
+    --fg: #e4ebf3;
+    --muted: #b4c4d8;
+    --surface: #1d2939;
+    --border: #65768b;
     --accent: #8ab4f8;
     --accent-fg: #0d0d10;
     --picked: #22314d;
@@ -33,7 +33,7 @@
     --error-bg: #3f1218;
     --error-fg: #ffc2c9;
     --ok-fg: #8fe0a6;
-    --tag-bg: #2b2b31;
+    --tag-bg: #2a3749;
   }
 }
 * { box-sizing: border-box; }

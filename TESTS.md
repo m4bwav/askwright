@@ -8,9 +8,13 @@ Entry shape: `### T-YYYYMMDD-n · date · harness · env · passed/total`, then 
 
 ## How to run the repository suites
 
-From the repository root: `python tests/check_skills.py`, `python tests/test_ask.py` and `python scripts/budget.py` (standard library only; CI runs these). The browser suites need `pip install playwright` and an installed Chrome or Edge, and skip with a message without them: `python tests/test_page.py` (behaviour, keyboard, axe) and `python tests/test_visual.py` (top bar, index, question set and project page at 1280, 1000, 390 and 340 px; screenshots in `tests/screenshots/`, git-ignored, or `ASKW_SHOTS=<dir>`). Look at the screenshots after any page change.
+From the repository root: `python tests/check_skills.py`, `python tests/test_ask.py` and `python scripts/budget.py` (standard library only; CI runs these). The browser suites need `pip install playwright` and an installed Chrome or Edge, and skip with a message without them: `python tests/test_page.py` (behaviour, keyboard, axe) and `python tests/test_visual.py` (top bar, index, question set and project page at 1280, 1000, 390 and 340 px, and the three pages in dark mode with a 4.5:1 contrast check; screenshots in `tests/screenshots/`, git-ignored, or `ASKW_SHOTS=<dir>`). Look at the screenshots after any page change.
 
 ## Runs
+
+### T-20261031-2 · 2026-10-31 · 0.10.1 dark mode · Windows, Python 3.14, Chrome · passed
+- tests/test_visual.py 5 passed (new dark-mode test failed first on the phone dashboard's Last updated cell at 2.02:1, fixed); dark screenshots of question, dashboard and project pages inspected by eye.
+- led to: C-20261031-2
 
 ### T-20261031-1 · 2026-10-31 · 0.10.0 repository suites · Windows, Python 3.14, Chrome · passed
 - tests/test_page.py 47 passed (dashboard tests moved to the table with row expansion; new test_done_set_quick_action_copies_prompt; keyboard walk checks the finish screen's Copy prompt to continue).

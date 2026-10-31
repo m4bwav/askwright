@@ -4,6 +4,10 @@ Every change to [README.md](README.md) and its companions, newest first, each wi
 
 Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (IDs or "user request"), `files:` (file and section), and a sentence on what changed. Cite section headings, not line numbers.
 
+### C-20261031-2 · 2026-10-31 · 0.10.1: dark-mode visual tests; one dark palette; dashboard plurals
+- because: continue prompt (dark-mode screenshots, wider polish), T-20261031-2
+- files: tests/test_visual.py (test_dark_mode_pages_are_dark_and_readable: question, dashboard and project pages at desktop and phone in dark mode, body must be dark and visible text at least 4.5:1), page/dashboard.css (the phone Last updated cell was 2.0:1 in dark mode, found by the new test), page/app.css (question page dark palette moved from neutral grey to the dashboard's blue-grey so every page matches), page/dashboard.js (summary says "1 question needs ... 1 session"), TESTS.md, plugin.json, ask.py VERSION
+
 ### C-20261031-1 · 2026-10-31 · 0.10.0: dashboard table with expandable rows; copy-to-continue on the finish screen
 - because: user request ("each item is too large... a table with expandable rows... Title, Project, last updated, and quick link action button"; "the last page of the quiz... should have a button to copy a prompt to process the answers and continue"), T-20261031-1
 - files: page/dashboard.js and dashboard.css (sessions table: Title with an open/done badge, Project, Last updated, Action; a row toggle expands the old card contents: product, context, times, counts, next five questions, Open, Copy continue prompt, Snooze, Archive, path; a done set's quick action is Copy prompt; phone layout stacks each row), page/app.js and app.css (finish screen "Hand the answers back" box with Copy prompt to continue, primary when nothing is left open; study review gets the button too), tests/test_page.py (dashboard tests on the table, test_done_set_quick_action_copies_prompt, finish-copy check), tests/test_visual.py, plugin.json, ask.py VERSION

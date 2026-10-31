@@ -4,6 +4,10 @@ Every change to [README.md](README.md) and its companions, newest first, each wi
 
 Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (IDs or "user request"), `files:` (file and section), and a sentence on what changed. Cite section headings, not line numbers.
 
+### C-20261031-10 · 2026-10-31 · 0.16.0: one volume control for every clip on the page
+- because: user request (master volume), PR #39
+- files: page/index.html (header slider and mute button, shown only while the page has media), page/app.js (level kept in localStorage; keys m mutes, - and = step it; a native player's own volume change moves the master), page/app.css, plugin.json, ask.py VERSION
+
 ### C-20261031-9 · 2026-10-31 · 0.15.1: tab icons
 - because: user request ("add a favicon to the pages so it can be identified in tabs"), T-20261031-8
 - files: page/favicon.svg (blue question mark, question sets), page/favicon-sessions.svg (green list, dashboard), page/favicon-project.svg (purple folder, project pages), the three HTML pages (`<link rel="icon">`), ask.py PAGE_FILES and `/favicon.ico` (now the question icon, was 204), tests/test_ask.py, plugin.json, ask.py VERSION

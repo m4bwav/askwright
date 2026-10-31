@@ -1,6 +1,8 @@
 # Handoff
 
 ## Current state
+2026-10-31 (session 9, continue prompt): 0.16.0 released (master volume, #39). All five continue-prompt goals shipped; nothing owed. Open only if asked: dashboard project filter, SKILL.md trim (body 10.1 KB, yellow), install-size split.
+
 2026-10-31 (session 8, continue prompt): all five goals remain shipped. Main has the master volume control (#39) unreleased on top of v0.15.1; bump and tag 0.16.0 with the next packaged change. Hardened the flaky side-by-side click test (waits for the image to decode, measures the box before each click). Still open only if asked: dashboard project filter, SKILL.md trim, install-size split.
 
 2026-10-31 (session 7, owner request): 0.15.1 tab icons (favicons) per page kind. Continue prompt goals stay all shipped; still open only if asked: project filter on the dashboard, SKILL.md trim, install-size split (295 KB, ceiling 300 KB), hardening the flaky side-by-side click test.

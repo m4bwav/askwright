@@ -740,11 +740,19 @@ class ClickMediaTests(PageCase):
     def test_click_half_of_side_by_side_image_picks_that_side(self):
         p = self.with_arrow(media=[{"src": "swatch.png", "alt": "both takes"}])
         img = p.locator("figure.side-pickable img")
-        box = img.bounding_box()
-        img.click(position={"x": box["width"] * 0.8, "y": box["height"] / 2})
+        # measure only after the image has decoded: a box taken before layout is narrow,
+        # so 80% of it landed in the left half (flaky 't2' != 't5' in CI)
+        img.evaluate("el => el.decode ? el.decode() : null")
+        p.wait_for_function("el => el.complete && el.naturalWidth > 0", arg=img.element_handle())
+
+        def click_at(frac):
+            box = img.bounding_box()
+            img.click(position={"x": box["width"] * frac, "y": box["height"] / 2})
+
+        click_at(0.8)
         self.wait_saved()
         self.assertEqual(self.answers()["arrow"]["choice"], "t5")  # sides.right
-        img.click(position={"x": box["width"] * 0.2, "y": box["height"] / 2})
+        click_at(0.2)
         self.wait_saved()
         self.assertEqual(self.answers()["arrow"]["choice"], "t2")
 

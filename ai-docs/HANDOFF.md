@@ -1,6 +1,8 @@
 # Handoff
 
 ## Current state
+2026-10-31 (session 8, continue prompt): all five goals remain shipped. Main has the master volume control (#39) unreleased on top of v0.15.1; bump and tag 0.16.0 with the next packaged change. Hardened the flaky side-by-side click test (waits for the image to decode, measures the box before each click). Still open only if asked: dashboard project filter, SKILL.md trim, install-size split.
+
 2026-10-31 (session 7, owner request): 0.15.1 tab icons (favicons) per page kind. Continue prompt goals stay all shipped; still open only if asked: project filter on the dashboard, SKILL.md trim, install-size split (295 KB, ceiling 300 KB), hardening the flaky side-by-side click test.
 
 2026-10-31 (visual and projects session 6): 0.15.0 moved projects off the sessions list into a Projects tab (owner request; C-20261031-8). Flaky: test_page.py test_click_half_of_side_by_side_image_picks_that_side failed once in CI on PR #36 ('t2' != 't5') and passed on re-run; worth hardening (probably clicks before the image has laid out). Note: tagging the 19 sets rewrote their questions.json, so their Last updated reads 2026-10-31 (mtime fallback). Earlier: the owner's real projects are in the registry (9 projects, every one of the 19 live sets has one; mapping by folder in log C-20261031-7). Dead temp entries removed and their source fixed (L-023 `verify-scripts-leak-registry`). The continue prompt's five goals are all shipped (0.8.0 to 0.14.0). Still open, only if the owner asks: dashboard filter polish (e.g. a project filter now that 9 projects exist), SKILL.md trim (10,134 of 10,240 bytes), install-size split (C-20261031-1). No version bump this session.

@@ -138,7 +138,8 @@
     pl.hidden = !S.project;
     if (S.project) {
       pl.textContent = "Project: " + S.project.name;
-      pl.title = S.project.path || S.project.name;
+      pl.title = "Open the project page" + (S.project.path ? " (" + S.project.path + ")" : "");
+      pl.href = "/projects/" + encodeURIComponent(S.project.slug || "");
     }
     const bl = d.set.back_link;
     if (bl && /^https?:\/\//.test(bl.url || "")) {
@@ -196,7 +197,7 @@
     t += left.length
       ? " " + left.length + " left: " + names + "."
       : " Every question is answered; check them below.";
-    showNotice(t);
+    showNotice(t, "info");
   }
 
   // ------------------------------------------------------------ saving
@@ -266,9 +267,10 @@
     b.hidden = false;
   }
   function hideBanner() { $("#banner").hidden = true; }
-  function showNotice(text) {
+  function showNotice(text, kind) {
     const n = $("#notice");
-    n.replaceChildren(h("span", { text }), h("button", { type: "button", class: "btn small", text: "Dismiss", onclick: () => { n.hidden = true; } }));
+    n.classList.toggle("info", kind === "info");
+    n.replaceChildren(h("span", { class: "notice-text", text }), h("button", { type: "button", class: "btn small", text: "Dismiss", onclick: () => { n.hidden = true; } }));
     n.hidden = false;
   }
 
@@ -384,9 +386,12 @@
     const left = list.length - answered;
     const i = list.findIndex((q) => q.id === S.current);
     const pos = S.view === "question" && i >= 0 ? "Question " + (i + 1) + " of " + list.length : "";
-    const counts = answered + " answered · " + left + " left";
-    // The counts drop on a phone (the track under the header shows them); the position stays.
-    $("#progress").replaceChildren(pos ? h("span", { text: pos }) : "", h("span", { class: pos ? "counts" : null, text: (pos ? " · " : "") + counts }));
+    // Two pills that never wrap; the counts drop on a phone (the track under the header shows them).
+    const posText = pos ? (i + 1) + " / " + list.length : "";
+    const pill = (cls, text, label) => h("span", { class: "pill " + cls, text, title: label, "aria-label": label });
+    $("#progress").replaceChildren(
+      posText ? pill("pos", posText, pos) : "",
+      pill(posText ? "counts" : "counts solo", answered + " done · " + left + " left", answered + " answered, " + left + " left"));
     $("#track-fill").style.width = (list.length ? Math.round((answered / list.length) * 100) : 0) + "%";
     const ba = $("#btn-answered");
     ba.hidden = answered === 0;
@@ -643,7 +648,8 @@
     if (where) art.append(h("p", { class: "context-line", text: where }));
     const caption = S.study ? [q.topic, q.title].filter(Boolean).join(" · ") + (q.bonus ? " · bonus" : "") : q.title;
     art.append(h("p", { class: "caption" }, caption,
-      !S.study && q.reversible === false ? h("span", { class: "tag warn", text: "hard to undo" }) : null),
+      !S.study && q.reversible === false ? h("span", { class: "tag warn", text: "hard to undo" }) : null,
+      q.updated ? h("span", { class: "when" }, window.askTime.el(q.updated, q.updated !== q.created ? "updated " : "asked ")) : null),
     h("h1", { tabindex: "-1", id: "q-h" }, q.question));
     if (q.hint) art.append(h("p", { class: "hint", text: q.hint }));
     if (q.why) art.append(h("section", { class: "why", "aria-labelledby": "why-h" }, h("h2", { id: "why-h", text: "Why this matters" }), h("p", { text: q.why })));
@@ -1024,7 +1030,25 @@
   $("#btn-overview").addEventListener("click", () => leave(() => { S.view = "overview"; render(true); }));
   $("#btn-answered").addEventListener("click", () => { S.showAnswered = !S.showAnswered; topbar(); if (S.view === "overview") render(false); });
   $("#btn-keys").addEventListener("click", () => $("#keys").showModal());
-  $("#btn-copy").addEventListener("click", copyPrompt);
+  $("#btn-copy").addEventListener("click", () => { $("#more").open = false; copyPrompt(); });
+  // Narrow screens: the secondary links move into the More menu (same elements, so ids and handlers stay).
+  // On a phone the Show answered toggle goes into the menu as well.
+  const narrow = window.matchMedia("(max-width: 70rem)");
+  const phone = window.matchMedia("(max-width: 40rem)");
+  const placeLinks = () => {
+    const nav = $("#top-links"), menu = $("#more-menu"), more = $("#more");
+    for (const el of document.querySelectorAll(".chip.secondary, .chip.phone-secondary")) {
+      const inMenu = el.classList.contains("secondary") ? narrow.matches : phone.matches;
+      if (inMenu) menu.append(el);
+      else nav.insertBefore(el, el.id === "btn-answered" ? $("#btn-overview") : more);
+    }
+    more.hidden = !narrow.matches;
+    if (!narrow.matches) more.open = false;
+  };
+  placeLinks();
+  narrow.addEventListener("change", placeLinks);
+  phone.addEventListener("change", placeLinks);
+  document.addEventListener("click", (e) => { if (!$("#more").contains(e.target)) $("#more").open = false; });
   $("#keys-close").addEventListener("click", () => $("#keys").close());
 
   function typing() {

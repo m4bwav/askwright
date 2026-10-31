@@ -4,6 +4,11 @@ Every change to [README.md](README.md) and its companions, newest first, each wi
 
 Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (IDs or "user request"), `files:` (file and section), and a sentence on what changed. Cite section headings, not line numbers.
 
+### C-20261030-3 · 2026-10-30 · 0.8.0: project pages, timestamps, a one-row top bar, visual tests
+- because: user request (the top bar looked janky: truncated title, wrapped counter, uneven links; project pages with repos, folders and question sets; created/updated on everything; Playwright screenshots), T-20261030-2
+- files: ask.py (project records and `ask.py project`, /projects/<slug>, /api/projects, /api/project, created/updated stamped by new/add/close with an mtime fallback, project slug in /api/set and /api/sessions), page/index.html, app.js, app.css (one-row top bar: project link over an ellipsised title, position and count pills, chips on one baseline, a More menu under 70rem, Show answered joining it on phones; question time in the caption; calmer Welcome back notice), page/time.js (new: relative times, exact on hover), page/project.html and project.js (new), page/dashboard.* (projects strip, project links, worked-on and created times), references/schema.md (The set, Projects), SKILL.md (Step 1), tests/test_ask.py (ProjectAndTimeTests), tests/test_visual.py (new), tests/test_page.py (bars test waits for the menu move), TESTS.md, plugin.json
+- Design calls: ai-docs/decisions/2026-10-30-projects-and-top-bar.md.
+
 ### C-20261030-2 · 2026-10-30 · 0.7.1: no stray "null" on the Check your answers screen
 - because: user request (the word "null" showed under the answers once every question was answered)
 - files: scripts/page/app.js (kept() filter for the two Check your answers screens), tests/test_page.py (keyboard run asserts no "null"), plugin.json

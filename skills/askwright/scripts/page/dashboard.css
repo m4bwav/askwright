@@ -44,6 +44,24 @@ summary { cursor: pointer; min-height: 44px; padding: 10px 0; font-weight: 600; 
 .snooze > summary { padding: 10px 18px; border: 1px solid #516985; border-radius: 6px; background: #fff; }
 .snooze-menu { position: absolute; z-index: 1; min-width: 150px; padding: 6px; display: grid; gap: 4px; background: #fff; border: 1px solid #65768b; border-radius: 6px; box-shadow: 0 4px 12px #0003; }
 .snooze-menu button { text-align: left; }
+a { color: #1d4f8c; }
+.project a { color: inherit; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.project a:hover { color: #1d4f8c; }
+.when time { border-bottom: 1px dotted currentColor; }
+.projects { padding: 4px 0 20px; }
+.projects h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; color: #46586e; margin: 0 0 8px; }
+.projects ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.projects li { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid #ced7e0; border-radius: 999px; background: #fff; }
+.projects li a { font-weight: 650; }
+.crumbs { font-size: .95rem; }
+.facts { display: flex; flex-wrap: wrap; gap: 8px 28px; margin: 16px 0 0; }
+.facts dt { font-size: .8rem; text-transform: uppercase; letter-spacing: .05em; color: #46586e; }
+.facts dd { margin: 2px 0 0; font-weight: 650; }
+section h2 { font-size: 1.15rem; margin: 28px 0 12px; }
+.places { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; overflow-wrap: anywhere; }
+.places code { font-size: .9rem; padding: 2px 6px; background: #e8edf2; border-radius: 4px; }
+.sets { display: grid; gap: 14px; }
+.set-card h3 { margin: 0 0 8px; font-size: 1.15rem; }
 @media (max-width: 520px) {
   main { padding: 24px 16px; }
   article { padding: 18px; }
@@ -53,7 +71,10 @@ summary { cursor: pointer; min-height: 44px; padding: 10px 0; font-weight: 600; 
   :root { background: #121923; color: #e4ebf3; }
   article, input[type=search], select, button { background: #1d2939; color: #e4ebf3; }
   article, input[type=search], select, button { border-color: #65768b; }
-  .brand, .meta, .path, footer, .project { color: #b4c4d8; }
+  .brand, .meta, .path, footer, .project, .projects h2, .facts dt { color: #b4c4d8; }
+  a, .project a:hover { color: #a6caff; }
+  .projects li { background: #1d2939; border-color: #65768b; }
+  .places code { background: #2a3749; }
   .toast { background: #e4ebf3; color: #121923; }
   .count { color: #a6caff; }
   button:hover { background: #30445e; }

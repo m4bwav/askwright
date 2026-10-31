@@ -13,3 +13,4 @@ kickoff-prompt.md
 .github/images/seed*.png
 .github/images/contact-sheet.png
 evals/results/
+tests/screenshots/

@@ -52,8 +52,11 @@ function render() {
     const card = node("article", "");
     card.dataset.session = row.id;
     if (row.project) {
-      const proj = node("p", `Project: ${row.project.name}`, "project");
-      if (row.project.path) proj.title = row.project.path;
+      const proj = node("p", "Project: ", "project");
+      const link = node("a", row.project.name);
+      link.href = "/projects/" + encodeURIComponent(row.project.slug);
+      if (row.project.path) link.title = row.project.path;
+      proj.append(link);
       card.append(proj);
     }
     card.append(node("h2", row.title || "Unavailable session"));
@@ -63,6 +66,9 @@ function render() {
       card.append(node("p", [row.product || "Product not recorded", row.session, row.asked_by]
         .filter(Boolean).join(" / "), "meta"));
       if (row.context) card.append(node("p", row.context));
+      const when = node("p", "", "meta when");
+      when.append(askTime.el(row.last_worked, "Worked on "), " · ", askTime.el(row.created, "created "));
+      card.append(when);
       card.append(node("p", `${row.pending} need attention / ${row.answered} answered`, "count"));
       const details = [
         row.unsure ? `${row.unsure} not sure` : "",
@@ -138,6 +144,7 @@ function render() {
   if (!visible.length) sessions.append(node("p", rows.length ?
     "No sessions match this view. Try another list, All sessions or clear the filters." :
     "No sessions registered yet. Agents register automatically when they create or serve an askwright set."));
+  renderProjects();
   document.querySelector("#summary").textContent =
     `${inView.reduce((sum, row) => sum + (row.pending || 0), 0)} questions need attention across ` +
     `${inView.filter(row => row.pending > 0).length} sessions. Showing ${visible.length} of ${inView.length} sessions in this list.`;
@@ -152,6 +159,28 @@ function render() {
     const control = Array.from(sessions.querySelectorAll("[data-focus]")).find(el => el.dataset.focus === focused);
     if (control) control.focus();
   }
+}
+
+function renderProjects() {
+  const nav = document.querySelector("#projects");
+  const counts = new Map();
+  for (const row of rows) {
+    if (!row.project) continue;
+    const c = counts.get(row.project.slug) || {name: row.project.name, sets: 0, pending: 0};
+    c.sets += 1;
+    c.pending += row.pending || 0;
+    counts.set(row.project.slug, c);
+  }
+  const items = [...counts].sort((a, b) => b[1].pending - a[1].pending || a[1].name.localeCompare(b[1].name));
+  nav.hidden = !items.length;
+  const list = nav.querySelector("ul");
+  list.replaceChildren(...items.map(([slug, c]) => {
+    const li = node("li", "");
+    const a = node("a", c.name);
+    a.href = "/projects/" + encodeURIComponent(slug);
+    li.append(a, node("span", c.pending ? ` ${c.pending} open` : ` ${c.sets} set${c.sets === 1 ? "" : "s"}`, "meta"));
+    return li;
+  }));
 }
 
 async function copyText(text) {

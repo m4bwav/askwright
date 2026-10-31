@@ -118,7 +118,8 @@ Notes without a pick, "not sure" and answers to changed questions still count as
 Conditional questions waiting on another answer are counted separately.
 
 Unavailable sessions (a set whose folder moved or was deleted) are hidden; a checkbox with their count shows them.
-A Projects strip above the lists links each project's page. Sessions are a table: title, project, last updated and
+Two tabs: Sessions and Projects (remembered per browser; `/sessions#projects` opens Projects). The Projects tab is a table
+of every project (sets, open questions, last worked on) linking each project's page. Sessions are a table: title, project, last updated and
 one quick action (Open questions, or Copy prompt once every question is answered). Click a title to expand its row:
 product, context, counts, a preview of the next five questions, Open questions, Copy continue prompt, Snooze and Archive.
 The last page of a question set also has a Copy prompt to continue button that hands the answers back to the agent.

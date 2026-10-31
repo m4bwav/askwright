@@ -19,7 +19,11 @@
     <p>Every registered session on this computer. Open a session to review its questions.</p>
     <p id="summary" role="status">Loading sessions...</p>
   </header>
-  <nav id="projects" class="projects" aria-label="Projects" hidden><h2>Projects</h2><ul></ul></nav>
+  <div id="tabs" role="tablist" aria-label="Dashboard">
+    <button type="button" role="tab" id="tab-sessions" data-tab="sessions" aria-controls="panel-sessions" aria-selected="true">Sessions</button>
+    <button type="button" role="tab" id="tab-projects" data-tab="projects" aria-controls="panel-projects" aria-selected="false" tabindex="-1">Projects</button>
+  </div>
+  <div id="panel-sessions" role="tabpanel" aria-labelledby="tab-sessions">
   <nav id="views" aria-label="Session lists">
     <button type="button" data-view="inbox" aria-pressed="true">Inbox</button>
     <button type="button" data-view="snoozed" aria-pressed="false">Snoozed</button>
@@ -35,6 +39,10 @@
   <p id="error" role="alert" hidden></p>
   <p id="action-status" role="status"></p>
   <section id="sessions" aria-label="Question sessions" tabindex="-1"></section>
+  </div>
+  <div id="panel-projects" role="tabpanel" aria-labelledby="tab-projects" hidden>
+    <section id="projects" class="projects" aria-label="Projects"></section>
+  </div>
   <footer>Counts refresh every 5 seconds. Notes without a pick and "not sure" still need your attention.</footer>
 </main>
 <div id="toast" class="toast" aria-hidden="true" hidden></div>

@@ -4,6 +4,14 @@ Every change to [README.md](README.md) and its companions, newest first, each wi
 
 Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (IDs or "user request"), `files:` (file and section), and a sentence on what changed. Cite section headings, not line numbers.
 
+### C-20261031-8 · 2026-10-31 · 0.15.0: projects move to their own dashboard tab
+- because: user request ("The projects list could get lengthy, can you put them in a separate tab from the session find and list? I only look at the full list of project occasionally"), T-20261031-7
+- files: page/dashboard.html (Sessions and Projects tabs, ARIA tablist; the Projects strip removed), page/dashboard.js (renderProjects builds a table: project, sets, open, last worked on, most open first; tab remembered in localStorage, `#projects` opens it, arrow keys switch), page/dashboard.css (tab styles light and dark; phone rows as name over "1 set · 7 open · when"), tests/test_visual.py (Projects tab at desktop and phone, light and dark), README (dashboard section), plugin.json, ask.py VERSION
+
+### C-20261031-7 · 2026-10-31 · owner's real projects registered; wiki-verify scripts isolate ASKWRIGHT_HOME
+- because: continue prompt (real projects with `ask.py project`), L-023
+- files: ai-docs/notes/*-wiki-verify.py (ASKWRIGHT_HOME set to a temp folder), registry data outside the repo (9 projects, 19 sets tagged)
+
 ### C-20261031-6 · 2026-10-31 · 0.14.0: every set has a project; calmer overview, check and study review screens
 - because: user request ("each session must have a project name, even if its something made up on the fly"; related sets, above all one continue-prompt chain, share it; a chain across projects gets an umbrella project), continue prompt (wider polish of overview and study review), T-20261031-6
 - files: SKILL.md (Step 1: `--project` required, naming rule; Step 3 trimmed to stay under the 10 KB body budget), ask.py (`new` without `--project` returns a `warning`), page/app.css (not-answered tags, verdicts and review borders muted grey instead of error red; review cards 1 px border), page/app.js (the Back/Next footer is hidden on the score screen; "Not answered" verdict marked "–" not "✗"; the welcome-back notice is cleared on submit), tests/test_visual.py (test_overview_finish_and_study_review: overview, check-your-answers and study review at desktop and phone, light and dark, no horizontal scroll, 4.5:1 contrast), plugin.json, ask.py VERSION

@@ -1,6 +1,8 @@
 # Handoff
 
 ## Current state
+2026-10-31 (owner request, visual and projects session 4): 0.13.0 (PR #32, tagged v0.13.0). Copy continue prompt now ends with `Execute <absolute path>` of the newest `*continue-prompt*.md` / `*next-session-prompt*.md` found in ai-docs/plans/, plans/ or the folder itself (project path, project dirs, set folder and three parents), served as `next_prompt`. Option numbers became key badges. Dashboard restarted from main; restart running question pages to get it. Still next: wider polish of the overview and study review screens, the owner's real projects with `ask.py project`. Install size near the 300 KB ceiling (C-20261031-1 split proposal).
+
 2026-10-31 (owner request): 0.12.0 a single side-by-side image (`sides` set, one image) picks the left or right take by the half clicked; Pick buttons kept. C-20261031-4, T-20261031-4. Restart running question pages to get it.
 
 2026-10-31 (visual and projects session 3): 0.10.1 (PR #28) dark-mode visual test (question, dashboard and project pages, body dark, visible text 4.5:1; it caught the phone Last updated cell at 2:1), one blue-grey dark palette on every page, dashboard plurals. 0.11.0 (PR #29, tagged v0.11.0) on the owner's mid-session request: sortable dashboard columns, Last updated newest first by default, remembered per browser, a sort bar on phones. Dashboard restarted from main. Still next for the continue prompt: wider polish of the question body, overview and study review; adding the owner's real projects with `ask.py project`. Install size 285 KB (yellow, ceiling 300 KB): the split proposal in C-20261031-1 is getting closer to needed.

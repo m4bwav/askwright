@@ -182,6 +182,14 @@ Write an entry the moment a real signal happens: a user correction, the same err
 - Scope: repo tests
 - Status: active · helpful 1 · harmful 0 · last_confirmed 2026-10-30
 
+### L-023 · 2026-10-31 · `verify-scripts-leak-registry`: wiki-verify scripts registered temp sets on the real dashboard
+- Trigger: 8 of 27 entries in ~/.askwright/sessions pointed at deleted AppData Temp folders (`ask/takes`, `set`), dated 10-26 to 10-31.
+- Hypothesis: ai-docs/notes/*-wiki-verify.py run `ask.py serve` (which registers) without setting ASKWRIGHT_HOME; the unit tests already isolate it.
+- Rule: any script that runs ask.py against throwaway sets sets ASKWRIGHT_HOME to a temp folder first.
+- Evidence: C-20261031-7, entries removed 2026-10-31, both verify scripts now set it.
+- Scope: repo:askwright
+- Status: active · helpful 1 · harmful 0 · last_confirmed 2026-10-31
+
 <!-- Example (delete once you have a real entry):
 ### L-001 · 2026-10-24 · One-line lesson in plain words
 - Trigger: what happened, with dates or counts

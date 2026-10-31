@@ -84,6 +84,10 @@ a.project-line:hover { color: var(--accent); text-decoration: underline; }
 .chip:hover { background: var(--surface); }
 .chip[aria-pressed="true"] { background: var(--picked); border-color: var(--accent); }
 .chip kbd { font-size: .75rem; padding: .15em .35em; line-height: 1; color: var(--muted); }
+.volume { display: inline-flex; align-items: center; gap: .3rem; }
+.volume[hidden] { display: none; }
+.volume .chip { padding: 0 .5rem; font-size: 1rem; }
+.volume input { width: 6rem; min-height: 28px; accent-color: var(--accent); margin: 0; }
 .more { position: relative; }
 .more > summary { list-style: none; }
 .more > summary::-webkit-details-marker { display: none; }

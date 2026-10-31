@@ -21,6 +21,10 @@
     </div>
     <p class="progress" id="progress"></p>
     <nav class="top-links" id="top-links" aria-label="Views">
+      <span class="volume" id="volume" hidden>
+        <button type="button" class="chip" id="btn-mute" aria-pressed="false" aria-label="Mute" title="Mute (m)">🔊</button>
+        <input type="range" id="vol" min="0" max="100" step="5" value="100" aria-label="Volume" title="Volume for every clip">
+      </span>
       <button type="button" class="chip phone-secondary" id="btn-answered" aria-pressed="false" hidden>Show answered</button>
       <button type="button" class="chip" id="btn-overview">All questions <kbd>o</kbd></button>
       <a class="chip secondary" id="back-link" hidden></a>
@@ -62,6 +66,8 @@
     <dt><kbd>[</kbd> / <kbd>]</kbd></dt><dd>Jump to the times in "What to look for"</dd>
     <dt><kbd>Shift</kbd>+<kbd>1</kbd> to <kbd>9</kbd></dt><dd>Play or pause that clip in the listen bench</dd>
     <dt><kbd>b</kbd></dt><dd>Listen bench: switch to the next clip at the same point</dd>
+    <dt><kbd>m</kbd></dt><dd>Mute or unmute every clip</dd>
+    <dt><kbd>-</kbd> / <kbd>=</kbd></dt><dd>Volume down or up</dd>
     <dt><kbd>o</kbd></dt><dd>All questions</dd>
     <dt><kbd>Esc</kbd></dt><dd>Leave the note box (keys work again)</dd>
   </dl>

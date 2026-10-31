@@ -158,19 +158,24 @@ class DashboardPageTests(PageCase):
         self.env.stop()
         self.home.cleanup()
 
+    def expand(self, title):
+        toggle = self.page.get_by_role("button", name=title, exact=True)
+        if toggle.get_attribute("aria-expanded") != "true":
+            toggle.click()
+
     def open(self):
         self.page.goto(self.url)
-        self.page.wait_for_selector("article")
+        self.page.wait_for_selector("#sessions tbody")
         return self.page
 
     def test_filters_counts_accessibility_and_phone(self):
         p = self.open()
-        self.assertEqual(p.locator("article").count(), 2)
+        self.assertEqual(p.locator("#sessions tbody").count(), 2)
         p.locator("#product").select_option("Codex")
-        self.assertEqual(p.locator("article h2").all_text_contents(), ["Site review"])
+        self.assertEqual(p.locator("#sessions .name").all_text_contents(), ["Site review"])
         p.locator("#product").select_option("")
         p.locator("#search").fill("Film")
-        self.assertEqual(p.locator("article h2").all_text_contents(), ["Film review"])
+        self.assertEqual(p.locator("#sessions .name").all_text_contents(), ["Film review"])
         p.locator("#search").fill("")
         for folder in (self.dir, self.other):
             _, data = ask.load_set(folder)
@@ -178,10 +183,11 @@ class DashboardPageTests(PageCase):
                 q["status"] = "closed"
             ask.write_json_atomic(folder / "questions.json", data)
         p.locator("#refresh").click()
-        p.wait_for_selector("article", state="detached")
+        p.wait_for_selector("#sessions tbody", state="detached")
         p.locator("#show-all").check()
-        self.assertEqual(p.locator("article").count(), 2)
-        self.assertIn("0 need attention", p.locator("article").first.inner_text())
+        self.assertEqual(p.locator("#sessions tbody").count(), 2)
+        p.locator("#sessions .toggle").first.click()
+        self.assertIn("0 need attention", p.locator("#sessions tbody").first.inner_text())
         self.axe("dashboard light")
         p.emulate_media(color_scheme="dark")
         self.axe("dashboard dark")
@@ -189,9 +195,28 @@ class DashboardPageTests(PageCase):
         self.assertTrue(p.evaluate("document.documentElement.scrollWidth <= window.innerWidth"))
         self.assertEqual(self.errors, [])
 
+    def test_done_set_quick_action_copies_prompt(self):
+        self.ctx.grant_permissions(["clipboard-read", "clipboard-write"], origin=self.url.rstrip("/"))
+        p = self.open()
+        rows = ask.list_sessions()["sessions"]
+        for row in rows:
+            row.update(pending=0, answered=3, unsure=0, note_only=0, continue_prompt="Continue " + row["title"])
+        body = json.dumps({"ok": True, "sessions": rows})
+        p.route("**/api/sessions", lambda route: route.fulfill(status=200, content_type="application/json", body=body))
+        p.locator("#show-all").check()
+        p.locator("#refresh").click()
+        p.wait_for_function("document.querySelector('td.action button').textContent === 'Copy prompt'")
+        self.assertEqual(p.locator("#sessions .badge").first.inner_text(), "done")
+        self.assertEqual(p.locator("#sessions tr.detail:visible").count(), 0)
+        p.locator("td.action button").first.click()
+        p.wait_for_selector("#toast:not([hidden])")
+        self.assertIn("Copied the continue prompt", p.locator("#toast").inner_text())
+        self.assertEqual(self.errors, [])
+
     def test_next_five_preview_stays_expanded_after_refresh(self):
         p = self.open()
-        card = p.locator("article").filter(has=p.get_by_role("heading", name="Film review", exact=True))
+        card = p.locator("#sessions tbody").filter(has=p.get_by_role("button", name="Film review", exact=True))
+        self.expand("Film review")
         preview = card.locator(".preview")
         self.assertFalse(preview.evaluate("el => el.open"))
         preview.locator("summary").focus()
@@ -205,13 +230,14 @@ class DashboardPageTests(PageCase):
         data["title"] = "Updated other session"
         ask.write_json_atomic(self.other / "questions.json", data)
         p.locator("#refresh").click()
-        p.wait_for_selector("h2:has-text('Updated other session')")
+        p.wait_for_selector("#sessions .name:has-text('Updated other session')")
         self.assertTrue(preview.evaluate("el => el.open"))
         self.assertEqual(self.errors, [])
 
     def test_snooze_archive_and_restore_persist_across_reload(self):
         p = self.open()
-        film = p.locator("article").filter(has=p.get_by_role("heading", name="Film review", exact=True))
+        film = p.locator("#sessions tbody").filter(has=p.get_by_role("button", name="Film review", exact=True))
+        self.expand("Film review")
         film.locator(".snooze > summary").click()
         self.assertEqual(film.locator(".snooze-menu button").all_text_contents(),
                          ["1 hour", "4 hours", "1 day", "3 days", "1 week"])
@@ -219,65 +245,67 @@ class DashboardPageTests(PageCase):
         self.assertFalse(film.locator(".snooze").evaluate("el => el.open"))
         film.locator(".snooze > summary").click()
         film.get_by_role("button", name="1 hour: Film review", exact=True).click()
-        p.wait_for_function("!Array.from(document.querySelectorAll('article h2')).some(el => el.textContent === 'Film review')")
+        p.wait_for_function("!Array.from(document.querySelectorAll('#sessions .name')).some(el => el.textContent === 'Film review')")
         p.locator("#show-all").check()
-        self.assertEqual(p.locator("article").count(), 1)
+        self.assertEqual(p.locator("#sessions tbody").count(), 1)
         p.reload()
-        p.wait_for_selector("article")
-        self.assertEqual(p.locator("article h2").all_text_contents(), ["Site review"])
+        p.wait_for_selector("#sessions tbody")
+        self.assertEqual(p.locator("#sessions .name").all_text_contents(), ["Site review"])
         p.locator('[data-view="snoozed"]').click()
+        self.expand("Film review")
         self.assertTrue(film.get_by_text("Snoozed until", exact=False).is_visible())
         self.axe("snoozed sessions")
         film.get_by_role("button", name="Unsnooze: Film review", exact=True).click()
-        p.wait_for_selector("article", state="detached")
+        p.wait_for_selector("#sessions tbody", state="detached")
         p.locator('[data-view="inbox"]').click()
         film.get_by_role("button", name="Archive: Film review", exact=True).click()
-        p.wait_for_function("document.querySelectorAll('article').length === 1")
+        p.wait_for_function("document.querySelectorAll('#sessions tbody').length === 1")
         p.locator("#show-all").check()
-        self.assertEqual(p.locator("article h2").all_text_contents(), ["Site review"])
+        self.assertEqual(p.locator("#sessions .name").all_text_contents(), ["Site review"])
         p.locator('[data-view="archived"]').click()
-        self.assertEqual(p.locator("article h2").all_text_contents(), ["Film review"])
+        self.assertEqual(p.locator("#sessions .name").all_text_contents(), ["Film review"])
         self.axe("archived sessions")
         film.get_by_role("button", name="Unarchive: Film review", exact=True).click()
-        p.wait_for_selector("article", state="detached")
+        p.wait_for_selector("#sessions tbody", state="detached")
         p.locator('[data-view="inbox"]').click()
-        self.assertEqual(p.locator("article").count(), 2)
+        self.assertEqual(p.locator("#sessions tbody").count(), 2)
         self.assertEqual(self.errors, [])
 
     def test_snooze_expiry_returns_without_reload_and_errors_keep_card(self):
         p = self.open()
-        film = p.locator("article").filter(has=p.get_by_role("heading", name="Film review", exact=True))
+        film = p.locator("#sessions tbody").filter(has=p.get_by_role("button", name="Film review", exact=True))
+        self.expand("Film review")
         p.route("**/api/session-state", lambda route: route.fulfill(
             status=500, content_type="application/json", body='{"ok":false,"error":"cannot save state"}'))
         film.get_by_role("button", name="Archive: Film review", exact=True).click()
         p.wait_for_selector("#error:visible")
         self.assertIn("cannot save state", p.locator("#error").inner_text())
-        self.assertEqual(p.locator("article").count(), 2)
+        self.assertEqual(p.locator("#sessions tbody").count(), 2)
         self.assertTrue(film.get_by_role("button", name="Archive: Film review", exact=True).is_enabled())
         p.unroute("**/api/session-state")
         film.locator(".snooze > summary").click()
         film.get_by_role("button", name="4 hours: Film review", exact=True).click()
-        p.wait_for_function("document.querySelectorAll('article').length === 1")
+        p.wait_for_function("document.querySelectorAll('#sessions tbody').length === 1")
         sid = ask.register_set(self.dir)
         ask.write_json_atomic(ask.state_dir() / "session-state" / (sid + ".json"),
                               {"state": "snoozed", "snoozed_until": time.time() + .2})
-        p.wait_for_selector("h2:has-text('Film review')", timeout=12000)
-        self.assertEqual(p.locator("article").count(), 2)
+        p.wait_for_selector("#sessions .name:has-text('Film review')", timeout=12000)
+        self.assertEqual(p.locator("#sessions tbody").count(), 2)
 
     def test_live_refresh_and_open_stopped_session(self):
         p = self.open()
         _, data = ask.load_set(self.other)
         data["title"] = "Updated title"
         ask.write_json_atomic(self.other / "questions.json", data)
-        p.wait_for_selector("h2:has-text('Updated title')", timeout=12000)
+        p.wait_for_selector("#sessions .name:has-text('Updated title')", timeout=12000)
         p.get_by_role("button", name="Open questions: Film review", exact=True).click()
         p.wait_for_selector("[data-q]", timeout=60000)
         self.assertTrue(ask.server_info(self.dir)["alive"])
         self.assertEqual(self.errors, [])
         more_menu(p)
         p.get_by_role("link", name="All sessions", exact=True).click()
-        p.wait_for_selector("article")
-        self.assertEqual(p.locator("article").count(), 2)
+        p.wait_for_selector("#sessions tbody")
+        self.assertEqual(p.locator("#sessions tbody").count(), 2)
 
     def test_empty_missing_and_failed_requests(self):
         p = self.open()
@@ -287,6 +315,7 @@ class DashboardPageTests(PageCase):
         p.wait_for_function("() => document.querySelector('#broken-count').textContent === '1'")
         self.assertEqual(p.locator(".session-error").count(), 0)
         p.check("#show-broken")
+        p.locator("tr.broken .toggle").click()
         p.wait_for_selector(".session-error")
         self.assertIn("no questions.json", p.locator(".session-error").inner_text())
         p.route("**/api/open", lambda route: route.fulfill(
@@ -333,6 +362,8 @@ class GenericPageTests(PageCase):
         self.assertEqual(p.locator("h1").inner_text(), "Check your answers")
         # A hint left out when everything is answered must not reach the page as the text "null".
         self.assertNotIn("null", p.locator("main").inner_text())
+        if not study:
+            self.assertEqual(p.locator("#finish-copy").inner_text(), "Copy prompt to continue")
         self.wait_saved()
         p.get_by_role("button", name="Submit my answers" if study else "All done").focus()
         p.keyboard.press("Enter")
@@ -822,9 +853,10 @@ class ListenPageTests(PageCase):
         ask.register_set(self.dir)
         p = self.page
         p.goto(self.url + "sessions")
-        card = p.locator("article").first
+        card = p.locator("#sessions tbody").first
         card.wait_for()
-        self.assertIn("Test reel", card.locator(".project").text_content())
+        self.assertIn("Test reel", card.locator(".proj").text_content())
+        card.locator(".toggle").click()
         card.get_by_role("button", name="Copy continue prompt").first.click()
         p.wait_for_selector("#toast:not([hidden])")
         self.assertIn("Continue Test reel", p.evaluate("() => navigator.clipboard.readText()"))

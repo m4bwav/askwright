@@ -13,6 +13,7 @@ let opening = false;
 let changing = false;
 let view = "inbox";
 const expanded = new Set();
+const previews = new Set();
 const snoozeOptions = [[3600, "1 hour"], [14400, "4 hours"], [86400, "1 day"],
   [259200, "3 days"], [604800, "1 week"]];
 
@@ -54,99 +55,63 @@ function render() {
       row.project && row.project.name, row.project && row.project.path]
       .join(" ").toLowerCase().includes(term));
   sessions.replaceChildren();
+  const table = node("table", "", "sessions");
+  const head = node("tr", "");
+  for (const label of ["Title", "Project", "Last updated", "Action"]) {
+    const th = node("th", label);
+    th.scope = "col";
+    head.append(th);
+  }
+  const thead = node("thead", "");
+  thead.append(head);
+  table.append(thead);
   for (const row of visible) {
-    const card = node("article", "");
-    card.dataset.session = row.id;
+    const body = node("tbody", "");
+    body.dataset.session = row.id;
+    const open = expanded.has(row.id);
+    const tr = node("tr", "", "row" + (row.error ? " broken" : ""));
+    const titleCell = node("td", "", "title");
+    const toggle = node("button", "", "toggle");
+    toggle.type = "button";
+    toggle.dataset.focus = `${row.id}:toggle`;
+    toggle.setAttribute("aria-expanded", String(open));
+    toggle.setAttribute("aria-controls", `detail-${row.id}`);
+    const chev = node("span", open ? "▾" : "▸", "chev");
+    chev.setAttribute("aria-hidden", "true");
+    toggle.append(chev, node("span", row.title || "Unavailable session", "name"));
+    toggle.addEventListener("click", () => {
+      if (expanded.has(row.id)) expanded.delete(row.id);
+      else expanded.add(row.id);
+      render();
+    });
+    titleCell.append(toggle);
+    if (!row.error) titleCell.append(node("span", row.pending ? `${row.pending} open` : "done", row.pending ? "badge" : "badge done"));
+    const projectCell = node("td", "", "proj");
     if (row.project) {
-      const proj = node("p", "Project: ", "project");
       const link = node("a", row.project.name);
       link.href = "/projects/" + encodeURIComponent(row.project.slug);
       if (row.project.path) link.title = row.project.path;
-      proj.append(link);
-      card.append(proj);
-    }
-    card.append(node("h2", row.title || "Unavailable session"));
-    if (row.error) {
-      card.append(node("p", row.error, "session-error"));
+      projectCell.append(link);
     } else {
-      card.append(node("p", [row.product || "Product not recorded", row.session, row.asked_by]
-        .filter(Boolean).join(" / "), "meta"));
-      if (row.context) card.append(node("p", row.context));
-      const when = node("p", "", "meta when");
-      when.append(askTime.el(row.last_worked, "Worked on "), " · ", askTime.el(row.created, "created "));
-      card.append(when);
-      card.append(node("p", `${row.pending} need attention / ${row.answered} answered`, "count"));
-      const details = [
-        row.unsure ? `${row.unsure} not sure` : "",
-        row.note_only ? `${row.note_only} note only` : "",
-        row.stale ? `${row.stale} changed since answered` : "",
-        row.waiting ? `${row.waiting} waiting on another answer` : "",
-        row.paused ? "Paused" : "",
-        row.done ? "Marked done" : ""
-      ].filter(Boolean);
-      if (details.length) card.append(node("p", details.join(" / "), "meta"));
-      const preview = node("details", "", "preview");
-      preview.open = expanded.has(row.id);
-      const summary = node("summary", "Next 5 questions");
-      summary.dataset.focus = `${row.id}:preview`;
-      preview.append(summary);
-      const questions = row.next_questions || [];
-      if (questions.length) {
-        const list = node("ol", "");
-        for (const question of questions) list.append(node("li", question.question));
-        preview.append(list);
-      } else {
-        preview.append(node("p", "No questions need attention."));
-      }
-      preview.addEventListener("toggle", () => {
-        if (preview.isConnected) {
-          if (preview.open) expanded.add(row.id);
-          else expanded.delete(row.id);
-        }
-      });
-      card.append(preview);
-      const button = node("button", "Open questions", "open");
-      button.type = "button";
-      button.disabled = changing || opening;
-      button.dataset.session = row.id;
-      button.dataset.focus = `${row.id}:open`;
-      button.setAttribute("aria-label", `Open questions: ${row.title}`);
-      button.addEventListener("click", () => open(row, button));
-      const copy = node("button", "Copy continue prompt", "copy");
-      copy.type = "button";
-      copy.dataset.focus = `${row.id}:copy`;
-      copy.setAttribute("aria-label", `Copy continue prompt: ${row.title}`);
-      copy.addEventListener("click", () => copyPrompt(row));
-      const actions = node("div", "", "actions");
-      actions.append(button, copy);
-      card.append(actions);
+      projectCell.append(node("span", "-", "meta"));
     }
-    const actions = card.querySelector(".actions") || node("div", "", "actions");
-    if (!card.contains(actions)) card.append(actions);
-    if (row.state === "snoozed") {
-      card.append(node("p", `Snoozed until ${new Date(row.snoozed_until * 1000).toLocaleString()}`, "meta"));
-    }
-    if (row.state === "archived" || row.state === "snoozed") {
-      const label = row.state === "archived" ? "Unarchive" : "Unsnooze";
-      actions.append(actionButton(row, label, "restore"));
-    } else {
-      const snooze = node("details", "", "snooze");
-      const summary = node("summary", "Snooze");
-      summary.dataset.focus = `${row.id}:snooze`;
-      snooze.append(summary);
-      const menu = node("div", "", "snooze-menu");
-      menu.setAttribute("role", "group");
-      menu.setAttribute("aria-label", `Snooze duration: ${row.title || row.id}`);
-      for (const [seconds, label] of snoozeOptions) {
-        menu.append(actionButton(row, label, "snooze", seconds));
-      }
-      snooze.append(menu);
-      actions.append(snooze);
-    }
-    if (row.state !== "archived") actions.append(actionButton(row, "Archive", "archive"));
-    if (row.path) card.append(node("p", row.path, "path"));
-    sessions.append(card);
+    const whenCell = node("td", "", "updated");
+    if (!row.error) whenCell.append(askTime.el(row.last_worked, ""));
+    const actionCell = node("td", "", "action");
+    if (!row.error) actionCell.append(isDone(row) ? copyButton(row, "Copy prompt", "quick") : openButton(row, "quick"));
+    tr.append(titleCell, projectCell, whenCell, actionCell);
+    body.append(tr);
+    const detailRow = node("tr", "", "detail");
+    detailRow.id = `detail-${row.id}`;
+    detailRow.hidden = !open;
+    const cell = node("td", "");
+    cell.colSpan = 4;
+    if (open) cell.append(...detail(row));
+    detailRow.append(cell);
+    body.append(detailRow);
+    table.append(body);
   }
+  if (visible.length) sessions.append(table);
   if (!visible.length) sessions.append(node("p", rows.length ?
     "No sessions match this view. Try another list, All sessions or clear the filters." :
     "No sessions registered yet. Agents register automatically when they create or serve an askwright set."));
@@ -165,6 +130,103 @@ function render() {
     const control = Array.from(sessions.querySelectorAll("[data-focus]")).find(el => el.dataset.focus === focused);
     if (control) control.focus();
   }
+}
+
+// A set is done when nothing needs attention and something was answered: its quick action copies the prompt.
+function isDone(row) {
+  return !row.error && row.pending === 0 && row.answered > 0;
+}
+
+function openButton(row, key) {
+  const button = node("button", "Open questions", "open");
+  button.type = "button";
+  button.disabled = changing || opening;
+  button.dataset.session = row.id;
+  button.dataset.focus = `${row.id}:open:${key}`;
+  button.setAttribute("aria-label", `Open questions: ${row.title}`);
+  button.addEventListener("click", () => open(row, button));
+  return button;
+}
+
+function copyButton(row, label, key) {
+  const copy = node("button", label, "copy" + (key === "quick" ? " open" : ""));
+  copy.type = "button";
+  copy.dataset.focus = `${row.id}:copy:${key}`;
+  copy.title = "Copy a prompt that tells the agent to act on these answers and continue";
+  copy.setAttribute("aria-label", `Copy continue prompt: ${row.title}`);
+  copy.addEventListener("click", () => copyPrompt(row));
+  return copy;
+}
+
+// Everything the old session card showed, for the expanded row.
+function detail(row) {
+  const out = [];
+  if (row.error) {
+    out.push(node("p", row.error, "session-error"));
+  } else {
+    out.push(node("p", [row.product || "Product not recorded", row.session, row.asked_by]
+      .filter(Boolean).join(" / "), "meta"));
+    if (row.context) out.push(node("p", row.context));
+    const when = node("p", "", "meta when");
+    when.append(askTime.el(row.last_worked, "Worked on "), " · ", askTime.el(row.created, "created "));
+    out.push(when);
+    out.push(node("p", `${row.pending} need attention / ${row.answered} answered`, "count"));
+    const details = [
+      row.unsure ? `${row.unsure} not sure` : "",
+      row.note_only ? `${row.note_only} note only` : "",
+      row.stale ? `${row.stale} changed since answered` : "",
+      row.waiting ? `${row.waiting} waiting on another answer` : "",
+      row.paused ? "Paused" : "",
+      row.done ? "Marked done" : ""
+    ].filter(Boolean);
+    if (details.length) out.push(node("p", details.join(" / "), "meta"));
+    const preview = node("details", "", "preview");
+    preview.open = previews.has(row.id);
+    const summary = node("summary", "Next 5 questions");
+    summary.dataset.focus = `${row.id}:preview`;
+    preview.append(summary);
+    const questions = row.next_questions || [];
+    if (questions.length) {
+      const list = node("ol", "");
+      for (const question of questions) list.append(node("li", question.question));
+      preview.append(list);
+    } else {
+      preview.append(node("p", "No questions need attention."));
+    }
+    preview.addEventListener("toggle", () => {
+      if (preview.isConnected) {
+        if (preview.open) previews.add(row.id);
+        else previews.delete(row.id);
+      }
+    });
+    out.push(preview);
+  }
+  const actions = node("div", "", "actions");
+  if (!row.error) actions.append(openButton(row, "detail"), copyButton(row, "Copy continue prompt", "detail"));
+  if (row.state === "snoozed") {
+    out.push(node("p", `Snoozed until ${new Date(row.snoozed_until * 1000).toLocaleString()}`, "meta"));
+  }
+  if (row.state === "archived" || row.state === "snoozed") {
+    const label = row.state === "archived" ? "Unarchive" : "Unsnooze";
+    actions.append(actionButton(row, label, "restore"));
+  } else {
+    const snooze = node("details", "", "snooze");
+    const summary = node("summary", "Snooze");
+    summary.dataset.focus = `${row.id}:snooze`;
+    snooze.append(summary);
+    const menu = node("div", "", "snooze-menu");
+    menu.setAttribute("role", "group");
+    menu.setAttribute("aria-label", `Snooze duration: ${row.title || row.id}`);
+    for (const [seconds, label] of snoozeOptions) {
+      menu.append(actionButton(row, label, "snooze", seconds));
+    }
+    snooze.append(menu);
+    actions.append(snooze);
+  }
+  if (row.state !== "archived") actions.append(actionButton(row, "Archive", "archive"));
+  out.push(actions);
+  if (row.path) out.push(node("p", row.path, "path"));
+  return out;
 }
 
 function renderProjects() {
@@ -241,7 +303,7 @@ async function changeState(row, action, seconds) {
     // Let the server decide expiration and ordering, including changes made in other tabs.
     changing = false;
     await refresh();
-    if (!document.activeElement.closest("article")) {
+    if (!document.activeElement.closest("tbody")) {
       document.querySelector(`[data-view="${view}"]`).focus();
     }
   } catch (e) {

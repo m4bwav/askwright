@@ -118,9 +118,10 @@ Notes without a pick, "not sure" and answers to changed questions still count as
 Conditional questions waiting on another answer are counted separately.
 
 Unavailable sessions (a set whose folder moved or was deleted) are hidden; a checkbox with their count shows them.
-A Projects strip above the lists links each project's page. Each card links its project, shows when it was last
-worked on, and has "Open questions" and "Copy continue prompt" buttons.
-Each session card has an expandable preview of its next five questions needing attention, in question order.
+A Projects strip above the lists links each project's page. Sessions are a table: title, project, last updated and
+one quick action (Open questions, or Copy prompt once every question is answered). Click a title to expand its row:
+product, context, counts, a preview of the next five questions, Open questions, Copy continue prompt, Snooze and Archive.
+The last page of a question set also has a Copy prompt to continue button that hands the answers back to the agent.
 The Snooze dropdown hides that session for 1 hour, 4 hours, 1 day, 3 days or 1 week.
 It returns to the inbox when that time expires. Open Snoozed to bring it back early with Unsnooze.
 Archive moves a session to the Archive list until you choose Unarchive.

@@ -4,6 +4,7 @@ const sessions = document.querySelector("#sessions");
 const search = document.querySelector("#search");
 const product = document.querySelector("#product");
 const showAll = document.querySelector("#show-all");
+const showBroken = document.querySelector("#show-broken");
 const error = document.querySelector("#error");
 let rows = [];
 let snapshot = null;
@@ -42,7 +43,12 @@ function render() {
   const focused = document.activeElement.dataset.focus;
   const term = search.value.trim().toLowerCase();
   const inView = rows.filter(row => (row.state || "inbox") === view);
-  const visible = inView.filter(row => (view !== "inbox" || showAll.checked || row.pending > 0 || row.error) &&
+  // Unavailable sessions (moved or deleted folders, unreadable sets) stay hidden until asked for.
+  const broken = inView.filter(row => row.error).length;
+  document.querySelector("#broken-count").textContent = broken;
+  showBroken.closest("label").hidden = !broken && !showBroken.checked;
+  const visible = inView.filter(row => (row.error ? showBroken.checked :
+      view !== "inbox" || showAll.checked || row.pending > 0) &&
     (!product.value || row.product === product.value) &&
     [row.title, row.path, row.context, row.product, row.session, row.asked_by, row.error,
       row.project && row.project.name, row.project && row.project.path]
@@ -296,6 +302,7 @@ document.querySelector("#filters").addEventListener("submit", event => event.pre
 search.addEventListener("input", render);
 product.addEventListener("change", render);
 showAll.addEventListener("change", render);
+showBroken.addEventListener("change", render);
 for (const button of document.querySelectorAll("[data-view]")) {
   button.addEventListener("click", () => {
     view = button.dataset.view;

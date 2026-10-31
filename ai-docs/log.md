@@ -65,3 +65,5 @@ Append-only. One line per operation: `## [YYYY-MM-DD] op | title` where op is on
 ## [2026-10-30] update | 0.8.0: project records and pages (`ask.py project`, /projects/<slug>), created/updated on sets, questions and projects (mtime fallback), one-row top bar with pills, chips and a More menu under 70rem, Show answered joining it on phones, dashboard Projects strip, tests/test_visual.py with screenshots. C-20261030-3, T-20261030-2, L-022, decisions/2026-10-30-projects-and-top-bar.md.
 
 ## [2026-10-30] update | 0.9.0: click a picture (or the Pick button under a clip or sound) to pick its option, on the owner's request. C-20261030-4, T-20261030-3, decisions/2026-10-30-click-media-to-pick.md.
+
+## [2026-10-30] update | 0.9.1: dashboard hides unavailable sessions behind an "Unavailable sessions (N)" checkbox (owner request). C-20261030-5.

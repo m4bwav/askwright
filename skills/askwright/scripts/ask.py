@@ -47,7 +47,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-VERSION = "0.15.0"
+VERSION = "0.15.1"
 PAGE = Path(__file__).resolve().parent / "page"
 KINDS = ("choice", "multi", "compare", "rank", "text", "scale", "confirm")
 MODES = ("decide", "study")
@@ -71,6 +71,7 @@ PAGE_FILES.update({"/dashboard.js": ("dashboard.js", "text/javascript; charset=u
                    "/dashboard.css": ("dashboard.css", "text/css; charset=utf-8"),
                    "/project.js": ("project.js", "text/javascript; charset=utf-8"),
                    "/time.js": ("time.js", "text/javascript; charset=utf-8")})
+PAGE_FILES.update({f"/{n}": (n, "image/svg+xml") for n in ("favicon.svg", "favicon-sessions.svg", "favicon-project.svg")})
 MAGIC = ((b"\x89PNG\r\n\x1a\n", "png"), (b"\xff\xd8\xff", "jpg"), (b"GIF87a", "gif"), (b"GIF89a", "gif"))
 CSP = ("default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; "
        "connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
@@ -1542,7 +1543,7 @@ class Handler(BaseHTTPRequestHandler):
             name, ctype = PAGE_FILES[path]
             return self.send_bytes(200, (PAGE / name).read_bytes(), ctype)
         if path == "/favicon.ico":
-            return self.send_bytes(204, b"", "image/x-icon")
+            return self.send_bytes(200, (PAGE / "favicon.svg").read_bytes(), "image/svg+xml")
         if path.startswith("/m/") and not getattr(self.server, "dashboard", False):
             return self.media(path)
         if path.startswith("/api/"):

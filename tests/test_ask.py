@@ -382,6 +382,13 @@ class ServerTests(ServerCase):
         for f in ("/app.js", "/app.css"):
             self.assertEqual(self.req("GET", f)[0], 200)
 
+    def test_favicons_served_and_linked(self):
+        self.assertIn(b'href="/favicon.svg"', self.req("GET", "/")[2])
+        for f in ("/favicon.svg", "/favicon-sessions.svg", "/favicon-project.svg", "/favicon.ico"):
+            st, h, data = self.req("GET", f)
+            self.assertEqual((st, h["content-type"]), (200, "image/svg+xml"), f)
+            self.assertTrue(data.startswith(b"<svg"), f)
+
     def test_foreign_host_refused(self):
         self.assertEqual(self.req("GET", "/", host="evil.example:%d" % self.port)[0], 403)
 

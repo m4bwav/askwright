@@ -4,6 +4,10 @@ Every change to [README.md](README.md) and its companions, newest first, each wi
 
 Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (IDs or "user request"), `files:` (file and section), and a sentence on what changed. Cite section headings, not line numbers.
 
+### C-20261031-9 · 2026-10-31 · 0.15.1: tab icons
+- because: user request ("add a favicon to the pages so it can be identified in tabs"), T-20261031-8
+- files: page/favicon.svg (blue question mark, question sets), page/favicon-sessions.svg (green list, dashboard), page/favicon-project.svg (purple folder, project pages), the three HTML pages (`<link rel="icon">`), ask.py PAGE_FILES and `/favicon.ico` (now the question icon, was 204), tests/test_ask.py, plugin.json, ask.py VERSION
+
 ### C-20261031-8 · 2026-10-31 · 0.15.0: projects move to their own dashboard tab
 - because: user request ("The projects list could get lengthy, can you put them in a separate tab from the session find and list? I only look at the full list of project occasionally"), T-20261031-7
 - files: page/dashboard.html (Sessions and Projects tabs, ARIA tablist; the Projects strip removed), page/dashboard.js (renderProjects builds a table: project, sets, open, last worked on, most open first; tab remembered in localStorage, `#projects` opens it, arrow keys switch), page/dashboard.css (tab styles light and dark; phone rows as name over "1 set · 7 open · when"), tests/test_visual.py (Projects tab at desktop and phone, light and dark), README (dashboard section), plugin.json, ask.py VERSION

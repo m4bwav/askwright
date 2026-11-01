@@ -13,24 +13,56 @@
 </head>
 <body>
 <a class="skip" href="#sets">Skip to question sets</a>
-<main>
+<main class="project-page">
   <header>
-    <nav class="crumbs" aria-label="Breadcrumb"><a href="/sessions">All sessions</a></nav>
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="/sessions">All sessions</a> <span aria-hidden="true">/</span> <a href="/sessions#projects">Projects</a></nav>
     <p class="brand">Project</p>
-    <h1 id="name">Loading…</h1>
+    <h1><span id="name">Loading…</span> <span id="status" class="status" hidden></span></h1>
     <p id="description"></p>
-    <dl class="facts" id="facts"></dl>
   </header>
   <p id="error" role="alert" hidden></p>
-  <section aria-labelledby="where-h" id="where" hidden>
-    <h2 id="where-h">Where it lives</h2>
-    <ul class="places" id="places"></ul>
+  <section id="attention" class="attention" aria-labelledby="attention-h" hidden>
+    <h2 id="attention-h">Needs you</h2>
+    <ul id="attention-list"></ul>
   </section>
-  <section aria-labelledby="sets-h">
-    <h2 id="sets-h">Question sets</h2>
-    <div id="sets" class="sets" tabindex="-1"></div>
-  </section>
+  <dl class="facts" id="facts"></dl>
+  <div class="columns">
+    <div>
+      <section aria-labelledby="next-h" id="next" hidden>
+        <h2 id="next-h">Next session</h2>
+        <p class="meta">The newest continue prompt in the project's folders.</p>
+        <p class="prompt-line"><code id="next-path"></code></p>
+        <button id="copy-start" type="button" class="open">Copy start command</button>
+        <details id="other-prompts" hidden><summary>Other prompt files</summary><ul class="places" id="prompt-files"></ul></details>
+      </section>
+      <section aria-labelledby="goals-h">
+        <h2 id="goals-h">Goals</h2>
+        <ul id="goals" class="goals"></ul>
+      </section>
+      <section aria-labelledby="state-h" id="state" hidden>
+        <h2 id="state-h">Current state</h2>
+        <div id="handoffs"></div>
+      </section>
+      <section aria-labelledby="sets-h">
+        <h2 id="sets-h">Question sets</h2>
+        <div id="sets" class="sets" tabindex="-1"></div>
+      </section>
+    </div>
+    <div>
+      <section aria-labelledby="where-h" id="where" hidden>
+        <h2 id="where-h">Where it lives</h2>
+        <ul class="places" id="places"></ul>
+      </section>
+      <section aria-labelledby="history-h">
+        <h2 id="history-h">History</h2>
+        <label class="check small"><input id="show-log" type="checkbox" checked> Include the folders' work logs</label>
+        <ol id="timeline" class="timeline"></ol>
+        <button id="more-history" type="button" hidden>Show all</button>
+      </section>
+    </div>
+  </div>
 </main>
+<div id="toast" class="toast" aria-hidden="true" hidden></div>
 <noscript>This page needs JavaScript.</noscript>
 </body>
 </html>

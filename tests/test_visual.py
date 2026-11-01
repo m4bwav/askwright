@@ -116,7 +116,17 @@ class VisualCase(unittest.TestCase):
         data["project"] = {"name": "Madness Workshop", "path": str(self.dir)}
         (self.dir / "questions.json").write_text(json.dumps(data), encoding="utf-8")
         ask.ensure_project("Madness Workshop", description="Mod levels and Director tuning for the Workshop.",
-                           repos=["https://github.com/example/workshop"], dirs=[str(self.dir)])
+                           repos=["https://github.com/example/workshop"], dirs=[str(self.dir)],
+                           goals=["Ship the arena map", "Tune the Director waves"],
+                           direction="Should the arena have two floors or one?", note="Kickoff: arena first")
+        docs = self.dir / "ai-docs" / "plans"
+        docs.mkdir(parents=True)
+        (docs / "2026-10-30-arena-continue-prompt.md").write_text("# Continue\n", encoding="utf-8")
+        ask.ensure_project("Madness Workshop", prompt_run=str(docs / "2026-10-30-arena-continue-prompt.md"))
+        (self.dir / "ai-docs" / "HANDOFF.md").write_text(
+            "# Handoff\n\n## Current state\nArena blockout done; waves untested.\n", encoding="utf-8")
+        (self.dir / "ai-docs" / "log.md").write_text(
+            "# Log\n\n## [2026-10-29] update | Blocked out the arena floor plan.\n", encoding="utf-8")
         ask.register_set(self.dir)
         self.srv = ask.make_server(self.dir, port=0)
         threading.Thread(target=self.srv.serve_forever, daemon=True).start()
@@ -199,10 +209,21 @@ class VisualCase(unittest.TestCase):
                 self.shot(p, "projects-tab-" + name)
                 p.locator("#projects a").first.click()
                 p.wait_for_selector(".set-card")
-                self.assertEqual(p.locator("h1").inner_text(), "Madness Workshop")
+                self.assertEqual(p.locator("#name").inner_text(), "Madness Workshop")
                 self.assertIn("github.com/example/workshop", p.locator("#places").inner_text())
-                self.assertEqual(p.locator(".set-card h3").inner_text(), LONG)
+                self.assertEqual(p.locator(".set-card .set-title").inner_text(), LONG)
                 self.assertTrue(p.locator("#facts time").first.get_attribute("title"))
+                self.assertEqual(p.locator("#status").inner_text(), "Needs direction")
+                self.assertIn("two floors", p.locator("#attention").inner_text())
+                self.assertEqual(p.locator("#goals li").count(), 2)
+                self.assertIn("waves untested", p.locator("#handoffs").inner_text())
+                self.assertIn("arena-continue-prompt.md", p.locator("#next-path").inner_text())
+                history = p.locator("#timeline").inner_text()
+                self.assertIn("Blocked out the arena", history)
+                self.assertIn("Kickoff", history)
+                self.assertNotIn("none recorded", p.locator("#facts").inner_text())
+                p.uncheck("#show-log")
+                self.assertNotIn("Blocked out the arena", p.locator("#timeline").inner_text())
                 self.assertFalse(p.evaluate("() => document.documentElement.scrollWidth > innerWidth"))
                 self.shot(p, "project-" + name)
 
@@ -212,7 +233,7 @@ class VisualCase(unittest.TestCase):
         p.wait_for_selector("[data-q]")
         p.click("#project-line")
         p.wait_for_selector(".set-card")
-        self.assertEqual(p.locator("h1").inner_text(), "Madness Workshop")
+        self.assertEqual(p.locator("#name").inner_text(), "Madness Workshop")
 
     def test_dark_mode_pages_are_dark_and_readable(self):
         for name in ("desktop", "phone"):
@@ -231,7 +252,7 @@ class VisualCase(unittest.TestCase):
                 self.shot(p, "projects-tab-dark-" + name)
                 p.locator("#projects a").first.click()
                 p.wait_for_selector(".set-card")
-                self.assert_dark(p, "h1, .set-card h3, #facts, #places a")
+                self.assert_dark(p, "#name, .set-card h3, #facts dt, #facts dd, #places a, #timeline .what, #attention li, #status")
                 self.shot(p, "project-dark-" + name)
 
     def test_overview_finish_and_study_review(self):

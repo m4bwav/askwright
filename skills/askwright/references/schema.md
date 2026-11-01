@@ -76,10 +76,10 @@ A gallery item is one complete case. Keep a side-by-side comparison in one image
 hide one of its candidates; `scripts/contact.py out.png a.png b.png --labels ... --scale 3` makes one (Pillow).
 ## Projects
 
-A project record lives in the user-wide registry (`~/.askwright/projects/<slug>.json`, or under `ASKWRIGHT_HOME`), one file per project, keyed by a slug of its name: `{"name", "description", "repos": [URL...], "dirs": [folder...], "created", "updated"}`. `ask.py project NAME [--description TEXT] [--repo URL]... [--dir DIR]... [--remove-repo URL] [--remove-dir DIR]` creates or updates it; `ask.py project` lists every project with its sets. Registering a set whose `project` names a project creates the record if it is missing and adds the set's `path` to `dirs`. The project page (`/projects/<slug>`, on the dashboard and on every question server) shows the name, description, created, last worked on (the newest of the record's update and its sets' last answer, add or update), the repositories, the folders and the question sets.
+A project record lives in the user-wide registry (`~/.askwright/projects/<slug>.json`, or under `ASKWRIGHT_HOME`), one file per project, keyed by a slug of its name: `{"name", "description", "repos", "dirs", "goals", "status", "direction", "history": [{"at", "kind", "text", "path"?}], "created", "updated"}`. `ask.py project NAME [--description T] [--repo URL]... [--dir DIR]... [--goal T]... [--remove-repo|--remove-dir|--remove-goal X] [--status active|needs-direction|paused|done] [--needs-direction QUESTION] [--note TEXT] [--prompt-run FILE]` creates or updates it; history keeps the last 500 notes, status changes and prompt runs. `ask.py project` lists every project with its sets, status and first and last prompt run. Registering a set whose `project` names a project creates the record if missing and adds the set's `path` to `dirs`. The project page (`/projects/<slug>`, on the dashboard and every question server) shows status, a Needs you box, created, last worked on, first and last prompt run, the newest continue prompt (Copy start command), goals, each folder's `ai-docs/HANDOFF.md` opening, folders, sets, and one history merged with the folders' dated `ai-docs/log.md` entries.
 
 Moving a project's existing long review page onto sets, with answers synced back to its picks file:
-[bridging.md](bridging.md). `label` names a case in the selector; `caption` explains what to compare.
+[the wiki](https://github.com/m4bwav/askwright/wiki/Dashboard-and-Projects#moving-a-long-review-page-onto-sets). `label` names a case in the selector; `caption` explains what to compare.
 Navigation, a case counter and a full-size link appear around the active image. Galleries do not auto-advance
 or record choices. Left/Right arrows inside the gallery change cases, not questions.
 
@@ -157,7 +157,7 @@ while navigating the current page session. Critical consequences still belong in
 
 ## Study sets (quizzes)
 
-`"mode": "study"` on the set (default `"decide"`) makes it a quiz; [study-mode.md](study-mode.md) says how to write
+`"mode": "study"` on the set (default `"decide"`) makes it a quiz; [the Study mode wiki page](https://github.com/m4bwav/askwright/wiki/Study-Mode#how-to-write-a-study-set) says how to write
 one. Kinds are `choice` and `text` only; `guess`, the question's `why` and `look_for` are not needed, and a question
 may quote its sentence after the `?`.
 

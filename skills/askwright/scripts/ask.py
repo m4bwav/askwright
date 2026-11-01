@@ -20,7 +20,7 @@ foreground prints one JSON line when it is ready and then keeps serving until st
 
 <set> is a folder holding questions.json, or the file itself. The server writes answers.json, events.jsonl,
 attachments/ and server.json next to it; a study set (a quiz) also gets results.json, one entry per attempt.
-See references/schema.md for every field and references/study-mode.md for quizzes.
+See references/schema.md for every field and the Study mode wiki page for quizzes.
 """
 
 import argparse
@@ -47,7 +47,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-VERSION = "0.16.0"
+VERSION = "0.17.0"
 PAGE = Path(__file__).resolve().parent / "page"
 KINDS = ("choice", "multi", "compare", "rank", "text", "scale", "confirm")
 MODES = ("decide", "study")
@@ -233,6 +233,12 @@ def load_project(slug):
         rec[k] = [x for x in rec.get(k) or [] if isinstance(x, str)]
     if not isinstance(rec.get("description"), str):
         rec["description"] = ""
+    rec["goals"] = [g for g in rec.get("goals") or [] if isinstance(g, str)]
+    rec["history"] = [h for h in rec.get("history") or [] if isinstance(h, dict) and isinstance(h.get("at"), str)]
+    if rec.get("status") not in PROJECT_STATUSES:
+        rec["status"] = "active"
+    if not isinstance(rec.get("direction"), str):
+        rec["direction"] = ""
     m = iso_mtime(f)
     for k in ("created", "updated"):
         if not isinstance(rec.get(k), str):
@@ -241,8 +247,14 @@ def load_project(slug):
     return rec
 
 
-def ensure_project(name, description=None, repos=(), dirs=(), remove_repos=(), remove_dirs=()):
-    """Creates or updates the user-wide project record: one file per project, named by its slug."""
+PROJECT_STATUSES = ("active", "needs-direction", "paused", "done")
+HISTORY_CAP = 500
+
+
+def ensure_project(name, description=None, repos=(), dirs=(), remove_repos=(), remove_dirs=(), goals=(),
+                   remove_goals=(), status=None, direction=None, note=None, prompt_run=None):
+    """Creates or updates the user-wide project record: one file per project, named by its slug.
+    Goals, a status (needs-direction carries the open question) and a history of notes and prompt runs."""
     slug = project_slug(name)
     f = project_file(slug)
     old = load_project(slug)
@@ -259,6 +271,36 @@ def ensure_project(name, description=None, repos=(), dirs=(), remove_repos=(), r
             if x and x not in rec[k]:
                 rec[k].append(x)
         rec[k] = [x for x in rec[k] if x not in drop]
+    hist = list(rec.get("history") or [])
+    goal_list = [g for g in rec.get("goals") or [] if isinstance(g, str)]
+    for g in goals:
+        g = str(g).strip()
+        if g and g not in goal_list:
+            goal_list.append(g)
+    goal_list = [g for g in goal_list if g not in remove_goals]
+    if goal_list or "goals" in rec:
+        rec["goals"] = goal_list
+    if status is not None:
+        if status not in PROJECT_STATUSES:
+            raise AskError("status is one of " + ", ".join(PROJECT_STATUSES))
+        if status != rec.get("status", "active"):
+            hist.append({"at": now(), "kind": "status", "text": status})
+        rec["status"] = status
+        if status != "needs-direction":
+            rec["direction"] = ""
+    if direction is not None and direction.strip() and (direction.strip(), "needs-direction") != (
+            rec.get("direction"), rec.get("status")):
+        rec["direction"] = direction.strip()
+        rec["status"] = "needs-direction"
+        hist.append({"at": now(), "kind": "direction", "text": direction.strip()})
+    if note and note.strip():
+        hist.append({"at": now(), "kind": "note", "text": note.strip()})
+    if prompt_run:
+        run = Path(prompt_run).expanduser()
+        hist.append({"at": now(), "kind": "prompt", "text": run.name,
+                     "path": (run.resolve() if run.exists() else run).as_posix()})
+    if hist:
+        rec["history"] = hist[-HISTORY_CAP:]
     if not old or before != json.dumps(rec, sort_keys=True):
         stamp(rec)
         f.parent.mkdir(parents=True, exist_ok=True)
@@ -284,22 +326,70 @@ def list_projects(sessions=None):
             continue
         if proj["slug"] not in out:
             out[proj["slug"]] = {"slug": proj["slug"], "name": proj["name"], "description": "", "repos": [],
-                                 "dirs": [proj["path"]] if proj["path"] else [], "created": row.get("created"),
+                                 "dirs": [proj["path"]] if proj["path"] else [], "goals": [], "history": [],
+                                 "status": "active", "direction": "", "created": row.get("created"),
                                  "updated": row.get("updated"), "sets": []}
         out[proj["slug"]]["sets"].append(row)
     for rec in out.values():
         times = [t for t in [rec.get("updated")] + [r.get("last_worked") for r in rec["sets"]] if t]
         rec["last_worked"] = max(times, key=parse_time) if times else None
         rec["sets"].sort(key=lambda r: parse_time(r.get("last_worked")), reverse=True)
+        runs = [h for h in rec["history"] if h.get("kind") == "prompt"]
+        rec.update(prompt_runs=len(runs), first_prompt=runs[0] if runs else None,
+                   last_prompt=runs[-1] if runs else None, pending=sum(r.get("pending") or 0 for r in rec["sets"]))
     rows = sorted(out.values(), key=lambda r: parse_time(r.get("last_worked")), reverse=True)
     return {"ok": True, "projects": rows}
 
 
+LOG_LINE = re.compile(r"^##\s*\[(\d{4}-\d{2}-\d{2})\]\s*([\w-]+)\s*\|\s*(.+?)\s*$")
+
+
+def project_docs(rec):
+    """What the project's own folders say: each ai-docs/HANDOFF.md (its opening), the dated ai-docs/log.md
+    entries and the continue or next-session prompt files, newest first. Reads at most 256 KB of each file."""
+    handoffs, logs, prompts = [], [], set()
+    for d in rec["dirs"]:
+        docs = Path(d) / "ai-docs"
+        try:
+            with open(docs / "HANDOFF.md", "rb") as h:
+                text = h.read(262144).decode("utf-8", errors="replace")
+            body = re.sub(r"(?s)^\s*#[^\n]*\n", "", text).strip()
+            handoffs.append({"path": (docs / "HANDOFF.md").as_posix(), "modified": iso_mtime(docs / "HANDOFF.md"),
+                             "excerpt": body[:1500]})
+        except OSError:
+            pass
+        try:
+            with open(docs / "log.md", "rb") as h:
+                h.seek(max(0, (docs / "log.md").stat().st_size - 262144))
+                lines = h.read().decode("utf-8", errors="replace").splitlines()
+        except OSError:
+            lines = []
+        for line in lines:
+            m = LOG_LINE.match(line)
+            if m:
+                logs.append({"at": m.group(1), "kind": m.group(2), "text": m.group(3)[:400], "source": "log"})
+        for sub in (docs / "plans", Path(d) / "plans", Path(d)):
+            for g in NEXT_PROMPT_GLOBS:
+                try:
+                    prompts.update(f.resolve() for f in sub.glob(g) if f.is_file())
+                except OSError:
+                    continue
+    files = sorted(prompts, key=lambda f: f.stat().st_mtime, reverse=True)[:10]
+    return handoffs, logs, [{"path": f.as_posix(), "modified": iso_mtime(f)} for f in files]
+
+
 def project_page(slug):
+    """One project with everything its page shows: the record, its sets, its folders' docs and one timeline."""
     project_file(slug)
     for rec in list_projects()["projects"]:
         if rec["slug"] == slug:
-            return {"ok": True, "project": rec}
+            handoffs, logs, prompts = project_docs(rec)
+            timeline = [dict(h, source="project") for h in rec["history"][::-1]] + logs[::-1]  # newest first on ties
+            timeline += [{"at": r["created"], "kind": "set", "text": "Question set: " + (r.get("title") or r["id"]),
+                          "source": "sets"} for r in rec["sets"] if r.get("created")]
+            timeline.sort(key=lambda h: parse_time(h["at"]), reverse=True)
+            return {"ok": True, "project": dict(rec, handoffs=handoffs, prompt_files=prompts, timeline=timeline[:80],
+                                                answered=sum(r.get("answered") or 0 for r in rec["sets"]))}
     raise AskError("unknown project")
 
 
@@ -1913,7 +2003,9 @@ def cmd_project(a):
     if a.list or not a.name:
         return emit(list_projects())
     rec = ensure_project(a.name, description=a.description, repos=a.repo, dirs=a.dir, remove_repos=a.remove_repo,
-                         remove_dirs=[str(Path(x).expanduser().resolve()) for x in a.remove_dir])
+                         remove_dirs=[str(Path(x).expanduser().resolve()) for x in a.remove_dir], goals=a.goal,
+                         remove_goals=a.remove_goal, status=a.status, direction=a.needs_direction, note=a.note,
+                         prompt_run=a.prompt_run)
     return emit({"ok": True, "project": rec})
 
 
@@ -2286,6 +2378,12 @@ def main(argv=None):
     s.add_argument("--dir", action="append", default=[], help="a local directory (repeat for more)")
     s.add_argument("--remove-repo", action="append", default=[])
     s.add_argument("--remove-dir", action="append", default=[])
+    s.add_argument("--goal", action="append", default=[], help="a goal of the project (repeat for more)")
+    s.add_argument("--remove-goal", action="append", default=[])
+    s.add_argument("--status", choices=PROJECT_STATUSES)
+    s.add_argument("--needs-direction", metavar="QUESTION", help="flag the project as waiting on the owner's call")
+    s.add_argument("--note", help="add a dated entry to the project's history")
+    s.add_argument("--prompt-run", metavar="FILE", help="record that a continue or session prompt was run")
     s.add_argument("--list", action="store_true")
     s = sub.add_parser("dashboard", help="serve the shared session dashboard")
     s.add_argument("--port", type=int, default=0)

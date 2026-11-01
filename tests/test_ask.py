@@ -1433,6 +1433,32 @@ class ProjectAndTimeTests(unittest.TestCase):
         code, d = run_cli("project")
         self.assertEqual([p["slug"] for p in d["projects"]], ["space-deck"])
 
+    def test_project_goals_status_history_and_docs(self):
+        root = Path(self.home.name) / "proj"
+        (root / "ai-docs" / "plans").mkdir(parents=True)
+        prompt = root / "ai-docs" / "plans" / "x-continue-prompt.md"
+        prompt.write_text("go", encoding="utf-8")
+        (root / "ai-docs" / "HANDOFF.md").write_text("# Handoff\n\nState: half done.\n", encoding="utf-8")
+        (root / "ai-docs" / "log.md").write_text("# Log\n## [2026-10-01] add | first\n## [2026-10-02] fix | second\n",
+                                                encoding="utf-8")
+        code, d = run_cli("project", "Arena", "--dir", root, "--goal", "Ship", "--goal", "Tune",
+                          "--needs-direction", "One floor or two?", "--note", "kickoff", "--prompt-run", prompt)
+        self.assertEqual(code, 0, d)
+        rec = d["project"]
+        self.assertEqual((rec["goals"], rec["status"], rec["direction"]), (["Ship", "Tune"], "needs-direction",
+                                                                           "One floor or two?"))
+        run_cli("project", "Arena", "--needs-direction", "One floor or two?")  # same question: no new entry
+        self.assertEqual([h["kind"] for h in ask.load_project("arena")["history"]], ["direction", "note", "prompt"])
+        code, d = run_cli("project", "Arena", "--status", "active", "--remove-goal", "Tune", "--prompt-run", prompt)
+        self.assertEqual((d["project"]["status"], d["project"]["direction"], d["project"]["goals"]),
+                         ("active", "", ["Ship"]))
+        page = ask.project_page("arena")["project"]
+        self.assertEqual(page["prompt_runs"], 2)
+        self.assertTrue(page["first_prompt"]["at"] <= page["last_prompt"]["at"])
+        self.assertIn("half done", page["handoffs"][0]["excerpt"])
+        self.assertTrue(page["prompt_files"][0]["path"].endswith("x-continue-prompt.md"))
+        self.assertEqual([h["text"] for h in page["timeline"] if h["source"] == "log"], ["second", "first"])
+
     def test_sets_attach_to_projects_with_times(self):
         s = TempSet(lambda data: data.update(project={"name": "Reel", "path": self.home.name}))
         try:

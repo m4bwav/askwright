@@ -1,6 +1,8 @@
 # Handoff
 
 ## Current state
+2026-11-01 (session 10, owner request): 0.17.0 project management pages, dashboard project filter, SKILL.md trim, install split (decisions/2026-11-01-project-management-pages.md). Next: register goals/status for the owner's 9 real projects (`ask.py project NAME --goal ... --needs-direction ...`) so their pages fill; prompt runs only appear once agents record them with `--prompt-run`. Install 306 KB (ceiling raised to 320 KB).
+
 2026-10-31 (session 9, continue prompt): 0.16.0 released (master volume, #39). All five continue-prompt goals shipped; nothing owed. Open only if asked: dashboard project filter, SKILL.md trim (body 10.1 KB, yellow), install-size split.
 
 2026-10-31 (session 8, continue prompt): all five goals remain shipped. Main has the master volume control (#39) unreleased on top of v0.15.1; bump and tag 0.16.0 with the next packaged change. Hardened the flaky side-by-side click test (waits for the image to decode, measures the box before each click). Still open only if asked: dashboard project filter, SKILL.md trim, install-size split.

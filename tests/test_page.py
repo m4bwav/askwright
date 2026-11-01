@@ -158,6 +158,29 @@ class DashboardPageTests(PageCase):
         self.env.stop()
         self.home.cleanup()
 
+    def test_project_filter_and_status_column(self):
+        _, data = ask.load_set(self.other)
+        data["project"] = "Site work"
+        ask.write_json_atomic(self.other / "questions.json", data)
+        ask.register_set(self.other)
+        ask.ensure_project("Site work", direction="Which hero image?")
+        p = self.page
+        p.goto(self.url + "sessions")
+        p.wait_for_selector("#project-filter option[value=site-work]", state="attached")
+        p.check("#show-all")
+        p.select_option("#project-filter", "site-work")
+        self.assertEqual(p.locator("#sessions .toggle .name").all_inner_texts(), ["Site review"])
+        p.select_option("#project-filter", "-")
+        self.assertEqual(p.locator("#sessions .toggle .name").all_inner_texts(), ["Film review"])
+        p.reload()
+        p.wait_for_selector("#sessions tbody")
+        self.assertEqual(p.locator("#project-filter").input_value(), "-")  # remembered per browser
+        p.goto(self.url + "sessions?project=site-work")
+        p.wait_for_selector("#sessions tbody")
+        self.assertEqual(p.locator("#project-filter").input_value(), "site-work")
+        p.click("#tab-projects")
+        p.wait_for_selector("#projects .status:has-text('Needs direction')")
+
     def expand(self, title):
         toggle = self.page.get_by_role("button", name=title, exact=True)
         if toggle.get_attribute("aria-expanded") != "true":

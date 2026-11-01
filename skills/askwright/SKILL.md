@@ -31,7 +31,7 @@ When someone wants to practise or test what they know (a quiz on homework, a rev
 set: `"mode": "study"`, multiple-choice questions with one `correct` option and a `why` on every option (each wrong
 option stands for a real mistake), a `topic` on each, and optional written questions with a `rubric`. The page
 scores it on submit and shows a review per question and per topic; `ask.py grade` lists written answers for you to
-grade. No guesses, no "not sure". Read [references/study-mode.md](references/study-mode.md) before writing one;
+grade. No guesses, no "not sure". Read [the Study mode wiki page](https://github.com/m4bwav/askwright/wiki/Study-Mode#how-to-write-a-study-set) before writing one;
 steps 1 and 2 below are for decision sets.
 
 ## Step 1: write the set
@@ -61,17 +61,9 @@ and a clip with a known fixed order gets `false`: keep the lint warning or remak
 matters after another answer gets `show_if`. A major decision gets a `one_pager` (text, facts, a pros and cons
 table, images, a chart) above it. Keep a set to 12 open questions or fewer.
 
-### Keep long reviews compact
-
-Ask one comparison per independent frame, take or edit before recommending a model or workflow.
-Each case states the requested result, links sources and has visible **Good / Keep / Reject** checks:
-success, what must stay fixed, and specific defects with locations. Offer "Both meet the request" and
-"Neither meets the request", distinct from uncertainty. Collect picks and notes before proposing policy.
-Galleries hold supporting views of one case; three images get one automatically, `media_layout: "gallery"` two.
-Voices or sounds to compare: audio-only media becomes a listen bench (writing-questions.md, Voice comparisons).
-Keep comparison candidates together; independent picks get separate questions, at most 12 per round.
-Put optional detail in the collapsed `one_pager` and shared facts in a short table.
-Use `media_layout: "stack"` only when simultaneous viewing matters more than length.
+Long reviews: one comparison per independent frame, take or edit; each case states the requested result and has
+**Good / Keep / Reject** checks; offer "Both meet the request" and "Neither meets the request". Galleries,
+listen benches for voices and `media_layout`: writing-questions.md.
 
 ## Step 2: review, then lint
 
@@ -95,10 +87,12 @@ It lints, binds 127.0.0.1 on a free port, self-checks, prints `{"ok": true, "url
 Give the person the URL with one line on what the set decides and how many questions. A running server's URL is
 reused. `--open` opens their browser. Only 127.0.0.1; serving to another machine is not supported.
 
-`new` and `serve` register sets in the shared inbox. Share `dashboard_url` alongside the question URL.
-`ask.py dashboard --detach` starts or reuses an independent master page; `--stop` stops only that page.
-Register older sets with `ask.py register <set>`. All products share `~/.askwright` unless
-`ASKWRIGHT_HOME` overrides it. The master's counts update from disk; stopped question pages reopen from it.
+`new` and `serve` register sets in the shared inbox (`~/.askwright`, or `ASKWRIGHT_HOME`); share `dashboard_url`
+too. `ask.py dashboard --detach` starts or reuses it; `ask.py register <set>` adds an older set.
+
+Projects: keep the project page current. When you run a continue prompt, record it:
+`ask.py project NAME --prompt-run <prompt file>`. Add `--goal`, `--note "<what changed>"`, and
+`--needs-direction "<question>"` when blocked on the owner (`--status active` clears it). schema.md, Projects.
 
 ## Step 4: wait without guessing
 

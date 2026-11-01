@@ -4,6 +4,10 @@ Every change to [README.md](README.md) and its companions, newest first, each wi
 
 Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (IDs or "user request"), `files:` (file and section), and a sentence on what changed. Cite section headings, not line numbers.
 
+### C-20261101-1 · 2026-11-01 · 0.17.0: project pages for managing a project; dashboard project filter; install split
+- because: user request ("a history of the project, what its goals are, does it need direction, last prompt run, first prompt run, dates"; "do all 3": project filter, SKILL.md trim, install-size split), T-20261101-1, decisions/2026-11-01-project-management-pages.md
+- files: ask.py (`ensure_project` goals, status, direction, history; `project_docs`; `project_page` timeline; `project` options --goal --remove-goal --status --needs-direction --note --prompt-run), page/project.html and project.js (status pill, Needs you box, facts with first and last prompt run, Next session with Copy start command, goals, Current state from HANDOFF.md, history timeline with work-log toggle), page/dashboard.html, dashboard.js and dashboard.css (project filter, Status column, project page styles), SKILL.md (Long reviews compacted, Step 3 trimmed, Projects paragraph), references/schema.md (Projects), references/bridging.md and study-mode.md (moved to the wiki), README.md (dashboard section moved to the wiki, project command row), scripts/budget.py (install yellow ceiling 320 KB), tests, plugin.json, ask.py VERSION
+
 ### C-20261031-10 · 2026-10-31 · 0.16.0: one volume control for every clip on the page
 - because: user request (master volume), PR #39
 - files: page/index.html (header slider and mute button, shown only while the page has media), page/app.js (level kept in localStorage; keys m mutes, - and = step it; a native player's own volume change moves the master), page/app.css, plugin.json, ask.py VERSION

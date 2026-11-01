@@ -12,6 +12,10 @@ From the repository root: `python tests/check_skills.py`, `python tests/test_ask
 
 ## Runs
 
+### T-20261101-1 · 2026-11-01 · 0.17.0 project pages, project filter · Windows, Python 3.14, Chrome · passed
+- tests/test_ask.py 102 passed (1 Windows skip; new test_project_goals_status_history_and_docs), tests/test_page.py DashboardPageTests 9 passed (new test_project_filter_and_status_column), tests/test_visual.py 6 passed (project page asserts status, Needs you, goals, handoff, next prompt, history and the log toggle; dark contrast), check_skills 0, budget yellow (306 KB, SKILL.md body 9.6 KB). Screenshots inspected: the Open button carried the full set title (shortened), handoff headings showed raw `##` (stripped), dark prompt dots too dim (lightened).
+- led to: C-20261101-1
+
 ### T-20261031-8 · 2026-10-31 · 0.15.1 tab icons · Windows, Python 3.14, Chrome · passed
 - tests/test_ask.py 101 passed (1 Windows skip; new test_favicons_served_and_linked), tests/test_visual.py 6 passed, check_skills 0 problems, budget yellow (295 KB). Icons rendered at 64 and 16 px and inspected.
 - led to: C-20261031-9

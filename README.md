@@ -49,7 +49,7 @@ this"), and for every question your answer, the right one and why each option is
 questions wait for the agent to grade them (`ask.py grade`). "Try again" reshuffles the options and keeps earlier
 attempts in `results.json`. The answer key and the real option ids never reach the browser before submitting.
 Graphs, force diagrams and simple drawings can be drawn from a few lines of JSON (`"figure"` media), in either mode.
-How to write good wrong answers and explanations: [references/study-mode.md](skills/askwright/references/study-mode.md).
+How to write good wrong answers and explanations: [the Study mode wiki page](https://github.com/m4bwav/askwright/wiki/Study-Mode#how-to-write-a-study-set).
 
 ## What the agent gets back
 
@@ -101,48 +101,16 @@ The [wiki](https://github.com/m4bwav/askwright/wiki) has every command with its 
 format, every lint rule with its message, recipes and an FAQ. [skills/askwright/references/schema.md](skills/askwright/references/schema.md)
 lists every field.
 
-## One inbox for all sessions
-
-Open a master page for every registered question set on this computer:
+## One inbox for all sessions, one page per project
 
     python skills/askwright/scripts/ask.py dashboard --detach --open
 
-The command returns a local URL you can bookmark. Calling it again reuses the running dashboard.
-After a restart it reuses its previous port, unless you pass `--port`. Restart the command after rebooting.
-If that port is occupied, the command reports an error rather than changing your bookmark.
-
-Sets register automatically when agents create or serve them, across projects and agent products.
-The default view shows sessions needing attention. Use All sessions to include answered rounds, or filter
-by product and search by title, folder or agent. Counts refresh every five seconds from the answer files.
-Notes without a pick, "not sure" and answers to changed questions still count as needing attention.
-Conditional questions waiting on another answer are counted separately.
-
-Unavailable sessions (a set whose folder moved or was deleted) are hidden; a checkbox with their count shows them.
-Two tabs: Sessions and Projects (remembered per browser; `/sessions#projects` opens Projects). The Projects tab is a table
-of every project (sets, open questions, last worked on) linking each project's page. Sessions are a table: title, project, last updated and
-one quick action (Open questions, or Copy prompt once every question is answered). Click a title to expand its row:
-product, context, counts, a preview of the next five questions, Open questions, Copy continue prompt, Snooze and Archive.
-The last page of a question set also has a Copy prompt to continue button that hands the answers back to the agent.
-The Snooze dropdown hides that session for 1 hour, 4 hours, 1 day, 3 days or 1 week.
-It returns to the inbox when that time expires. Open Snoozed to bring it back early with Unsnooze.
-Archive moves a session to the Archive list until you choose Unarchive.
-All sessions includes answered sessions in the inbox; snoozed and archived sessions remain in their own lists.
-These choices survive page and server restarts, and agents registering a set again do not reset them.
-They change only dashboard organization, never questions, answers or server processes.
-
-Open questions reuses a running question page or starts it again if it stopped. Existing answers stay in place.
-Each question page also has an All sessions link, and `serve` returns its `dashboard_url`.
-The independent master page stays up when individual question servers stop.
-
-For older sets, run `ask.py register <set>`. Registration does not move or change the set.
-Set `product`, `session` and `asked_by` in the question data to identify the originating agent, or pass
-`--product`, `--session` and `--asked-by` when using `new`. Unknown metadata stays blank.
-Older askwright installations must be updated to register automatically.
-
-The registry and dashboard server details live in `~/.askwright`, outside your repositories.
-All products running under the same user share it; `ASKWRIGHT_HOME` selects a different location.
-Missing or unreadable sets show an error on the dashboard. askwright does not scan your disk for question sets.
-Stop the independent dashboard with `ask.py dashboard --stop`; this leaves question pages running.
+A master page for every registered question set on this computer, with a bookmarkable URL. Sets register when
+agents create or serve them. Sessions are a table (filter by project or product, search, sort, snooze, archive,
+copy the continue prompt); the Projects tab lists every project with its status. A project page shows its goals,
+whether it needs your direction, created and last worked on, first and last prompt run, the newest continue prompt
+with a Copy start command button, the folders' HANDOFF.md, its question sets and one history of notes, prompt runs
+and the folders' work logs. Details: [Dashboard and projects](https://github.com/m4bwav/askwright/wiki/Dashboard-and-Projects).
 
 ## ask.py
 
@@ -160,6 +128,7 @@ Stop the independent dashboard with `ask.py dashboard --stop`; this leaves quest
 | `figure <spec> <out.svg>` | Draws a figure spec (graph, forces, shapes) to an SVG file to look at. |
 | `stop <set>` | Stops the set's server by its PID, after the server answers a ping proving it owns that PID. |
 | `register <set>` | Adds an existing set to the shared local dashboard, deduplicated by its resolved folder. |
+| `project [NAME]` | Creates or updates a project record (`--description`, `--repo`, `--dir`, `--goal`, `--status`, `--needs-direction Q`, `--note TEXT`, `--prompt-run FILE`); with no name, lists projects. |
 | `dashboard` | Serves the shared session inbox. Supports `--detach`, `--open`, `--port N` and `--stop`. |
 
 Every command prints one JSON object, except `--version` (plain text) and a usage mistake (argparse text on

@@ -3,6 +3,15 @@ const token = document.querySelector('meta[name="ask-token"]').content;
 const sessions = document.querySelector("#sessions");
 const search = document.querySelector("#search");
 const product = document.querySelector("#product");
+const projectFilter = document.querySelector("#project-filter");
+// The project filter: ?project=SLUG wins, else the last choice in this browser. "-" means sets without a project.
+let wantedProject = new URLSearchParams(location.search).get("project");
+if (wantedProject === null) {
+  try { wantedProject = localStorage.getItem("askwright-project") || ""; } catch (e) { wantedProject = ""; }
+}
+let projectMeta = new Map();
+let projectsSnapshot = null;
+const STATUS = {"needs-direction": "Needs direction", "paused": "Paused", "done": "Done", "active": "Active"};
 const showAll = document.querySelector("#show-all");
 const showBroken = document.querySelector("#show-broken");
 const error = document.querySelector("#error");
@@ -58,6 +67,7 @@ function render() {
   const visible = inView.filter(row => (row.error ? showBroken.checked :
       view !== "inbox" || showAll.checked || row.pending > 0) &&
     (!product.value || row.product === product.value) &&
+    (!projectFilter.value || (projectFilter.value === "-" ? !row.project : row.project && row.project.slug === projectFilter.value)) &&
     [row.title, row.path, row.context, row.product, row.session, row.asked_by, row.error,
       row.project && row.project.name, row.project && row.project.path]
       .join(" ").toLowerCase().includes(term));
@@ -270,7 +280,7 @@ function renderProjects() {
   }
   const table = node("table", "", "sessions project-list");
   const head = node("tr", "");
-  for (const label of ["Project", "Sets", "Open", "Last worked on"]) head.append(node("th", label));
+  for (const label of ["Project", "Status", "Sets", "Open", "Last worked on"]) head.append(node("th", label));
   const thead = node("thead", "");
   thead.append(head);
   const body = node("tbody", "");
@@ -280,9 +290,15 @@ function renderProjects() {
     const a = node("a", c.name);
     a.href = "/projects/" + encodeURIComponent(slug);
     name.append(a);
+    const meta = projectMeta.get(slug) || {};
+    const status = node("td", "", "status-cell");
+    const pill = node("span", STATUS[meta.status || "active"], "status");
+    pill.dataset.status = meta.status || "active";
+    if (meta.direction) pill.title = meta.direction;
+    status.append(pill);
     const when = node("td", "", "updated");
     if (c.last) when.append(askTime.el(c.last, ""));
-    tr.append(name, node("td", plural(c.sets, "set"), "num"), node("td", c.pending ? `${c.pending} open` : "none", "num"), when);
+    tr.append(name, status, node("td", plural(c.sets, "set"), "num"), node("td", c.pending ? `${c.pending} open` : "none", "num"), when);
     body.append(tr);
   }
   table.append(thead, body);
@@ -402,8 +418,24 @@ async function loadSessions() {
       }
       product.value = selected;
       if (product.selectedIndex < 0) product.value = "";
+      const chosen = projectFilter.options.length > 1 ? projectFilter.value : wantedProject;
+      const names = new Map(rows.filter(row => row.project).map(row => [row.project.slug, row.project.name]));
+      projectFilter.replaceChildren(new Option("All projects", ""));
+      for (const [slug, name] of [...names].sort((a, b) => a[1].localeCompare(b[1]))) projectFilter.add(new Option(name, slug));
+      if (rows.some(row => !row.project && !row.error)) projectFilter.add(new Option("No project", "-"));
+      projectFilter.value = chosen;
+      if (projectFilter.selectedIndex < 0) projectFilter.value = "";
       render();
     }
+    try {
+      const list = (await api("/api/projects")).projects;
+      const key = JSON.stringify(list.map(p => [p.slug, p.status, p.direction]));
+      if (key !== projectsSnapshot) {
+        projectsSnapshot = key;
+        projectMeta = new Map(list.map(p => [p.slug, p]));
+        renderProjects();
+      }
+    } catch (e) { /* the Projects tab shows Active until this works */ }
     report("");
   } catch (e) {
     report(`Cannot refresh sessions: ${e.message}. Previously loaded counts may be out of date.`);
@@ -431,6 +463,10 @@ async function open(row, button) {
 document.querySelector("#filters").addEventListener("submit", event => event.preventDefault());
 search.addEventListener("input", render);
 product.addEventListener("change", render);
+projectFilter.addEventListener("change", () => {
+  try { localStorage.setItem("askwright-project", projectFilter.value); } catch (e) { /* storage unavailable */ }
+  render();
+});
 showAll.addEventListener("change", render);
 showBroken.addEventListener("change", render);
 for (const button of document.querySelectorAll("[data-view]")) {

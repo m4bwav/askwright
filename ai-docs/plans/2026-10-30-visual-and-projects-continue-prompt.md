@@ -14,6 +14,9 @@ Repeating prompt. State lives in `ai-docs/HANDOFF.md`, never here.
 4. **Timestamps.** Projects, question sets and individual questions carry `created` and `updated` (ISO 8601), migrated for existing data (fall back to file mtime), shown on the pages in a relative form with the exact time on hover.
 5. **Playwright tests** for visual work: a small suite that serves fixture data, takes screenshots of the top bar, index, question set and project page at desktop and phone widths, and asserts no overflow/wrap in the top bar. Keep it optional (skips if Playwright is absent) so the stdlib tests still run alone; document how to run it in `TESTS.md`.
 
+## Status
+All five goals shipped (0.8.0 to 0.17.0). A session started from this prompt keeps project records current (`ask.py project NAME --goal/--status/--note`, from each project's HANDOFF) and handles owner requests; it does not invent new UI work.
+
 ## Order of work
 Timestamps + project data model → project page + links → Playwright harness → top bar redesign (iterate with screenshots) → wider polish.
 

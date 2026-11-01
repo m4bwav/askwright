@@ -1,6 +1,8 @@
 # Handoff
 
 ## Current state
+2026-11-01 (session 11, continue prompt): goals and status set for all 10 registered projects (lovecraft-shorts added since session 10), derived from each project's README/HANDOFF; Siege news flagged needs-direction (watch the HD final), Flux 3 vs Qwen and Spear sranc marked done. No code change, no version bump. Continue prompt goals all shipped: next sessions only keep project records current or take owner requests.
+
 2026-11-01 (session 10, owner request): 0.17.0 project management pages, dashboard project filter, SKILL.md trim, install split (decisions/2026-11-01-project-management-pages.md). Next: register goals/status for the owner's 9 real projects (`ask.py project NAME --goal ... --needs-direction ...`) so their pages fill; prompt runs only appear once agents record them with `--prompt-run`. Install 306 KB (ceiling raised to 320 KB).
 
 2026-10-31 (session 9, continue prompt): 0.16.0 released (master volume, #39). All five continue-prompt goals shipped; nothing owed. Open only if asked: dashboard project filter, SKILL.md trim (body 10.1 KB, yellow), install-size split.

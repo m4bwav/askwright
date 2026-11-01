@@ -82,3 +82,4 @@ Append-only. One line per operation: `## [YYYY-MM-DD] op | title` where op is on
 ## [2026-10-31] release | 0.16.0: master volume (#39) released and tagged. C-20261031-10.
 ## [2026-11-01] update | 0.17.0: project pages manage the project (goals, needs-direction status, history merged with folder work logs, first and last prompt run, Copy start command, HANDOFF opening), dashboard project filter and Status column, SKILL.md trimmed to 9.6 KB, bridging and study-mode references moved to the wiki, install ceiling 320 KB. C-20261101-1, T-20261101-1.
 ## [2026-11-01] update | goals and status for all 10 registered projects via `ask.py project --goal/--status/--needs-direction` (registry only, no repo code change).
+## [2026-11-01] update | session 12: lovecraft-shorts history note (Zann picks, renders running); other projects unchanged since session 11.

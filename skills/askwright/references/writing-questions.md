@@ -77,6 +77,21 @@ the question-evaluation research (QAS-99 adapted, R-T11); models under-flag poin
 - Tell the person they can type a note while the clip plays: the clip pauses and the note can be tied to that
   time; they can paste or drop a screenshot into the note.
 
+## Parked checks
+
+Sessions that render media (ComfyUI images and video, film takes, music, voices, meshes) often end with "open for
+the person: listen to the lip sync", "check the take", "pick between seeds". Do not leave that as prose in a
+handoff or a chat reply: the person has to find the files, guess what to look for and has nowhere to answer.
+
+- Build the set before the session ends: one question per check, the clip or image as media, `look_for` with the
+  moment and the test ("from 1.0 s: do the lips close on 'b' and 'p'?"), and the source or reference beside it.
+- A listen check gets the audio in a video (a still frame or the take itself) so the page plays it; for sync
+  checks keep picture and sound together and offer a 0.5x clip when the line is fast.
+- Give the options real outcomes ("In sync, keep the tier", "Lags, tune the offset", "Off, drop the route").
+- Put the set folder in the handoff's open-for-the-person line, and read `answers.json` at the start of the next
+  session before redoing or trusting the work.
+- Several small parked checks from one session go in one set, not one set each.
+
 ## Voice comparisons
 
 - Put every candidate voice of one line in one question's `media`, audio only: the page shows a listen bench (one

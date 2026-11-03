@@ -24,6 +24,8 @@ Then pick the channel:
   version and an AskUserQuestion mapping, so you can write the set once and still keep it in chat.
 - Anything with clips, images or audio, more than 4 questions, a major decision that needs background, or answers
   that will arrive over hours: the page.
+- Anything to see or hear goes on the page, even one question: chat cannot play a clip. A check left open at
+  session end becomes a set ([Parked checks](references/writing-questions.md#parked-checks)).
 
 ## A quiz instead: study mode
 

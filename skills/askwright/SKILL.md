@@ -24,12 +24,8 @@ Then pick the channel:
   version and an AskUserQuestion mapping, so you can write the set once and still keep it in chat.
 - Anything with clips, images or audio, more than 4 questions, a major decision that needs background, or answers
   that will arrive over hours: the page.
-- Anything the person must see or hear goes on the page, even a single question: a listen check (sync, voice,
-  music, mix), a look check (a take, an image, a mask, a repair), or any comparison of renders. Chat cannot play a
-  clip or set two takes side by side; "please listen to X" in chat or in a handoff is a check that never gets done.
-  This holds for every skill that renders media (ComfyUI, film, music, art, 3D). A check you leave open at the
-  end of a session becomes a set too, and the handoff names the set folder, not the chore
-  ([writing-questions.md, Parked checks](references/writing-questions.md#parked-checks)).
+- Anything to see or hear goes on the page, even one question: chat cannot play a clip. A check left open at
+  session end becomes a set ([Parked checks](references/writing-questions.md#parked-checks)).
 
 ## A quiz instead: study mode
 

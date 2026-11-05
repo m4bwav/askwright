@@ -119,7 +119,7 @@ function renderAttention(p) {
   const waiting = p.sets.filter(r => r.pending > 0 && !r.error);
   if (waiting.length) {
     const li = node("li", "");
-    li.append(`${p.pending} question${p.pending === 1 ? "" : "s"} wait for your answers in ${waiting.length} set${waiting.length === 1 ? "" : "s"}. `);
+    li.append(`${p.pending} question${p.pending === 1 ? " waits" : "s wait"} for your answers in ${waiting.length} set${waiting.length === 1 ? "" : "s"}. `);
     const button = node("button", waiting.length > 1 ? "Open the newest" : "Open it", "open");
     button.title = waiting[0].title;
     button.type = "button";

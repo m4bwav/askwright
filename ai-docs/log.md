@@ -92,3 +92,6 @@ Append-only. One line per operation: `## [YYYY-MM-DD] op | title` where op is on
 
 ## 2026-11-04: 0.18.1 checkboxes over bundled options (owner request)
 The `multi` kind already gave checkboxes; agents were not choosing it. Added the bundled-options lint warning, SKILL.md and writing-questions guidance, and a clearer legend. C-20261104-2.
+
+## 2026-11-04: 0.19.0 new projects need a description (owner request)
+`project` and `new` refuse to create a project without one; hand-written sets can still register without one. Filled the four empty records. Tiny Colony turned out to be evaluation test data (its folders are scratchpad trap-busy and trap-small), left for the owner to remove. C-20261104-3.

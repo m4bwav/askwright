@@ -4,6 +4,11 @@ Every change to [README.md](README.md) and its companions, newest first, each wi
 
 Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (IDs or "user request"), `files:` (file and section), and a sentence on what changed. Cite section headings, not line numbers.
 
+### C-20261104-3 · 2026-11-04 · 0.19.0: a new project needs a description
+- because: user request ("when a project is created a description is required")
+- files: ask.py (cmd_project, cmd_new, --project-description), page/project.js (singular "1 question waits"), SKILL.md Step 1, references/schema.md, plugin.json, ask.py VERSION, tests
+- `ask.py project NAME` and `ask.py new --project NAME` refuse to create a project without a description, and a description cannot be blanked. Registering a hand-written set can still create a record without one.
+
 ### C-20261104-2 · 2026-11-04 · 0.18.1: agents use checkboxes instead of bundled options
 - because: user request ("This question seems like it could have just listed options for me to check"); `multi` already existed but a set offered "A and B" and "those two plus C and D" as one-pick options
 - files: ask.py (lint_set, bundled-options warning), page/app.js (legend), SKILL.md kinds, references/writing-questions.md, plugin.json, ask.py VERSION, tests

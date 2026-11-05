@@ -4,7 +4,7 @@ const sessions = document.querySelector("#sessions");
 const search = document.querySelector("#search");
 const product = document.querySelector("#product");
 const projectFilter = document.querySelector("#project-filter");
-// The project filter: ?project=SLUG wins, else the last choice in this browser. "-" means sets without a project.
+// The project filter: ?project=SLUG wins, else the last choice in this browser.
 let wantedProject = new URLSearchParams(location.search).get("project");
 if (wantedProject === null) {
   try { wantedProject = localStorage.getItem("askwright-project") || ""; } catch (e) { wantedProject = ""; }
@@ -67,7 +67,7 @@ function render() {
   const visible = inView.filter(row => (row.error ? showBroken.checked :
       view !== "inbox" || showAll.checked || row.pending > 0) &&
     (!product.value || row.product === product.value) &&
-    (!projectFilter.value || (projectFilter.value === "-" ? !row.project : row.project && row.project.slug === projectFilter.value)) &&
+    (!projectFilter.value || (row.project && row.project.slug === projectFilter.value)) &&
     [row.title, row.path, row.context, row.product, row.session, row.asked_by, row.error,
       row.project && row.project.name, row.project && row.project.path]
       .join(" ").toLowerCase().includes(term));
@@ -212,7 +212,8 @@ function detail(row) {
     if (details.length) out.push(node("p", details.join(" / "), "meta"));
     const preview = node("details", "", "preview");
     preview.open = previews.has(row.id);
-    const summary = node("summary", "Next 5 questions");
+    const shown = (row.next_questions || []).length;
+    const summary = node("summary", shown > 1 ? `Next ${shown} open questions` : shown ? "Next open question" : "No open questions");
     summary.dataset.focus = `${row.id}:preview`;
     preview.append(summary);
     const questions = row.next_questions || [];
@@ -422,7 +423,6 @@ async function loadSessions() {
       const names = new Map(rows.filter(row => row.project).map(row => [row.project.slug, row.project.name]));
       projectFilter.replaceChildren(new Option("All projects", ""));
       for (const [slug, name] of [...names].sort((a, b) => a[1].localeCompare(b[1]))) projectFilter.add(new Option(name, slug));
-      if (rows.some(row => !row.project && !row.error)) projectFilter.add(new Option("No project", "-"));
       projectFilter.value = chosen;
       if (projectFilter.selectedIndex < 0) projectFilter.value = "";
       render();

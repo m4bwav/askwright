@@ -40,7 +40,7 @@ steps 1 and 2 below are for decision sets.
 
 One folder per set, `<project>/ask/<set-id>/` unless the project already keeps review files somewhere (then put
 it beside them). Start it with `ask.py new <folder> --title "<what this round decides>" --product "<your agent product>" --session "<session name or id>" --asked-by "<your role>"`, then add questions.
-Use the actual product and session, never invent them; omit unknown metadata. Every set needs `--project NAME`
+Use the actual product and session, never invent them; omit unknown metadata. Every set must have `--project NAME` (`new` and lint refuse without it)
 (and `--project-path DIR`), even one made up on the spot; related sets, above all one continue-prompt chain, reuse
 the same name so they group; a chain across projects gets an umbrella project (every page links its project page; `ask.py project`, `--back-link`, `--continue-prompt`: schema.md).
 Media stays where it is: list its folders in `media_roots` and refer to files by name. A graph, a force diagram or a

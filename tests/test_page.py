@@ -170,11 +170,11 @@ class DashboardPageTests(PageCase):
         p.check("#show-all")
         p.select_option("#project-filter", "site-work")
         self.assertEqual(p.locator("#sessions .toggle .name").all_inner_texts(), ["Site review"])
-        p.select_option("#project-filter", "-")
+        p.select_option("#project-filter", "test-project")
         self.assertEqual(p.locator("#sessions .toggle .name").all_inner_texts(), ["Film review"])
         p.reload()
         p.wait_for_selector("#sessions tbody")
-        self.assertEqual(p.locator("#project-filter").input_value(), "-")  # remembered per browser
+        self.assertEqual(p.locator("#project-filter").input_value(), "test-project")  # remembered per browser
         p.goto(self.url + "sessions?project=site-work")
         p.wait_for_selector("#sessions tbody")
         self.assertEqual(p.locator("#project-filter").input_value(), "site-work")
@@ -274,6 +274,7 @@ class DashboardPageTests(PageCase):
         row = next(row for row in ask.list_sessions()["sessions"] if row["title"] == "Film review")
         self.assertEqual(preview.locator("li").all_text_contents(), [q["question"] for q in row["next_questions"]])
         self.assertEqual(preview.locator("li").count(), 5)
+        self.assertEqual(preview.locator("summary").inner_text(), "Next 5 open questions")
         self.axe("expanded question preview")
         _, data = ask.load_set(self.other)
         data["title"] = "Updated other session"

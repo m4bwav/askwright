@@ -47,7 +47,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-VERSION = "0.17.1"
+VERSION = "0.18.0"
 PAGE = Path(__file__).resolve().parent / "page"
 KINDS = ("choice", "multi", "compare", "rank", "text", "scale", "confirm")
 MODES = ("decide", "study")
@@ -495,15 +495,19 @@ def open_session(sid):
     return {"ok": True, "url": result["url"]}
 
 
+PLACEHOLDER_PROJECT = "Unsorted"
+
+
 def project_of(data):
-    """The set's project as {"name", "path"} (path may be ""), or None. A plain string is a name."""
+    """The set's project as {"name", "path"} (path may be ""). A plain string is a name.
+    Lint requires a project; an older set without one reads as the placeholder, so no page shows a blank."""
     p = data.get("project")
     if isinstance(p, str) and p.strip():
         return {"name": p.strip(), "path": "", "slug": project_slug(p.strip())}
     if isinstance(p, dict) and isinstance(p.get("name"), str) and p["name"].strip():
         name = p["name"].strip()
         return {"name": name, "path": str(p.get("path") or ""), "slug": project_slug(name)}
-    return None
+    return {"name": PLACEHOLDER_PROJECT, "path": "", "slug": project_slug(PLACEHOLDER_PROJECT)}
 
 
 NEXT_PROMPT_GLOBS = ("*continue-prompt*.md", "*next-session-prompt*.md")
@@ -816,7 +820,9 @@ def lint_set(d, data, probe=True):
         if not (isinstance(bl, dict) and isinstance(bl.get("url"), str)
                 and re.match(r"^https?://", bl["url"]) and str(bl.get("label") or "").strip()):
             E("back-link", 'back_link needs {"url": "http(s)://...", "label": "..."}')
-    if "project" in data:
+    if "project" not in data:
+        E("project", 'every set needs a project: a name, or {"name": "...", "path": "..."}; make one up if needed')
+    else:
         pr = data["project"]
         if not (isinstance(pr, str) and pr.strip() or isinstance(pr, dict) and isinstance(pr.get("name"), str)
                 and pr["name"].strip() and isinstance(pr.get("path", ""), str) and set(pr) <= {"name", "path"}):
@@ -1938,6 +1944,9 @@ def cmd_new(a):
     f = d / "questions.json"
     if f.exists():
         return emit({"ok": False, "error": f"{f} already exists"})
+    if not a.project.strip():  # every set belongs to a project, even a name made up on the spot
+        return emit({"ok": False, "error": "--project NAME is required: reuse the name of related sets, "
+                                           "or make one up (a placeholder is fine)"})
     sid = a.id or re.sub(r"[^A-Za-z0-9_.-]+", "-", d.name).strip("-") or "set"
     d.mkdir(parents=True, exist_ok=True)
     data = {"askwright": 1, "id": sid, "title": a.title, "context": "", "asked_by": a.asked_by,
@@ -1945,10 +1954,7 @@ def cmd_new(a):
     stamp(data)
     if a.back_link:
         data["back_link"] = {"url": a.back_link[0], "label": a.back_link[1]}
-    if a.project_path and not a.project:
-        return emit({"ok": False, "error": "--project-path needs --project NAME"})
-    if a.project:
-        data["project"] = {"name": a.project, "path": a.project_path} if a.project_path else a.project
+    data["project"] = {"name": a.project, "path": a.project_path} if a.project_path else a.project
     if a.continue_prompt_file:
         try:
             data["continue_prompt"] = Path(a.continue_prompt_file).expanduser().read_text(encoding="utf-8").strip()
@@ -1959,8 +1965,6 @@ def cmd_new(a):
     write_json_atomic(f, data)
     register_set(d)
     out = {"ok": True, "path": str(f.resolve()), "next": "add questions (references/schema.md), then lint"}
-    if not a.project:  # every set belongs to a project, even a name made up on the spot
-        out["warning"] = "no --project: give every set a project (reuse the name of related sets; make one up if needed)"
     return emit(out)
 
 
@@ -2323,7 +2327,7 @@ def main(argv=None):
     s.add_argument("--asked-by", default="")
     s.add_argument("--product", default="")
     s.add_argument("--session", default="")
-    s.add_argument("--project", default="", help="the project these questions are for (shown on every page)")
+    s.add_argument("--project", default="", help="required: the project these questions are for, a placeholder name if need be")
     s.add_argument("--project-path", default="", help="the project's folder, shown beside its name")
     cp = s.add_mutually_exclusive_group()
     cp.add_argument("--continue-prompt", default="", help="text the page's 'Copy continue prompt' button copies")

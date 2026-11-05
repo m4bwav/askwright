@@ -4,6 +4,11 @@ Every change to [README.md](README.md) and its companions, newest first, each wi
 
 Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (IDs or "user request"), `files:` (file and section), and a sentence on what changed. Cite section headings, not line numbers.
 
+### C-20261104-1 · 2026-11-04 · 0.18.0: project required; the dashboard preview says how many questions it lists
+- because: user request ("make project required even if its a placeholder project"; "instead of 5 it should say the number")
+- files: ask.py (project_of, lint_set, cmd_new), page/dashboard.js (preview label), SKILL.md Step 1, references/schema.md, plugin.json, ask.py VERSION, tests
+- `new` and lint now refuse a set with no project; an older set reads as the placeholder project "Unsorted". The preview reads "Next open question", "Next 3 open questions" or "No open questions" instead of a fixed "Next 5 questions".
+
 ### C-20261103-1 · 2026-11-03 · 0.17.1: media checks always go to the page, parked checks become sets
 - because: user request ("incorporate any questions comfyui or sessions have to utilize askwright for comparison, listening, video, or image checks, since the chat window can't really ask questions of those nature well")
 - files: SKILL.md (Step 0, the see-or-hear rule), references/writing-questions.md (Parked checks), plugin.json, ask.py VERSION

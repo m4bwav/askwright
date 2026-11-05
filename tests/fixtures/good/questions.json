@@ -1,5 +1,6 @@
 {
   "askwright": 1,
+  "project": "Test project",
   "id": "fixture-good",
   "title": "Pick the takes for the test reel",
   "context": "A short test reel. Each clip shows two draft takes side by side.",

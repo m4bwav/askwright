@@ -926,15 +926,15 @@ class CliTests(unittest.TestCase):
 
     def test_new(self):
         nd = self.s.tmp / "ask" / "fresh"
-        code, d = run_cli("new", nd, "--title", "Fresh set")
+        code, d = run_cli("new", nd, "--title", "Fresh set", "--project", "P")
         self.assertEqual(code, 0, d)
         data = json.loads((nd / "questions.json").read_text(encoding="utf-8"))
         self.assertEqual((data["id"], data["askwright"]), ("fresh", 1))
-        self.assertEqual(run_cli("new", nd, "--title", "Again")[0], 1)
+        self.assertEqual(run_cli("new", nd, "--title", "Again", "--project", "P")[0], 1)
 
     def test_back_link(self):
         nd = self.s.tmp / "ask" / "linked"
-        code, d = run_cli("new", nd, "--title", "Linked", "--back-link", "http://127.0.0.1:8765/", "Pick page")
+        code, d = run_cli("new", nd, "--title", "Linked", "--project", "P", "--back-link", "http://127.0.0.1:8765/", "Pick page")
         self.assertEqual(code, 0, d)
         data = json.loads((nd / "questions.json").read_text(encoding="utf-8"))
         self.assertEqual(data["back_link"], {"url": "http://127.0.0.1:8765/", "label": "Pick page"})
@@ -1316,6 +1316,8 @@ class ProjectAndListenTests(unittest.TestCase):
     def test_project_lint(self):
         for ok in ("Reel", {"name": "Reel"}, {"name": "Reel", "path": "/work/reel"}):
             self.assertNotIn("project", lint(lambda data, ok=ok: data.update(project=ok))[0])
+        self.assertIn("project", lint(lambda data: data.pop("project"))[0])  # required
+        self.assertEqual(ask.project_of({})["name"], "Unsorted")  # an older set still reads as a project
         for bad in ("", 3, {"path": "/x"}, {"name": ""}, {"name": "x", "path": 2}, {"name": "x", "url": "y"}):
             self.assertIn("project", lint(lambda data, bad=bad: data.update(project=bad))[0])
 
@@ -1386,6 +1388,10 @@ class ProjectAndListenTests(unittest.TestCase):
             self.assertEqual((data["project"], data["continue_prompt"]), ("Reel", "From a file."))
             code, d = run_cli("new", tmp / "c", "--title", "C", "--project-path", "/x")
             self.assertFalse(d["ok"])
+            code, d = run_cli("new", tmp / "d", "--title", "D")  # --project is required
+            self.assertFalse(d["ok"])
+            self.assertIn("--project", d["error"])
+            self.assertFalse((tmp / "d" / "questions.json").exists())
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
 
@@ -1479,7 +1485,7 @@ class ProjectAndTimeTests(unittest.TestCase):
     def test_new_add_close_stamp_times(self):
         tmp = Path(tempfile.mkdtemp(prefix="askw-times-"))
         try:
-            code, d = run_cli("new", tmp / "s", "--title", "T")
+            code, d = run_cli("new", tmp / "s", "--title", "T", "--project", "P")
             data = json.loads((tmp / "s" / "questions.json").read_text(encoding="utf-8"))
             self.assertTrue(data["created"] and data["updated"])
             q = good()["questions"][0]

@@ -47,8 +47,9 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-VERSION = "0.18.0"
+VERSION = "0.18.1"
 PAGE = Path(__file__).resolve().parent / "page"
+BUNDLE = re.compile(r"^(those|these|both|all of)\b|\bplus\b", re.I)
 KINDS = ("choice", "multi", "compare", "rank", "text", "scale", "confirm")
 MODES = ("decide", "study")
 STUDY_KINDS = ("choice", "text")  # a quiz asks multiple-choice or written questions
@@ -932,6 +933,11 @@ def lint_set(d, data, probe=True):
                 W("double-ask", "the question seems to join two asks; split it in two", qid)
             if LEADING.search(text):
                 W("leading", "the question leads the reader; ask it neutrally", qid)
+            labels = [str(o.get("label") or "") for o in q.get("options") or [] if isinstance(o, dict)]
+            if not study and q.get("kind") == "choice" and (any(BUNDLE.search(x) for x in labels)
+                                                            or sum(" and " in x for x in labels) > 1):
+                W("bundled-options", 'options bundle other choices ("A and B", "those plus C"); '
+                                     'list each once and use kind "multi" for checkboxes', qid)
 
         check_media(q.get("media"), qid, "media")
         layout = q.get("media_layout", "auto")

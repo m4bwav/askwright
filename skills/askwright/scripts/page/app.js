@@ -784,7 +784,7 @@
   }
 
   function answerArea(q, a, editing) {
-    const fs = h("fieldset", { id: "ans", disabled: !editing }, h("legend", { text: q.kind === "rank" ? "Your order" : q.kind === "multi" ? "Your answer (pick any)" : "Your answer" }));
+    const fs = h("fieldset", { id: "ans", disabled: !editing }, h("legend", { text: q.kind === "rank" ? "Your order" : q.kind === "multi" ? "Your answer (check all that apply)" : "Your answer" }));
     const name = "ans-" + q.id;
     let n = 1;
     if (q.kind === "rank") {

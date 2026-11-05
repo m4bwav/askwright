@@ -4,6 +4,11 @@ Every change to [README.md](README.md) and its companions, newest first, each wi
 
 Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (IDs or "user request"), `files:` (file and section), and a sentence on what changed. Cite section headings, not line numbers.
 
+### C-20261104-2 · 2026-11-04 · 0.18.1: agents use checkboxes instead of bundled options
+- because: user request ("This question seems like it could have just listed options for me to check"); `multi` already existed but a set offered "A and B" and "those two plus C and D" as one-pick options
+- files: ask.py (lint_set, bundled-options warning), page/app.js (legend), SKILL.md kinds, references/writing-questions.md, plugin.json, ask.py VERSION, tests
+- A `choice` question whose options bundle other choices now gets a lint warning pointing to `multi`, and the legend reads "check all that apply".
+
 ### C-20261104-1 · 2026-11-04 · 0.18.0: project required; the dashboard preview says how many questions it lists
 - because: user request ("make project required even if its a placeholder project"; "instead of 5 it should say the number")
 - files: ask.py (project_of, lint_set, cmd_new), page/dashboard.js (preview label), SKILL.md Step 1, references/schema.md, plugin.json, ask.py VERSION, tests

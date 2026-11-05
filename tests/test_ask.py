@@ -1313,6 +1313,15 @@ class ContactTests(unittest.TestCase):
 class ProjectAndListenTests(unittest.TestCase):
     """0.7.0: project label, continue prompt and the listen bench (lint, new, /api/set, dashboard rows)."""
 
+    def test_bundled_options_warn_on_choice_only(self):
+        def bundle(kind):
+            def mutate(data):
+                data["questions"] = [dict(data["questions"][0], kind=kind, options=[
+                    {"id": "a", "label": "VoxCPM2"}, {"id": "b", "label": "Those two plus Ming"}])]
+            return mutate
+        self.assertIn("bundled-options", lint(bundle("choice"))[1])
+        self.assertNotIn("bundled-options", lint(bundle("multi"))[1])
+
     def test_project_lint(self):
         for ok in ("Reel", {"name": "Reel"}, {"name": "Reel", "path": "/work/reel"}):
             self.assertNotIn("project", lint(lambda data, ok=ok: data.update(project=ok))[0])

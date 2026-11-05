@@ -89,3 +89,6 @@ Append-only. One line per operation: `## [YYYY-MM-DD] op | title` where op is on
 
 ## 2026-11-04: 0.18.0 project required, preview count (owner request)
 `ask.py new` and lint refuse a set without a project; older sets read as the placeholder "Unsorted", so the dashboard's "No project" filter is gone. The dashboard preview label gives the real count ("Next open question", "Next 3 open questions", "No open questions"). Backfilled the owner's seven projectless live sets, keeping their file times. C-20261104-1.
+
+## 2026-11-04: 0.18.1 checkboxes over bundled options (owner request)
+The `multi` kind already gave checkboxes; agents were not choosing it. Added the bundled-options lint warning, SKILL.md and writing-questions guidance, and a clearer legend. C-20261104-2.

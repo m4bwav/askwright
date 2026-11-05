@@ -43,6 +43,9 @@ the question-evaluation research (QAS-99 adapted, R-T11); models under-flag poin
   when your guess is always the first option.
 - Do not add "Not sure" or "Other"; the page adds both to every question.
 
+Several can be true? Use `multi` and list each thing once, so the person checks what they want. Never make
+combinations into one-pick options ("A and B", "those two plus C and D"); lint warns as `bundled-options`.
+
 ## Guesses
 
 - Every question gets one, with the reason in a sentence.

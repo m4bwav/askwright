@@ -47,7 +47,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-VERSION = "0.18.1"
+VERSION = "0.19.0"
 PAGE = Path(__file__).resolve().parent / "page"
 BUNDLE = re.compile(r"^(those|these|both|all of)\b|\bplus\b", re.I)
 KINDS = ("choice", "multi", "compare", "rank", "text", "scale", "confirm")
@@ -1953,6 +1953,10 @@ def cmd_new(a):
     if not a.project.strip():  # every set belongs to a project, even a name made up on the spot
         return emit({"ok": False, "error": "--project NAME is required: reuse the name of related sets, "
                                            "or make one up (a placeholder is fine)"})
+    described = a.project_description.strip()
+    if not described and not load_project(project_slug(a.project)):
+        return emit({"ok": False, "error": f"new project {a.project!r} needs --project-description: "
+                                           "say what it is in a sentence"})
     sid = a.id or re.sub(r"[^A-Za-z0-9_.-]+", "-", d.name).strip("-") or "set"
     d.mkdir(parents=True, exist_ok=True)
     data = {"askwright": 1, "id": sid, "title": a.title, "context": "", "asked_by": a.asked_by,
@@ -1969,6 +1973,8 @@ def cmd_new(a):
     elif a.continue_prompt:
         data["continue_prompt"] = a.continue_prompt
     write_json_atomic(f, data)
+    if described:
+        ensure_project(a.project, description=described)
     register_set(d)
     out = {"ok": True, "path": str(f.resolve()), "next": "add questions (references/schema.md), then lint"}
     return emit(out)
@@ -2012,6 +2018,10 @@ def detach(a):
 def cmd_project(a):
     if a.list or not a.name:
         return emit(list_projects())
+    if a.description is not None and not a.description.strip():
+        return emit({"ok": False, "error": "--description cannot be blank"})
+    if a.description is None and not load_project(project_slug(a.name)):
+        return emit({"ok": False, "error": f"new project {a.name!r} needs --description: say what it is in a sentence"})
     rec = ensure_project(a.name, description=a.description, repos=a.repo, dirs=a.dir, remove_repos=a.remove_repo,
                          remove_dirs=[str(Path(x).expanduser().resolve()) for x in a.remove_dir], goals=a.goal,
                          remove_goals=a.remove_goal, status=a.status, direction=a.needs_direction, note=a.note,
@@ -2334,6 +2344,7 @@ def main(argv=None):
     s.add_argument("--product", default="")
     s.add_argument("--session", default="")
     s.add_argument("--project", default="", help="required: the project these questions are for, a placeholder name if need be")
+    s.add_argument("--project-description", default="", help="what the project is; required when the project is new")
     s.add_argument("--project-path", default="", help="the project's folder, shown beside its name")
     cp = s.add_mutually_exclusive_group()
     cp.add_argument("--continue-prompt", default="", help="text the page's 'Copy continue prompt' button copies")

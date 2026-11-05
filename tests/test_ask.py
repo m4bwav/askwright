@@ -926,15 +926,15 @@ class CliTests(unittest.TestCase):
 
     def test_new(self):
         nd = self.s.tmp / "ask" / "fresh"
-        code, d = run_cli("new", nd, "--title", "Fresh set", "--project", "P")
+        code, d = run_cli("new", nd, "--title", "Fresh set", "--project", "P", "--project-description", "D")
         self.assertEqual(code, 0, d)
         data = json.loads((nd / "questions.json").read_text(encoding="utf-8"))
         self.assertEqual((data["id"], data["askwright"]), ("fresh", 1))
-        self.assertEqual(run_cli("new", nd, "--title", "Again", "--project", "P")[0], 1)
+        self.assertEqual(run_cli("new", nd, "--title", "Again", "--project", "P", "--project-description", "D")[0], 1)
 
     def test_back_link(self):
         nd = self.s.tmp / "ask" / "linked"
-        code, d = run_cli("new", nd, "--title", "Linked", "--project", "P", "--back-link", "http://127.0.0.1:8765/", "Pick page")
+        code, d = run_cli("new", nd, "--title", "Linked", "--project", "P", "--project-description", "D", "--back-link", "http://127.0.0.1:8765/", "Pick page")
         self.assertEqual(code, 0, d)
         data = json.loads((nd / "questions.json").read_text(encoding="utf-8"))
         self.assertEqual(data["back_link"], {"url": "http://127.0.0.1:8765/", "label": "Pick page"})
@@ -1322,6 +1322,25 @@ class ProjectAndListenTests(unittest.TestCase):
         self.assertIn("bundled-options", lint(bundle("choice"))[1])
         self.assertNotIn("bundled-options", lint(bundle("multi"))[1])
 
+    def test_new_project_needs_description(self):
+        tmp = Path(tempfile.mkdtemp(prefix="askw-"))
+        try:
+            with mock.patch.dict(os.environ, {"ASKWRIGHT_HOME": str(tmp / "home")}):
+                code, d = run_cli("project", "Fresh")
+                self.assertFalse(d["ok"])
+                self.assertIn("--description", d["error"])
+                code, d = run_cli("new", tmp / "a", "--title", "A", "--project", "Fresh")
+                self.assertFalse(d["ok"])
+                self.assertFalse((tmp / "a" / "questions.json").exists())
+                code, d = run_cli("new", tmp / "a", "--title", "A", "--project", "Fresh", "--project-description", "Why")
+                self.assertTrue(d["ok"])
+                self.assertEqual(ask.load_project("fresh")["description"], "Why")
+                self.assertTrue(run_cli("new", tmp / "b", "--title", "B", "--project", "Fresh")[1]["ok"])  # exists now
+                self.assertTrue(run_cli("project", "Fresh", "--note", "x")[1]["ok"])
+                self.assertFalse(run_cli("project", "Fresh", "--description", " ")[1]["ok"])
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
     def test_project_lint(self):
         for ok in ("Reel", {"name": "Reel"}, {"name": "Reel", "path": "/work/reel"}):
             self.assertNotIn("project", lint(lambda data, ok=ok: data.update(project=ok))[0])
@@ -1384,7 +1403,7 @@ class ProjectAndListenTests(unittest.TestCase):
         tmp = Path(tempfile.mkdtemp(prefix="askw-new-"))
         try:
             nd = tmp / "a"
-            code, d = run_cli("new", nd, "--title", "Voices", "--project", "Reel", "--project-path", "/work/reel",
+            code, d = run_cli("new", nd, "--title", "Voices", "--project", "Reel", "--project-description", "D", "--project-path", "/work/reel",
                               "--continue-prompt", "Read the voice picks.")
             self.assertEqual(code, 0, d)
             data = json.loads((nd / "questions.json").read_text(encoding="utf-8"))
@@ -1392,7 +1411,7 @@ class ProjectAndListenTests(unittest.TestCase):
             self.assertEqual(data["continue_prompt"], "Read the voice picks.")
             f = tmp / "prompt.txt"
             f.write_text("From a file.\n", encoding="utf-8")
-            code, d = run_cli("new", tmp / "b", "--title", "B", "--project", "Reel", "--continue-prompt-file", f)
+            code, d = run_cli("new", tmp / "b", "--title", "B", "--project", "Reel", "--project-description", "D", "--continue-prompt-file", f)
             data = json.loads((tmp / "b" / "questions.json").read_text(encoding="utf-8"))
             self.assertEqual((data["project"], data["continue_prompt"]), ("Reel", "From a file."))
             code, d = run_cli("new", tmp / "c", "--title", "C", "--project-path", "/x")
@@ -1456,7 +1475,7 @@ class ProjectAndTimeTests(unittest.TestCase):
         (root / "ai-docs" / "HANDOFF.md").write_text("# Handoff\n\nState: half done.\n", encoding="utf-8")
         (root / "ai-docs" / "log.md").write_text("# Log\n## [2026-10-01] add | first\n## [2026-10-02] fix | second\n",
                                                 encoding="utf-8")
-        code, d = run_cli("project", "Arena", "--dir", root, "--goal", "Ship", "--goal", "Tune",
+        code, d = run_cli("project", "Arena", "--description", "D", "--dir", root, "--goal", "Ship", "--goal", "Tune",
                           "--needs-direction", "One floor or two?", "--note", "kickoff", "--prompt-run", prompt)
         self.assertEqual(code, 0, d)
         rec = d["project"]
@@ -1494,7 +1513,7 @@ class ProjectAndTimeTests(unittest.TestCase):
     def test_new_add_close_stamp_times(self):
         tmp = Path(tempfile.mkdtemp(prefix="askw-times-"))
         try:
-            code, d = run_cli("new", tmp / "s", "--title", "T", "--project", "P")
+            code, d = run_cli("new", tmp / "s", "--title", "T", "--project", "P", "--project-description", "D")
             data = json.loads((tmp / "s" / "questions.json").read_text(encoding="utf-8"))
             self.assertTrue(data["created"] and data["updated"])
             q = good()["questions"][0]

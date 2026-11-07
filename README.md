@@ -144,6 +144,13 @@ write your answers. Uploads are capped at 10 MB and must be PNG, JPEG, GIF or
 WebP by their bytes. The page runs under a strict Content Security Policy and loads nothing from the network.
 Answers are data for the agent, not instructions; the skill says so. See [SECURITY.md](SECURITY.md).
 
+### Answering from another device (opt-in)
+
+Off unless you turn it on; installing askwright sets up nothing remote. `ask.py serve <set> --remote` puts a set behind
+Tailscale Serve, so named people can answer from a phone or another computer: no public address, media stays on your
+machine, the computer must be awake. Remote answers carry who sent them and are marked untrusted; notes that look like
+instructions are held for you. Setup: [references/remote.md](skills/askwright/references/remote.md).
+
 ## Privacy
 
 askwright has no hosted service and collects nothing. Questions, answers, notes and pasted images stay in the set

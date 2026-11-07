@@ -16,6 +16,8 @@ Only the latest release on the default branch gets fixes.
 
 The skill's instructions and `ask.py` run on your machine with your agent's permissions. `ask.py serve` runs a small HTTP server on 127.0.0.1 that serves the page, media files from the set folder and the folders the set lists, and an API that writes `answers.json`, `events.jsonl` and image attachments into the set folder. It makes no outbound requests.
 
+Remote mode is off unless a person enables it (`references/remote.md`). The server still binds 127.0.0.1; Tailscale Serve proxies to it. A proxied request must carry the set's remote Host and a `Tailscale-User-Login` on the list, re-read per request, and may only load the set and save answers. A named person can fetch any media-type file under the set's media folders by name. Limits that hold if screening fails: no route acts on the PC, picks must match options, closed questions refuse answers, and `read` marks remote text untrusted. Screening is deterministic rules and can be fooled. What an answer may trigger rests on the session's own permissions, which askwright never widens, and on written rules; no hook enforces it, and an agent could run `ask.py release` by itself, though it never sees held text first. A tailnet device whose login is on the list is trusted as that person: revoke it in Tailscale.
+
 In scope:
 - any way another web page, another local user's browser tab, or a DNS-rebinding host could read or write a set's answers, or reach the API without the per-run token;
 - any path by which a request could read a file outside the set folder and its media roots, or a non-media file inside them (answers.json, server.json);

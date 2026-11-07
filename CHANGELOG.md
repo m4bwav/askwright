@@ -4,6 +4,11 @@ Every change to [README.md](README.md) and its companions, newest first, each wi
 
 Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (IDs or "user request"), `files:` (file and section), and a sentence on what changed. Cite section headings, not line numbers.
 
+### C-20261107-2 · 2026-11-07 · 0.22.0: opt-in remote answers over Tailscale, with answer safety
+- because: user request (answer from a phone and from a second person's computer); owner's answers to remote-answers-1; ai-docs/research/2026-11-07-remote-answers.md
+- files: ask.py (gate, screen_text, remote, release, serve --remote/--for, read, status), page/app.js, references/remote.md, SKILL.md Step 3, README.md, SECURITY.md, AGENTS.md, plugin.json, scripts/budget.py, tests
+- Off by default. Proxied requests must be a listed person; routes that act on the PC are refused; remote answers carry `answered_by`, are marked untrusted, and suspicious ones are held until the owner runs `release`. Not yet run against a real Tailscale install.
+
 ### C-20261107-1 · 2026-11-07 · 0.21.0: session wake-up (claim, pending, start hook)
 - because: user request (a session should continue once a set is answered, with no one typing "done"); ai-docs/research/2026-11-07-remote-answers.md
 - files: ask.py (claim_wake, pending_sets, cmd_claim, cmd_pending, status --claim, read, new), hooks/hooks.json, SKILL.md Step 4, references/schema.md, plugin.json, tests

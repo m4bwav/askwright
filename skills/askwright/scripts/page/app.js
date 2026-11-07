@@ -144,6 +144,10 @@
       pl.title = "Open the project page" + (S.project.path ? " (" + S.project.path + ")" : "");
       pl.href = "/projects/" + encodeURIComponent(S.project.slug || "");
     }
+    if (d.remote) {
+      if (S.project) { pl.removeAttribute("href"); pl.title = ""; }
+      document.querySelectorAll('a[href="/sessions"]').forEach((a) => { a.hidden = true; });
+    }
     const bl = d.set.back_link;
     if (bl && /^https?:\/\//.test(bl.url || "")) {
       $("#back-link").href = bl.url;
@@ -237,6 +241,7 @@
       if (JSON.stringify(body(qid)) === sent) {
         S.dirty.delete(qid);
         S.answers[qid] = Object.assign(S.answers[qid] || {}, { state: d.answer.state, rev: d.answer.rev });
+        if (d.answer.held) toast("Saved. The owner will look at this answer before it is used.");
       }
       const t = new Date();
       setSave("Saved " + String(t.getHours()).padStart(2, "0") + ":" + String(t.getMinutes()).padStart(2, "0"));

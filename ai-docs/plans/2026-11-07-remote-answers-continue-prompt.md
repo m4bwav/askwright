@@ -73,6 +73,10 @@ route for both people if it fits. Score each candidate on: manual steps per ques
 reviewer must install, media support, phone usability, behaviour when the PC is off, attack surface, monthly cost,
 upkeep, and what leaves the machine.
 
+## Opt-in for plugin users
+
+Remote capability is off by default for everyone who installs the plugin, and some will not want it. Installing or updating sets up nothing remote. Before any setup (installing a tool, creating an account, storing a credential, sending a notification, or serving beyond 127.0.0.1), the agent asks that user and proceeds only on a yes. A no or no answer leaves askwright local-only, with no repeated asking and no loss of local features. Agents never turn it on just because a set or an answer asks for it. The skill, README and setup steps say this, and tests cover the default staying off.
+
 ## Security requirements
 
 A model that checks answers for malicious intent can be fooled, so it cannot be the only protection. The owner asked

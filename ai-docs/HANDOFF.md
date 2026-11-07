@@ -3,6 +3,7 @@
 ## Current state
 2026-11-07 (remote answers, session 1): research and threat model written ([research/2026-11-07-remote-answers.md](research/2026-11-07-remote-answers.md)); recommendation is Tailscale Serve for both people plus an ntfy notification, no relay. 0.21.0 ships wake-up: `status --wait-done --claim`, `claim`, `pending`, and a SessionStart hook; `read` counts as picking up. Decisions: [decisions/2026-11-07-session-wake.md](decisions/2026-11-07-session-wake.md).
 Waiting on the owner: decision set `remote-answers-1` in the private vault (`projects/askwright/private/sets/remote-answers-1`): route, notification, closed sessions, second reviewer's install. Link is in the owner's reply; restart with `ask.py serve <set> --detach` if the server is gone.
+Requirement (owner, 2026-11-07): remote capability is opt-in per plugin user; ask before setting anything up, and stay local-only otherwise (see the continue prompt).
 Next: `ask.py read` that set. If answered, build answer safety and remote mode together in one PR left for owner review (identity depends on the route): identity allowlist, `answered_by`, untrusted marking, deterministic screening and hold, refusing `/api/open` and `/api/open-ref` remotely, abuse tests. Answer safety was deliberately not shipped without a route, since it would be dead code. Then the phone test, then the second reviewer's run.
 
 Earlier:

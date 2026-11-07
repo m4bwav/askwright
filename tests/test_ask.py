@@ -1063,6 +1063,14 @@ class RemoteOptInTests(unittest.TestCase):
         finally:
             self.assertFalse(cli("remote", "--disable")["enabled"])
 
+    def test_tailscale_waiting_on_https_reports_the_link(self):
+        wait = ask.subprocess.TimeoutExpired("tailscale", 30, output=b"\n   https://login.tailscale.com/f/serve?node=x\n")
+        with mock.patch.object(ask.shutil, "which", return_value="tailscale"), \
+                mock.patch.object(ask.subprocess, "run", side_effect=wait):
+            with self.assertRaises(ask.AskError) as caught:
+                ask.tailscale("serve", "--bg")
+        self.assertIn("https://login.tailscale.com/f/serve?node=x", str(caught.exception))
+
     def test_exposure_failure_leaves_nothing_serving(self):
         try:
             cli("remote", "--enable", "--host", "pc.example.ts.net", "--owner", "o@example.com")

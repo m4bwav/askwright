@@ -1653,7 +1653,14 @@ def tailscale(*args):
         exe = str(guess) if guess.is_file() else None
     if not exe:
         raise AskError("Tailscale is not installed; see references/remote.md")
-    r = subprocess.run([exe, *args], capture_output=True, text=True, timeout=30)
+    try:
+        r = subprocess.run([exe, *args], capture_output=True, text=True, timeout=30)
+    except subprocess.TimeoutExpired as e:  # serve waits on a link while HTTPS certificates are off
+        said = e.stdout or b""
+        said = said.decode("utf-8", "replace") if isinstance(said, bytes) else said
+        link = re.search(r"https://\S+", said)
+        raise AskError(f"tailscale {args[0]} is waiting on a person"
+                       + (f": open {link.group(0)} to turn on HTTPS certificates, then try again" if link else ""))
     if r.returncode:
         raise AskError(f"tailscale {args[0]} failed: {(r.stderr or r.stdout).strip()[:300]}")
     return r.stdout

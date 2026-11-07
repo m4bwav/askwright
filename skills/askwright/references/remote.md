@@ -15,8 +15,11 @@ must be awake; a page that cannot be reached loses nothing.
 ## One-time setup
 
 1. The owner installs Tailscale on this computer and on their phone, and signs in on both.
-2. The agent runs `ask.py remote --enable`, which finds this computer's name and the owner's login.
-3. For a second person: they install Tailscale and sign in, the owner shares this computer with them from the
+2. The owner turns on MagicDNS and HTTPS Certificates on the Tailscale admin DNS page. This publishes the computer's
+   name and the private network's name on the public certificate ledger, so rename the computer first if its name is
+   sensitive. If this was missed, `ask.py serve --remote` reports the link to turn it on.
+3. The agent runs `ask.py remote --enable`, which finds this computer's name and the owner's login.
+4. For a second person: they install Tailscale and sign in, the owner shares this computer with them from the
    Tailscale admin page, they accept, and the agent runs `ask.py remote --add-person their-login`.
 
 ## Each set

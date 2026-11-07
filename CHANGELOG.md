@@ -4,6 +4,11 @@ Every change to [README.md](README.md) and its companions, newest first, each wi
 
 Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (IDs or "user request"), `files:` (file and section), and a sentence on what changed. Cite section headings, not line numbers.
 
+### C-20261107-1 · 2026-11-07 · 0.21.0: session wake-up (claim, pending, start hook)
+- because: user request (a session should continue once a set is answered, with no one typing "done"); ai-docs/research/2026-11-07-remote-answers.md
+- files: ask.py (claim_wake, pending_sets, cmd_claim, cmd_pending, status --claim, read, new), hooks/hooks.json, SKILL.md Step 4, references/schema.md, plugin.json, tests
+- `status --wait-done --claim` gives one continuation per "All done"; `pending` finds answered sets after a session closed or the machine restarted; a SessionStart hook reports them for the folder and stays silent otherwise. `read` counts as picking up. Nothing is exposed to the network and no session is started.
+
 ### C-20261106-1 · 2026-11-06 · 0.20.0: source references, Open folder and background tabs
 - because: user request ("I wouldn't know where to test this, it would be good if a directory was listed"; git and other external links; a separate tab for background on complicated pages)
 - files: ask.py (refs and tabs lint, no-refs warning, /api/open-ref, inline refusal), page/app.js, page/app.css, SKILL.md, references/schema.md, references/writing-questions.md, plugin.json, tests

@@ -102,11 +102,12 @@ Silence is never an answer. Either ask the person to say "done" in chat when the
 background with a deadline:
 
 ```
-python <this folder>/scripts/ask.py status <set> --wait-done --timeout 3600
+python <this folder>/scripts/ask.py status <set> --wait-done --claim --timeout 3600
 ```
 
-It returns when they press "All done" on the page or at the deadline. "I'm done for now" on the page means they
-will come back later; the page reopens on the first unanswered question with a welcome-back line.
+It returns when they press "All done" or at the deadline. Continue only if `claim.claimed` is true, so duplicate
+signals cause one continuation. "I'm done for now" keeps the wait going. Answers after a session closed:
+`ask.py pending` lists them (a Claude Code start hook does this for the folder).
 
 ## Step 5: read and report
 

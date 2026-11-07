@@ -1,6 +1,11 @@
 # Handoff
 
 ## Current state
+2026-11-07 (remote answers, session 1): research and threat model written ([research/2026-11-07-remote-answers.md](research/2026-11-07-remote-answers.md)); recommendation is Tailscale Serve for both people plus an ntfy notification, no relay. 0.21.0 ships wake-up: `status --wait-done --claim`, `claim`, `pending`, and a SessionStart hook; `read` counts as picking up. Decisions: [decisions/2026-11-07-session-wake.md](decisions/2026-11-07-session-wake.md).
+Waiting on the owner: decision set `remote-answers-1` in the private vault (`projects/askwright/private/sets/remote-answers-1`): route, notification, closed sessions, second reviewer's install. Link is in the owner's reply; restart with `ask.py serve <set> --detach` if the server is gone.
+Next: `ask.py read` that set. If answered, build answer safety and remote mode together in one PR left for owner review (identity depends on the route): identity allowlist, `answered_by`, untrusted marking, deterministic screening and hold, refusing `/api/open` and `/api/open-ref` remotely, abuse tests. Answer safety was deliberately not shipped without a route, since it would be dead code. Then the phone test, then the second reviewer's run.
+
+Earlier:
 2026-11-06 (owner request): 0.20.0 adds `refs` (folders, files, links, Open folder) and `tabs` on sets and questions, plus a `no-refs` lint warning: [decisions/2026-11-06-refs-and-tabs.md](decisions/2026-11-06-refs-and-tabs.md). Open only if asked: the wiki does not describe refs and tabs yet; a question server started before the update needs a restart. Install 322 KB (ceiling raised to 340 KB).
 
 2026-11-01 (session 11, continue prompt): goals and status set for all 10 registered projects (lovecraft-shorts added since session 10), derived from each project's README/HANDOFF; Siege news flagged needs-direction (watch the HD final), Flux 3 vs Qwen and Spear sranc marked done. No code change, no version bump. Continue prompt goals all shipped: next sessions only keep project records current or take owner requests.

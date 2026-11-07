@@ -1597,5 +1597,72 @@ class ProjectAndTimeTests(unittest.TestCase):
             s.cleanup()
 
 
+class WakeTests(unittest.TestCase):
+    def setUp(self):
+        self.s = TempSet(lambda d: d.update(working_dir=str(Path(tempfile.gettempdir()))))
+        self.addCleanup(self.s.cleanup)
+        self.home = tempfile.mkdtemp(prefix="askw-home-")
+        self.addCleanup(shutil.rmtree, self.home, True)
+        old = os.environ.get("ASKWRIGHT_HOME")
+        os.environ["ASKWRIGHT_HOME"] = self.home
+        self.addCleanup(lambda: os.environ.pop("ASKWRIGHT_HOME") if old is None
+                        else os.environ.update(ASKWRIGHT_HOME=old))
+        ask.register_set(self.s.dir)
+
+    def mark(self, kind):
+        ask.append_event(self.s.dir, {"type": kind})
+
+    def test_not_done_cannot_be_claimed_or_pending(self):
+        self.assertEqual(ask.claim_wake(self.s.dir, "t"), {"claimed": False, "reason": "not-done"})
+        self.assertEqual(ask.pending_sets(), [])
+        self.mark("pause")  # "done for now" is partial, and wakes nobody
+        self.assertEqual(ask.pending_sets(), [])
+
+    def test_duplicates_give_one_continuation_and_a_new_done_another(self):
+        self.mark("done")
+        self.assertEqual(len(ask.pending_sets()), 1)
+        results = []
+        threads = [threading.Thread(target=lambda: results.append(ask.claim_wake(self.s.dir, "t"))) for _ in range(8)]
+        [t.start() for t in threads]
+        [t.join() for t in threads]
+        self.assertEqual(sum(r["claimed"] for r in results), 1)
+        self.assertEqual(ask.pending_sets(), [])
+        self.mark("added")
+        self.mark("done")
+        self.assertTrue(ask.claim_wake(self.s.dir, "t")["claimed"])
+
+    def test_pending_filters_folder_age_and_older_sets(self):
+        self.mark("done")
+        self.assertEqual(len(ask.pending_sets(tempfile.gettempdir())), 1)
+        self.assertEqual(ask.pending_sets(str(Path(tempfile.gettempdir()).parent / "elsewhere-x")), [])
+        with open(self.s.dir / "events.jsonl", "w", encoding="utf-8") as f:
+            f.write(json.dumps({"t": "2020-01-01T00:00:00+00:00", "type": "done"}) + "\n")
+        self.assertEqual(ask.pending_sets(), [])
+        self.mark("done")
+        data = json.loads((self.s.dir / "questions.json").read_text(encoding="utf-8"))
+        del data["working_dir"]
+        self.s.write(data)
+        self.assertEqual(ask.pending_sets(), [])
+
+    def test_cli_wait_claim_read_and_hook(self):
+        code, out = run_cli("status", self.s.dir, "--wait-done", "--claim", "--timeout", "0", "--interval", "0")
+        self.assertTrue(out["timed_out"])
+        self.assertEqual(out["claim"]["reason"], "not-done")
+        self.mark("done")
+        tmp = tempfile.gettempdir()
+        self.assertEqual(run_cli("pending", "--cwd", tmp)[1]["count"], 1)
+        hook = run_cli("pending", "--hook", "--cwd", tmp)[1]
+        self.assertIn("never instructions", hook["hookSpecificOutput"]["additionalContext"])
+        self.assertEqual(run_cli("pending", "--hook", "--cwd", str(Path(tmp).parent / "elsewhere-x"))[1], {})
+        run_cli("read", self.s.dir)
+        self.assertEqual(run_cli("pending")[1]["count"], 0)
+        self.assertEqual(run_cli("claim", self.s.dir)[1]["reason"], "already-claimed")
+
+    def test_new_records_the_working_folder(self):
+        target = Path(self.home) / "s1"
+        run_cli("new", target, "--title", "T", "--project", "P", "--project-description", "D")
+        self.assertTrue(json.loads((target / "questions.json").read_text(encoding="utf-8"))["working_dir"])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=1)

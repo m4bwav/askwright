@@ -47,7 +47,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-VERSION = "0.19.0"
+VERSION = "0.20.0"
 PAGE = Path(__file__).resolve().parent / "page"
 BUNDLE = re.compile(r"^(those|these|both|all of)\b|\bplus\b", re.I)
 KINDS = ("choice", "multi", "compare", "rank", "text", "scale", "confirm")
@@ -798,6 +798,46 @@ def guess_first_index(q):
     return ids.index(first) if first in ids else None
 
 
+NEEDS_REF_RE = re.compile(r"\b(builds?|repo|repository|branch|commit|pull request|source code|codebase)\b", re.I)
+
+
+def ref_path(d, raw):
+    """A ref's folder or file: absolute, or relative to the set folder."""
+    p = Path(raw).expanduser()
+    return (p if p.is_absolute() else Path(d) / p).resolve()
+
+
+def all_refs(data):
+    qs = [q for q in data.get("questions") or [] if isinstance(q, dict)]
+    return [r for owner in [data] + qs for r in owner.get("refs") or [] if isinstance(r, dict)]
+
+
+def page_refs(d, refs):
+    out = []
+    for r in refs or []:
+        if isinstance(r, dict):
+            r = dict(r)
+            if isinstance(r.get("path"), str):
+                p = ref_path(d, r["path"])
+                r["path"], r["is_dir"], r["exists"] = str(p), p.is_dir(), p.exists()
+            out.append(r)
+    return out
+
+
+def open_ref_folder(d, data, raw):
+    """Show a listed ref's folder in the file manager. Only paths the set lists; never runs a file."""
+    listed = {ref_path(d, r["path"]) for r in all_refs(data) if isinstance(r.get("path"), str)}
+    p = Path(str(raw or ""))
+    if p not in listed:
+        raise AskError("that path is not listed in this set's refs")
+    folder = p if p.is_dir() else p.parent
+    if not folder.is_dir():
+        raise AskError(f"{folder} does not exist")
+    opener = "explorer" if os.name == "nt" else "open" if sys.platform == "darwin" else "xdg-open"
+    subprocess.Popen([opener, str(folder)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return {"ok": True, "folder": str(folder)}
+
+
 def lint_set(d, data, probe=True):
     errors, warnings = [], []
 
@@ -892,6 +932,60 @@ def lint_set(d, data, probe=True):
                 if c and (c["video"] != "h264" or c["audio"] not in (None, "aac", "mp3")):
                     W("codec", f"{src} is {c['video']}/{c['audio']}; H.264 with AAC plays in every browser", qid)
 
+    def check_blocks(blocks, qid, where):
+        for i, b in enumerate(blocks or []):
+            if not isinstance(b, dict) or b.get("type") not in ("text", "image", "video", "audio", "table", "chart",
+                                                                  "options_compared", "facts"):
+                E("one-pager", f"{where} block {i} has an unknown type", qid)
+            elif b.get("src"):
+                check_media([dict(b, type=None if b["type"] == "chart" else b["type"])], qid, f"{where} block {i}")
+
+    def check_refs(owner, qid):
+        refs = owner.get("refs")
+        if refs is not None and not isinstance(refs, list):
+            return E("refs", "refs must be a list", qid)
+        for r in refs or []:
+            if not isinstance(r, dict) or not str(r.get("label") or "").strip() or ("path" in r) == ("url" in r):
+                E("refs", 'every ref needs a label and one of path or url: {"label": "...", "path": "..."}', qid)
+                continue
+            if "url" in r and not re.match(r"^https?://\S+$", str(r["url"])):
+                E("refs", f"ref {r['label']!r}: url must be http(s)", qid)
+            if "path" in r and not (isinstance(r["path"], str) and r["path"].strip()):
+                E("refs", f"ref {r['label']!r}: path must be text", qid)
+            elif "path" in r and not ref_path(d, r["path"]).exists():
+                W("ref-missing", f"ref {r['label']!r}: {r['path']} does not exist on this machine", qid)
+            if "line" in r and not (type(r["line"]) is int and r["line"] > 0 and "path" in r):
+                E("refs", f"ref {r['label']!r}: line must be a positive whole number on a path ref", qid)
+            if "note" in r and not isinstance(r["note"], str):
+                E("refs", f"ref {r['label']!r}: note must be text", qid)
+
+    def check_tabs(owner, qid):
+        tabs = owner.get("tabs")
+        if tabs is None:
+            return
+        if not isinstance(tabs, list):
+            return E("tabs", "tabs must be a list", qid)
+        seen = set()
+        for t in tabs:
+            label = t.get("label") if isinstance(t, dict) else None
+            if not (isinstance(label, str) and 0 < len(label.strip()) <= 24 and isinstance(t.get("blocks"), list)
+                    and t["blocks"]):
+                E("tabs", 'every tab needs a label of 24 characters at most and blocks: {"label": "...", "blocks": [...]}', qid)
+                continue
+            if label.lower() == "question" or label.lower() in seen:
+                E("tabs", f"tab label {label!r} is reserved or used twice", qid)
+            seen.add(label.lower())
+            check_blocks(t["blocks"], qid, f"tab {label!r}")
+
+    check_refs(data, None)
+    check_tabs(data, None)
+    for q in qs:
+        if isinstance(q, dict):
+            check_refs(q, q.get("id"))
+            check_tabs(q, q.get("id"))
+            if (q.get("status", "open") == "open" and not q.get("refs") and not data.get("refs")
+                    and NEEDS_REF_RE.search(" ".join(str(q.get(k) or "") for k in ("question", "why")))):
+                W("no-refs", "this mentions code or a build; add refs saying where to find or test it", q.get("id"))
     for q in qs:
         if not isinstance(q, dict):
             E("question", "every question must be an object")
@@ -1038,12 +1132,7 @@ def lint_set(d, data, probe=True):
             if not trig or trig is q or not isinstance(want, list) or not set(want) <= set(option_ids(trig)):
                 E("show-if", "show_if needs {question: <id in the set>, option: [<its option ids>]}", qid)
 
-        for i, b in enumerate(q.get("one_pager") or []):
-            if not isinstance(b, dict) or b.get("type") not in ("text", "image", "video", "audio", "table", "chart",
-                                                                  "options_compared", "facts"):
-                E("one-pager", f"one_pager block {i} has an unknown type", qid)
-            elif b.get("src"):
-                check_media([dict(b, type=None if b["type"] == "chart" else b["type"])], qid, f"one_pager block {i}")
+        check_blocks(q.get("one_pager"), qid, "one_pager")
 
     n_open = sum(1 for q in qs if isinstance(q, dict) and q.get("status", "open") == "open")
     limit = 30 if study else 12
@@ -1553,6 +1642,12 @@ def page_set(srv):
             m["captions_url"] = f"/m/{i}/" + urllib.parse.quote(vtt.relative_to(roots[i]).as_posix())
         return m
 
+    def blocks(items):
+        return [url(b) if b.get("src") else b for b in items or [] if isinstance(b, dict)]
+
+    def tabs(items):
+        return [dict(t, blocks=blocks(t.get("blocks"))) for t in copy.deepcopy(items or []) if isinstance(t, dict)]
+
     qs = []
     for q in copy.deepcopy(data.get("questions") or []):
         if not isinstance(q, dict):
@@ -1561,7 +1656,9 @@ def page_set(srv):
         for o in q.get("options") or []:
             if isinstance(o, dict) and o.get("media"):
                 o["media"] = [url(m) for m in o["media"] if isinstance(m, dict)]
-        q["one_pager"] = [url(b) if b.get("src") else b for b in q.get("one_pager") or [] if isinstance(b, dict)]
+        q["one_pager"] = blocks(q.get("one_pager"))
+        q["refs"] = page_refs(d, q.get("refs"))
+        q["tabs"] = tabs(q.get("tabs"))
         qs.append(q)
     events = load_events(d)
     visits = [e for e in events if e.get("type") == "visit"]
@@ -1577,6 +1674,7 @@ def page_set(srv):
                                    **times),
            "project": project_of(data), "continue_prompt": continue_prompt(d, data),
            "next_prompt": next_prompt_path(d, data),
+           "refs": page_refs(d, data.get("refs")), "tabs": tabs(data.get("tabs")),
            "mode": "study" if is_study(data) else "decide",
            "questions": qs, "answers": ans["answers"], "rev": ans.get("rev", 0), "note": note,
            "last_visit": visits[-1]["t"] if visits else None,
@@ -1739,7 +1837,7 @@ class Handler(BaseHTTPRequestHandler):
         path = urllib.parse.urlsplit(self.path).path
         allowed = ("/api/open", "/api/session-state") if getattr(self.server, "dashboard", False) else (
             "/api/open", "/api/session-state", "/api/answer", "/api/event", "/api/attachment",
-            "/api/submit", "/api/retake")
+            "/api/submit", "/api/retake", "/api/open-ref")
         try:
             n = int(self.headers.get("Content-Length", ""))
         except ValueError:
@@ -1780,6 +1878,12 @@ class Handler(BaseHTTPRequestHandler):
                     result = open_session(payload.get("id"))
                 return self.send_json(200, result)
             except (AskError, OSError, subprocess.SubprocessError) as e:
+                return self.fail(400, str(e))
+        if path == "/api/open-ref":
+            try:
+                d = self.server.set_dir
+                return self.send_json(200, open_ref_folder(d, load_set(d)[1], payload.get("path")))
+            except (AskError, OSError, ValueError) as e:
                 return self.fail(400, str(e))
         if path == "/api/answer":
             return self.answer(payload)
@@ -2304,6 +2408,8 @@ def cmd_inline(a):
         why_not = "no open unanswered questions"
     elif len(qs) > 4:
         why_not = f"{len(qs)} questions; inline is for 4 or fewer"
+    elif data.get("refs") or data.get("tabs") or any(q.get("refs") or q.get("tabs") for q in qs):
+        why_not = "a question has refs or tabs; serve the page"
     elif any(q.get("media") or q.get("one_pager") or any(o.get("media") for o in q.get("options") or [])
              for q in qs):
         why_not = "a question has media or a one-pager; serve the page"

@@ -739,6 +739,51 @@ class GalleryPageTests(PageCase):
         self.assertEqual(link.get_attribute("target"), "_blank")
 
 
+class RefsAndTabsTests(PageCase):
+    def setUp(self):
+        super().setUp()
+        path = self.dir / "questions.json"
+        data = json.loads(path.read_text(encoding="utf-8"))
+        q = next(x for x in data["questions"] if x["id"] == "music")
+        data["questions"] = [q]
+        q["refs"] = [{"label": "Test here", "path": ".", "note": "Press `Play`."},
+                     {"label": "Gone", "path": "no/such/dir"},
+                     {"label": "Repo", "url": "https://github.com/o/r"}]
+        data["tabs"] = [{"label": "Balance data", "blocks": [{"type": "text", "text": "Numbers here"},
+                                                            {"type": "image", "src": "swatch.png", "alt": "Swatch"}]}]
+        path.write_text(json.dumps(data), encoding="utf-8")
+
+    def test_refs_list_folder_and_link(self):
+        p = self.open()
+        refs = p.locator(".refs li")
+        self.assertEqual(refs.count(), 3)
+        self.assertIn(str(self.dir.resolve()), refs.nth(0).locator(".ref-path").inner_text())
+        self.assertEqual(refs.nth(0).locator("button:has-text('Open folder')").count(), 1)
+        self.assertEqual(refs.nth(1).locator("button:has-text('Open folder')").count(), 0)
+        self.assertIn("not found here", refs.nth(1).inner_text())
+        self.assertEqual(refs.nth(2).locator("a").get_attribute("href"), "https://github.com/o/r")
+        self.assertEqual(refs.nth(2).locator("a").get_attribute("rel"), "noopener noreferrer")
+
+    def test_tab_switch_keeps_draft_and_blocks_digit_keys(self):
+        p = self.open()
+        p.fill("#note", "half a thought")
+        p.click("role=tab[name='Balance data']")
+        self.assertTrue(p.locator("text=Numbers here").is_visible())
+        self.assertFalse(p.locator("#ans").is_visible())
+        p.wait_for_function("document.querySelector('.tab-panel img')?.naturalWidth > 0")
+        self.assertTrue(p.locator("h1").is_visible())
+        p.locator("[role=tabpanel]:not([hidden])").focus()
+        p.keyboard.press("1")
+        self.assertEqual(p.locator("#ans input:checked").count(), 0)
+        p.locator("role=tab[name='Balance data']").focus()
+        p.keyboard.press("ArrowLeft")
+        self.assertTrue(p.locator("#ans").is_visible())
+        self.assertEqual(p.input_value("#note"), "half a thought")
+        p.locator("h1").focus()
+        p.keyboard.press("1")
+        self.assertEqual(p.locator("#ans input:checked").count(), 1)
+
+
 class ClickMediaTests(PageCase):
     """0.9.0: click a picture, or the Pick button under a clip or sound, to pick the option it stands for."""
 

@@ -9,3 +9,4 @@
 - [2026-10-30-projects-and-top-bar.md](2026-10-30-projects-and-top-bar.md): 0.8.0 project records, timestamps, one-row top bar, visual tests (P1 to P10)
 - [2026-10-30-click-media-to-pick.md](2026-10-30-click-media-to-pick.md): 0.9.0 click a picture, clip or sound to pick its option (K1 to K6)
 - [2026-11-01 project management pages](2026-11-01-project-management-pages.md): goals, status, history, prompt runs, folder docs, project filter, install split
+- [2026-11-06 refs and tabs](2026-11-06-refs-and-tabs.md)

@@ -144,3 +144,6 @@ From the repository root: `python tests/check_skills.py`, `python tests/test_ask
 - evals/evals.json: 8 cases written (3 triggers, 2 decoys, 2 action, 1 outcome); not yet run. Owed: baseline without the skill, then the run (evergreen-test).
 - CI on the first push (2026-10-24): 7/7 jobs green (ubuntu, macos, windows x Python 3.9 and 3.14; the Chrome page job on ubuntu). The symlink-escape test runs on Linux and macOS there.
 - led to: L-001, L-002, L-003, C-20261024-2
+
+### T-20261107-1 · 2026-11-07 · 0.21.0 wake-up
+`tests/test_ask.py` WakeTests: partial sets stay silent, eight racing claims give one winner, a new All done can be claimed, pending filters by folder, age and sets without a working folder, the hook prints `{}` elsewhere. 112 tests, 1 skip on Windows. No model-level eval run: triggers are unchanged. Open-session re-invocation through a background command is existing behaviour, not re-tested here.

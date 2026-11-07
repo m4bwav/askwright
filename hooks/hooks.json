@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/skills/askwright/scripts/ask.py\" pending --hook 2>/dev/null || python \"${CLAUDE_PLUGIN_ROOT}/skills/askwright/scripts/ask.py\" pending --hook",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

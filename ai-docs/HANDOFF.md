@@ -1,9 +1,9 @@
 # Handoff
 
 ## Current state
-2026-11-07 (remote answers, session 2): the owner answered `remote-answers-1`: Tailscale, no notification, start command for closed sessions, the second reviewer accepts one app. Built 0.22.0 on `feat/remote-mode`: opt-in `ask.py remote`, `serve --remote --for`, identity gate, untrusted marking, screening and hold, `release`, abuse tests. Decisions: [decisions/2026-11-07-remote-mode.md](decisions/2026-11-07-remote-mode.md). Setup: [../skills/askwright/references/remote.md](../skills/askwright/references/remote.md).
+2026-11-07 (remote answers, session 2): the owner answered `remote-answers-1`: Tailscale, no notification, start command for closed sessions, the second reviewer accepts one app. Built 0.22.0 on `feat/remote-mode`: opt-in `ask.py remote`, `serve --remote --for`, identity gate, untrusted marking, screening and hold, `release`, abuse tests. Decisions: [decisions/2026-11-07-remote-mode.md](decisions/2026-11-07-remote-mode.md). Setup steps are in the PR, at skills/askwright/references/remote.md.
 Not proven: nothing has run through real Tailscale. Tests send requests shaped like its documented headers. Check these on first run: Serve keeps the Host with its port, adds `X-Forwarded-For`, accepts `--https=<high port>` and the `http://127.0.0.1:<port>` target, and video seeks on a phone.
-Waiting on the owner: review the PR (security boundary, left open), and answer set `remote-setup-1` in the private vault (`projects/askwright/private/sets/remote-setup-1`). Restart with `ask.py serve <set> --detach` if its server is gone.
+Waiting on the owner: review PR 53 (https://github.com/m4bwav/askwright/pull/53, security boundary, left open), and answer set `remote-setup-1` in the private vault (`projects/askwright/private/sets/remote-setup-1`). Restart with `ask.py serve <set> --detach` if its server is gone.
 Next: `ask.py read` that set. After merge and a yes: install Tailscale on the PC, owner signs in, `ask.py remote --enable`, then the phone test off the home network with a real set holding a video. Fix what the checks above find. Then the second reviewer's run, wiki update, tag 0.22.0. Wake-up already works unchanged for remote answers.
 
 Earlier:

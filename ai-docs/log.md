@@ -99,3 +99,4 @@ The `multi` kind already gave checkboxes; agents were not choosing it. Added the
 
 ## 2026-11-07: remote answers session 1, 0.21.0 wake-up (owner request)
 Compared routes from primary sources and wrote the threat model; decision set served to the owner. Shipped claim, pending and a SessionStart hook; nothing exposed to the network. Answer safety waits for the route decision.
+Owner added: remote capability is opt-in; ask each user before setting anything up.

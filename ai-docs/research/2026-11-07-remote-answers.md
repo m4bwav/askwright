@@ -91,3 +91,18 @@ Remote mode must refuse the dashboard's `/api/open` and the set's `/api/open-ref
 | Partly answered, or "done for now" | no wake; a timeout reports the counts | same |
 | Answer after the session moved on | stays in `pending` until claimed | same |
 | Duplicate signals | `claim` succeeds once per "All done" | same |
+
+## Tailscale behaviour checked against source (2026-11-07, session 3)
+
+Docs do not state these, so they were read from `tailscale/tailscale` main (commit 01fa3ca, 2026-11-05). Still not run on a real install.
+
+| Assumption in PR 53 | Result | Where |
+|---|---|---|
+| Host stays as sent, port included | Holds: `r.Out.Host = r.In.Host` for TCP targets | `ipn/ipnlocal/serve.go` |
+| `X-Forwarded-For`, `-Host`, `-Proto` are added | Holds | `addProxyForwardedHeaders` |
+| Identity headers stripped from input, set for tailnet users, absent for tagged nodes and the local machine | Holds | `addTailscaleIdentityHeaders`, [serve](https://tailscale.com/kb/1312/serve) |
+| `--https=<high port>` | Holds: any port up to 65535 | `cmd/tailscale/cli/serve_v2.go` |
+| `http://127.0.0.1:<port>` target | Holds | [serve CLI](https://tailscale.com/kb/1242/tailscale-serve) |
+| Video seeking on a phone | Unknown until the phone test | |
+
+Found and fixed in PR 53: with HTTPS certificates off, `tailscale serve` prints an enable link and waits, which `ask.py` lost in a 30 s timeout. Also a setup step was missing: [HTTPS needs MagicDNS and publishes machine and tailnet names](https://tailscale.com/kb/1153/enabling-https) on the Certificate Transparency ledger. Sharing is on [all plans](https://tailscale.com/kb/1084/sharing), the recipient needs an Owner, Admin or IT admin role on their own tailnet, and unused invites expire after 30 days.

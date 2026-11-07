@@ -11,3 +11,4 @@
 - [2026-11-01 project management pages](2026-11-01-project-management-pages.md): goals, status, history, prompt runs, folder docs, project filter, install split
 - [2026-11-06 refs and tabs](2026-11-06-refs-and-tabs.md)
 - [2026-11-07-session-wake.md](2026-11-07-session-wake.md): one claim per All done, pending, start hook; what read does.
+- [2026-11-07-remote-mode.md](2026-11-07-remote-mode.md): remote mode rulings

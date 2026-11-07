@@ -932,6 +932,45 @@ class CliTests(unittest.TestCase):
         self.assertEqual((data["id"], data["askwright"]), ("fresh", 1))
         self.assertEqual(run_cli("new", nd, "--title", "Again", "--project", "P", "--project-description", "D")[0], 1)
 
+    def test_refs_and_tabs_lint(self):
+        good = {"label": "Repo", "url": "https://github.com/o/r"}
+        self.assertNotIn("refs", lint(lambda data: data.update(refs=[good]))[0])
+        for bad in ([{"label": "x"}], [{"url": "https://x/"}], [{"label": "x", "url": "javascript:alert(1)"}],
+                    [{"label": "x", "url": "https://x/", "path": "."}], [{"label": "x", "path": ".", "line": 0}], "x"):
+            self.assertIn("refs", lint(lambda data, bad=bad: data.update(refs=bad))[0], bad)
+        self.assertIn("ref-missing", lint(lambda data: data.update(refs=[{"label": "x", "path": "no/such/dir"}]))[1])
+        block = [{"type": "text", "text": "Notes"}]
+        self.assertNotIn("tabs", lint(lambda data: data.update(tabs=[{"label": "Data", "blocks": block}]))[0])
+        for bad in ([{"label": "Data"}], [{"label": "Question", "blocks": block}], [{"label": "x" * 25, "blocks": block}],
+                    [{"label": "A", "blocks": block}, {"label": "a", "blocks": block}]):
+            self.assertIn("tabs", lint(lambda data, bad=bad: data.update(tabs=bad))[0], bad)
+        self.assertIn("one-pager", lint(lambda data: data.update(tabs=[{"label": "A", "blocks": [{"type": "x"}]}]))[0])
+
+    def test_build_question_without_refs_warns(self):
+        def mutate(data):
+            data["questions"][0]["question"] = "Have you played the current build?"
+        self.assertIn("no-refs", lint(mutate)[1])
+        def with_ref(data):
+            mutate(data)
+            data["refs"] = [{"label": "Releases", "url": "https://github.com/o/r/releases"}]
+        self.assertNotIn("no-refs", lint(with_ref)[1])
+
+    def test_open_ref_folder_only_opens_listed_folders(self):
+        with tempfile.TemporaryDirectory() as t:
+            d = Path(t).resolve()
+            (d / "code").mkdir()
+            (d / "code" / "run.bat").write_text("echo", encoding="utf-8")
+            (d / "other").mkdir()
+            data = {"refs": [{"label": "F", "path": "code/run.bat"}], "questions": [{"refs": [{"label": "D", "path": str(d / "code")}]}]}
+            with mock.patch.object(ask.subprocess, "Popen") as popen:
+                self.assertEqual(ask.open_ref_folder(d, data, str(d / "code" / "run.bat"))["folder"], str(d / "code"))
+                self.assertEqual(popen.call_args[0][0][1], str(d / "code"))  # the parent folder, never the file
+                popen.reset_mock()
+                for bad in (str(d / "other"), "", None):
+                    with self.assertRaises(ask.AskError):
+                        ask.open_ref_folder(d, data, bad)
+                popen.assert_not_called()
+
     def test_back_link(self):
         nd = self.s.tmp / "ask" / "linked"
         code, d = run_cli("new", nd, "--title", "Linked", "--project", "P", "--project-description", "D", "--back-link", "http://127.0.0.1:8765/", "Pick page")

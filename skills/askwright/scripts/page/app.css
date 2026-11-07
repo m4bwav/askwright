@@ -290,9 +290,9 @@ textarea {
 
 .onepager { margin: 0 0 1.25rem; border: 1px solid var(--border); border-radius: 8px; padding: .5rem 1rem 1rem; }
 .onepager summary { cursor: pointer; font-weight: 700; min-height: 44px; padding: .5rem 0; }
-.onepager table, .check-table { border-collapse: collapse; width: 100%; margin: .75rem 0; font-size: .97rem; }
-.onepager th, .onepager td { border: 1px solid var(--border); padding: .4rem .55rem; text-align: left; vertical-align: top; }
-.onepager th { background: var(--surface); }
+.onepager table, .tab-panel table, .check-table { border-collapse: collapse; width: 100%; margin: .75rem 0; font-size: .97rem; }
+.onepager th, .onepager td, .tab-panel th, .tab-panel td { border: 1px solid var(--border); padding: .4rem .55rem; text-align: left; vertical-align: top; }
+.onepager th, .tab-panel th { background: var(--surface); }
 .facts { display: grid; grid-template-columns: max-content 1fr; gap: .25rem 1rem; margin: .75rem 0; }
 .facts dt { font-weight: 700; }
 .facts dd { margin: 0; }
@@ -369,4 +369,23 @@ dialog::backdrop { background: rgb(0 0 0 / .5); }
 }
 @media (prefers-reduced-motion: reduce) {
   * { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
+}
+
+/* Source references and background tabs */
+.refs { margin: 0 0 1.25rem; }
+.refs ul { list-style: none; margin: .4rem 0 0; padding: 0; }
+.refs li { border: 1px solid var(--border); border-radius: 8px; padding: .6rem .8rem; margin-bottom: .5rem; }
+.ref-head { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.ref-path { display: block; margin-top: .25rem; overflow-wrap: anywhere; color: var(--muted); }
+.ref-note { margin: .3rem 0 0; }
+.ref-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .4rem; }
+.tabs { display: flex; flex-wrap: wrap; gap: .25rem; margin: 0 0 1rem; border-bottom: 1px solid var(--border); }
+.tab { min-height: 44px; padding: .4rem .9rem; font: inherit; color: var(--fg); background: none; border: 0; border-bottom: 3px solid transparent; cursor: pointer; }
+.tab[aria-selected="true"] { font-weight: 700; color: var(--accent); border-bottom-color: var(--accent); }
+.tab-panel figure { margin: 0 0 1rem; }
+.tab-panel img, .tab-panel video { max-width: 100%; height: auto; }
+@media (min-width: 640px) {
+  .refs li { display: grid; grid-template-columns: 1fr auto; column-gap: .75rem; }
+  .ref-head, .ref-path, .ref-note { grid-column: 1; }
+  .ref-actions { grid-column: 2; grid-row: 1 / span 3; align-self: center; margin-top: 0; }
 }

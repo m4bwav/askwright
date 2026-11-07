@@ -105,6 +105,12 @@ handoff or a chat reply: the person has to find the files, guess what to look fo
 - `look_for` names what to listen for, with times: "The pause after 'dawn' at 2.0 s: natural or clipped?".
 - Several lines read by one voice per option: put each option's sample in its `media`; it plays from a button.
 
+## Refs and tabs
+
+If answering means testing, playing or reading something, say where: `refs` with the folder to open, the important
+source files with lines, and the repository, pull request or release links. "Have you played the build?" with no
+folder or link fails check 3. When background is long or has many images, split it into named `tabs`.
+
 ## One-pagers (major decisions only)
 
 Use one when the choice costs real time or money or is hard to undo. Keep it to what decides the choice:

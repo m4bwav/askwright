@@ -4,6 +4,11 @@ Every change to [README.md](README.md) and its companions, newest first, each wi
 
 Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (IDs or "user request"), `files:` (file and section), and a sentence on what changed. Cite section headings, not line numbers.
 
+### C-20261106-1 · 2026-11-06 · 0.20.0: source references, Open folder and background tabs
+- because: user request ("I wouldn't know where to test this, it would be good if a directory was listed"; git and other external links; a separate tab for background on complicated pages)
+- files: ask.py (refs and tabs lint, no-refs warning, /api/open-ref, inline refusal), page/app.js, page/app.css, SKILL.md, references/schema.md, references/writing-questions.md, plugin.json, tests
+- New `refs` and `tabs` on sets and questions. Refs list folders, files and links under "Source and links"; Open folder opens only paths the set lists and never runs a file. Tabs keep long background beside the question without losing drafts.
+
 ### C-20261104-3 · 2026-11-04 · 0.19.0: a new project needs a description
 - because: user request ("when a project is created a description is required")
 - files: ask.py (cmd_project, cmd_new, --project-description), page/project.js (singular "1 question waits"), SKILL.md Step 1, references/schema.md, plugin.json, ask.py VERSION, tests

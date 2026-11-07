@@ -27,6 +27,7 @@ every question page is as good as the best one, instead of whatever the agent im
   then reveal which take was where.
 - Image-heavy questions show one case at a time, with Previous/Next, a case selector and a full-size image link.
   Three or more images use this automatically; `media_layout` can request a gallery or a simultaneous stack.
+- `refs` list the folder to test in, source files and git or other links, with Open folder and Copy. `tabs` hold long background and images beside the question.
 - Background starts collapsed, with an expand/collapse control. Independent decisions still get separate
   questions. Batch evaluations collect frame-by-frame picks first, with specific Good / Keep / Reject checks;
   the agent recommends an overall model or workflow afterward.

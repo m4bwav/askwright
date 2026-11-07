@@ -61,7 +61,7 @@ Kinds: `choice`, `multi` (checkboxes: use it when several options can be true, n
 "Left"/"Right" until the pick and stores the option id; `randomized: true` only if the sides were drawn at random,
 and a clip with a known fixed order gets `false`: keep the lint warning or remake the pair in random order), `rank`, `text`, `scale`, `confirm`. A question that only
 matters after another answer gets `show_if`. A major decision gets a `one_pager` (text, facts, a pros and cons
-table, images, a chart) above it. Keep a set to 12 open questions or fewer.
+table, images, a chart) above it; lots of it goes in `tabs`. When code or a build is involved, `refs` say where to test it and link the source. Keep a set to 12 open questions or fewer.
 
 Long reviews: one comparison per independent frame, take or edit; each case states the requested result and has
 **Good / Keep / Reject** checks; offer "Both meet the request" and "Neither meets the request". Galleries,

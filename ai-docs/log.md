@@ -95,3 +95,4 @@ The `multi` kind already gave checkboxes; agents were not choosing it. Added the
 
 ## 2026-11-04: 0.19.0 new projects need a description (owner request)
 `project` and `new` refuse to create a project without one; hand-written sets can still register without one. Filled the four empty records. Tiny Colony turned out to be evaluation test data (its folders are scratchpad trap-busy and trap-small), left for the owner to remove. C-20261104-3.
+## [2026-11-06] add | 0.20.0 refs, Open folder and background tabs (owner request); decision 2026-11-06-refs-and-tabs

@@ -10,7 +10,7 @@
     set: null, questions: [], answers: {}, view: "question", current: null, history: [],
     showAnswered: false, editing: {}, dirty: new Set(), timers: {}, sig: "", leftPrompt: null,
     lookTimes: [], lookIdx: -1, keyInputs: [], tcOffer: null, firstLoad: true, serverTime: null,
-    mediaIndex: {}, backgroundOpen: {},
+    mediaIndex: {}, backgroundOpen: {}, tabOpen: {}, tabOff: false, refs: [], tabs: [],
     study: false, studyInfo: null, review: null, studySig: "", missedOnly: false,
   };
   // Study (quiz) mode: the server holds the answer key and sends it only in `review`, after the attempt is submitted.
@@ -134,6 +134,8 @@
     document.title = (d.set.title || "Questions") + " · askwright";
     S.project = d.project || null;
     S.continuePrompt = d.continue_prompt || "";
+    S.refs = d.refs || [];
+    S.tabs = d.tabs || [];
     S.nextPrompt = d.next_prompt || "";
     const pl = $("#project-line");
     pl.hidden = !S.project;
@@ -719,8 +721,8 @@
       h("thead", null, h("tr", null, cols.map((c) => h("th", { scope: "col", text: c })))),
       h("tbody", null, (rows || []).map((r) => h("tr", null, r.map((c) => h("td", { text: c == null ? "" : String(c) }))))));
   }
-  function onePager(blocks, qid) {
-    const kids = blocks.map((b) => {
+  function blockEls(blocks) {
+    return blocks.map((b) => {
       switch (b.type) {
         case "text": return h("div", null, md(b.text));
         case "image": case "chart": return mediaEl(Object.assign({}, b, { type: "image" }));
@@ -732,9 +734,65 @@
         default: return null;
       }
     });
+  }
+  function onePager(blocks, qid) {
+    const kids = blockEls(blocks);
     return h("details", { class: "onepager", open: !!S.backgroundOpen[qid],
       ontoggle: (e) => { S.backgroundOpen[qid] = e.currentTarget.open; } },
       h("summary", { text: "Background for this question" }), kids);
+  }
+
+  function refRow(r) {
+    const where = r.path ? r.path + (r.line ? ":" + r.line : "") : r.url;
+    const copy = h("button", { type: "button", class: "btn small", text: r.path ? "Copy path" : "Copy link", onclick: async () => {
+      const ok = await copyText(where);
+      toast(ok ? "Copied " + where : "Could not copy; your browser blocked the clipboard.", !ok);
+    } });
+    const open = r.path && r.exists ? h("button", { type: "button", class: "btn small", text: "Open folder", onclick: async () => {
+      const res = await fetch("/api/open-ref", { method: "POST", headers: { "Content-Type": "application/json", "X-Ask-Token": TOKEN }, body: JSON.stringify({ path: r.path }) }).catch(() => null);
+      toast(res && res.ok ? "Opened the folder on this computer." : "Could not open the folder; copy the path instead.", !(res && res.ok));
+    } }) : null;
+    return h("li", null,
+      h("div", { class: "ref-head" }, r.url ? h("a", { href: r.url, target: "_blank", rel: "noopener noreferrer", text: r.label }) : h("strong", { text: r.label }),
+        r.path && !r.exists ? h("span", { class: "tag warn", text: "not found here" }) : null),
+      r.path ? h("code", { class: "ref-path", text: where }) : null,
+      r.note ? h("p", { class: "ref-note" }, inlineMd(r.note)) : null,
+      h("div", { class: "ref-actions" }, open, copy));
+  }
+  function refsSection(q) {
+    const refs = (q.refs || []).concat(S.refs);
+    if (!refs.length) return null;
+    return h("section", { class: "refs", "aria-labelledby": "refs-h" }, h("h2", { id: "refs-h", text: "Source and links" }), h("ul", null, refs.map(refRow)));
+  }
+  // Question tab plus the question's and the set's own; every panel stays in the page so drafts and clips survive a switch.
+  function withTabs(art, q, body) {
+    const extra = (q.tabs || []).concat(S.tabs);
+    S.tabOff = false;
+    if (!extra.length) { art.append(...body); return; }
+    let active = Math.min(S.tabOpen[q.id] || 0, extra.length);
+    const labels = ["Question"].concat(extra.map((t) => t.label));
+    const panels = [h("div", { role: "tabpanel", id: "tab-p0", "aria-labelledby": "tab-b0" }, body)].concat(
+      extra.map((t, i) => h("div", { role: "tabpanel", class: "tab-panel", tabindex: "0", id: "tab-p" + (i + 1), "aria-labelledby": "tab-b" + (i + 1) }, blockEls(t.blocks))));
+    const pick = (i, focus) => {
+      active = i;
+      S.tabOpen[q.id] = i;
+      S.tabOff = i !== 0;
+      btns.forEach((b, n) => { b.setAttribute("aria-selected", String(n === i)); b.tabIndex = n === i ? 0 : -1; });
+      panels.forEach((p, n) => {
+        p.hidden = n !== i;
+        if (n !== i) p.querySelectorAll("video, audio").forEach((m) => m.pause());
+      });
+      if (focus) btns[i].focus();
+    };
+    const btns = labels.map((t, i) => h("button", { type: "button", role: "tab", class: "tab", id: "tab-b" + i, "aria-controls": "tab-p" + i, text: t, onclick: () => pick(i) }));
+    const bar = h("div", { role: "tablist", class: "tabs", "aria-label": "Question and background" }, btns);
+    bar.addEventListener("keydown", (e) => {
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      e.preventDefault(); e.stopPropagation();
+      pick((active + (e.key === "ArrowRight" ? 1 : labels.length - 1)) % labels.length, true);
+    });
+    art.append(bar, ...panels);
+    pick(active);
   }
 
   function renderQuestion(q) {
@@ -742,7 +800,7 @@
     const a = S.answers[q.id] || {};
     const editing = !!S.editing[q.id];
     S.bench = null;
-    const art = h("article", { class: "q", "data-q": q.id });
+    let art = h("article", { class: "q", "data-q": q.id });
     // Reading order: where this is (project, set), what is asked, why it matters, what decides it, then the answer.
     const where = [S.project && S.project.name, S.set && S.set.title].filter(Boolean).join(" · ");
     if (where) art.append(h("p", { class: "context-line", text: where }));
@@ -751,9 +809,13 @@
       !S.study && q.reversible === false ? h("span", { class: "tag warn", text: "hard to undo" }) : null,
       q.updated ? h("span", { class: "when" }, window.askTime.el(q.updated, q.updated !== q.created ? "updated " : "asked ")) : null),
     h("h1", { tabindex: "-1", id: "q-h" }, q.question));
+    const outer = art;  // the heading stays above the tabs; everything below belongs to the Question tab
+    art = h("div");
     if (q.hint) art.append(h("p", { class: "hint", text: q.hint }));
     if (q.why) art.append(h("section", { class: "why", "aria-labelledby": "why-h" }, h("h2", { id: "why-h", text: "Why this matters" }), h("p", { text: q.why })));
     if ((q.one_pager || []).length) art.append(onePager(q.one_pager, q.id));
+    const refs = refsSection(q);
+    if (refs) art.append(refs);
     if ((q.look_for || []).length) {
       const items = q.look_for.map((t) => {
         const times = [...t.matchAll(/(\d+(?:\.\d+)?)\s*s\b/g)].map((m) => parseFloat(m[1]));
@@ -771,7 +833,8 @@
     art.append(answerArea(q, a, editing));
     if (!S.study) art.append(guessArea(q, a), noteArea(q, a, editing));
     art.append(h("div", { id: "leave-prompt" }));
-    main.replaceChildren(art);
+    withTabs(outer, q, [...art.childNodes]);
+    main.replaceChildren(outer);
     markPicks(q);
   }
 
@@ -1175,6 +1238,8 @@
     const onControl = el && ["INPUT", "BUTTON", "VIDEO", "AUDIO", "A", "SUMMARY"].includes(el.tagName);
     const k = e.key;
     if (el?.tagName === "SELECT") return;
+    // On a background tab the answer controls are hidden: only moving between questions still works.
+    if (S.view === "question" && S.tabOff && !["n", "p", "ArrowLeft", "ArrowRight"].includes(k)) return;
     if (e.shiftKey && /^Digit[1-9]$/.test(e.code) && S.view === "question" && S.bench) {
       e.preventDefault();
       benchPlay(+e.code.slice(5) - 1);

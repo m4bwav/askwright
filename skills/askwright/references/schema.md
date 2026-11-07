@@ -19,6 +19,8 @@ A set is one folder holding `questions.json`. The server writes `answers.json`, 
 | `project` | yes | The project the questions are for, a placeholder name if need be (lint error without it; older sets read as "Unsorted"): a name, or `{"name": "...", "path": "..."}`. Shown in the top bar, above every question and on the session card. `ask.py new --project NAME [--project-description TEXT] [--project-path DIR]` sets it and refuses to run without it; a project with no record yet needs the description. |
 | `continue_prompt` | no | Text the "Copy continue prompt" button copies (top bar and session card). Without it the button copies a default: read the answers with `ask.py read` (absolute paths), evaluate them against your guesses, act, close. The page adds the answer counts at the moment of copying. When a `*continue-prompt*.md` or `*next-session-prompt*.md` exists in `ai-docs/plans/`, `plans/` or the folder itself (project path, project dirs, or the set folder and three parents), the newest one is appended as a last line `Execute <absolute path>`, ready to paste into a new session. `ask.py new --continue-prompt TEXT` or `--continue-prompt-file FILE`. |
 | `created`, `updated` | no | ISO 8601 times, written by `new`, `add` and `close` (each question carries its own pair too). Sets and questions written before 0.8.0 fall back to questions.json's modification time. Pages show them relative ("3 hours ago"), exact on hover. |
+| `refs` | no | Source and links shown on every question: see "Refs". |
+| `tabs` | no | Background tabs shown on every question: see "Tabs". |
 | `media_roots` | no | Folders that hold media, relative to the set folder or absolute. Media outside the set folder and these roots is refused. |
 | `questions` | yes | The questions in the order the page walks them. |
 
@@ -40,6 +42,8 @@ A set is one folder holding `questions.json`. The server writes `answers.json`, 
 | `guess` | yes | Your answer: see "Guesses". |
 | `sides` | `compare` | `{"left": "<option id>", "right": "<option id>", "randomized": true}`: which take sits where in the side-by-side media. `randomized` is `true` only when the sides were drawn at random; a fixed order is `false` (the lint warns). |
 | `one_pager` | no | Background blocks shown above the question (below). |
+| `refs` | no | Folders, files and links that help answer it: see "Refs". |
+| `tabs` | no | Extra tabs of background beside the question: see "Tabs". |
 | `show_if` | no | `{"question": "<id>", "option": ["<option id>", ...]}`: the question joins the line only after that answer. |
 | `status` | no | `open` (default), `closed`, `superseded` (needs `superseded_by`) or `withdrawn` (needs `reason`). Only open questions are on the page. |
 | `rev` | no | Starts at 1. Raise it when you change a question that may already be answered; answers to an older rev are reported as `stale`. `ask.py add --replace` does it for you. |
@@ -122,6 +126,16 @@ while navigating the current page session. Critical consequences still belong in
 | `table` | `columns`, `rows` (lists of cells), `caption` |
 | `image`, `chart` | `src`, `alt`, `caption` (a chart is an SVG or PNG file you made) |
 | `video`, `audio` | as a media item |
+
+### Refs
+
+`"refs": [{"label": "Test in this project", "path": "../game", "note": "Open in Unity, then press Play."}, {"label": "Balance code", "path": "src/Balance.cs", "line": 42}, {"label": "Build 121", "url": "https://github.com/owner/repo/releases/tag/build-121"}]`.
+
+Each ref has a `label` and one of `path` (a folder or file, absolute or relative to the set folder) or `url` (http or https); `line` (with `path`) and `note` (one short line; `**bold**`, `` `code` `` and links work) are optional. The page lists them under "Source and links", with Copy, and Open folder for a path that exists: a file opens its parent folder and is never run. The server opens only paths this set lists. The lint warns when a path is missing and when a question names code or a build with no refs.
+
+### Tabs
+
+`"tabs": [{"label": "Balance data", "blocks": [<one-pager blocks>]}]`. A question with tabs gets a tab bar under its heading: "Question" first, then the question's tabs, then the set's. Labels are 24 characters at most. The answer stays on the Question tab; digit keys pick nothing on another tab, and switching keeps drafts. Use tabs when background would bury the question; a short `one_pager` is enough otherwise.
 
 ## A whole example
 

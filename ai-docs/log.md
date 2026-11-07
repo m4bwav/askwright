@@ -103,3 +103,6 @@ Owner added: remote capability is opt-in; ask each user before setting anything 
 
 ## 2026-11-07: remote answers session 2, 0.22.0 remote mode (owner request)
 Read the owner's route answers and built opt-in Tailscale mode with answer safety; PR left for owner review. Not yet run through a real Tailscale install. Decision 2026-11-07-remote-mode.
+
+## 2026-11-07: remote answers session 3 (continue prompt)
+The owner approved installing Tailscale after PR 53 merges; it is still open, so nothing was installed. Checked the unproven Tailscale assumptions against source and fixed a lost HTTPS enable link in the PR.

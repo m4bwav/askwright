@@ -638,6 +638,25 @@ class FixturePageTests(PageCase):
         ctx.close()
         self.assertEqual(errs, [])
 
+class RemotePageTests(PageCase):
+    def test_remote_page_hides_links_to_the_owners_other_work(self):
+        def add_flag(route):
+            r = route.fetch()
+            route.fulfill(response=r, body=json.dumps(dict(r.json(), remote=True, project={"name": "Some project"})))
+        self.page.route("**/api/set", add_flag)
+        p = self.open()
+        self.assertEqual(self.errors, [])
+        self.assertFalse(p.locator('a[href="/sessions"]').first.is_visible())
+        self.assertIsNone(p.get_attribute("#project-line", "href"))
+
+    def test_held_answer_tells_the_person(self):
+        p = self.open()
+        p.route("**/api/answer", lambda route: route.fulfill(status=200, content_type="application/json", body=json.dumps(
+            {"ok": True, "rev": 1, "answer": {"state": "held", "rev": 1, "held": ["secrets"]}})))
+        p.locator("[data-q] input[type=radio]").first.check(force=True)
+        p.wait_for_function("document.body.textContent.includes('look at this answer')")
+
+
 class GalleryPageTests(PageCase):
     def setUp(self):
         super().setUp()

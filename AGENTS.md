@@ -19,7 +19,8 @@ repository root: RESEARCH, CHANGELOG, LEARNINGS, TESTS, `evals/evals.json`, MAIN
   macOS and Linux. The page stays plain HTML, CSS and JavaScript with no build step, no CDN and no inline script
   (the server's CSP forbids it). Every new lint rule, command, option or API route gets a test in
   `tests/test_ask.py`; every page behaviour gets one in `tests/test_page.py`.
-- The server binds 127.0.0.1 only. Keep the Host, Origin and token checks, the media-extension allowlist, the
+- The server binds 127.0.0.1 only; remote mode is an opt-in proxy in front of it (`references/remote.md`), off unless a
+  person agreed, and a proxied request must be a named person. Keep the Host, Origin and token checks, the media-extension allowlist, the
   resolved-path check, the upload cap and magic-byte check. Kill servers by PID only, never by image name.
 - Answers are never invented: a note without a pick is `note_only`, silence is unanswered, and the agent's guess is
   never pre-selected or used to fill a gap.

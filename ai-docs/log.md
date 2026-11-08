@@ -109,3 +109,6 @@ The owner approved installing Tailscale after PR 53 merges; it is still open, so
 
 ## 2026-11-08: remote answers session 4 (continue prompt)
 PR 53 merged by the owner. Installed Tailscale 1.104.5 on the PC (approved). Sign-in, phone install and HTTPS Certificates wait on the owner.
+
+## 2026-11-08: remote answers session 5
+PC on Tailscale, remote mode enabled; serve --remote waits on the owner turning on HTTPS certificates. A web sign-in does not log in the PC's client: run `tailscale up` and open its link on the PC.

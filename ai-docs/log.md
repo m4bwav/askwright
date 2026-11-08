@@ -112,3 +112,6 @@ PR 53 merged by the owner. Installed Tailscale 1.104.5 on the PC (approved). Sig
 
 ## 2026-11-08: remote answers session 5
 PC on Tailscale, remote mode enabled; serve --remote waits on the owner turning on HTTPS certificates. A web sign-in does not log in the PC's client: run `tailscale up` and open its link on the PC.
+
+## 2026-11-08: remote answers session 6
+HTTPS certs and phone ready; phone-test set served over ts.net, waiting on the owner's phone check. Curl from the PC to its own ts.net port timed out.

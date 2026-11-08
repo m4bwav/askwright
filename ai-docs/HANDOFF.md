@@ -1,9 +1,9 @@
 # Handoff
 
 ## Current state
-2026-11-08 (remote answers, session 6): owner turned on HTTPS certificates and put Tailscale on the phone (pixel-7-pro, ping OK). Test set D:/m4bwa/Claude/Projects/Ai/askwright-phone-test (two lancers clips, project askwright) served with `--remote --detach`: https://desktop-7ks2s6e.taildccde1.ts.net:65028/ (tailscaled listens on 100.76.82.1:65028). A curl from the PC itself to that URL timed out; unknown whether that is only a Windows self-connect quirk.
-Waiting on the owner: open the link on the phone (Tailscale on), play and seek the clips, answer both questions.
-Next: `ask.py read` the phone-test set; if the phone could not connect, check Windows firewall for tailscaled on 100.x; then second reviewer, wiki, tag v0.22.0.
+2026-11-08 (remote answers, session 7): the phone test passed. Off the home network, over Tailscale, both test clips played and seeked on the owner's phone, and `ask.py read` showed both answers as `source: remote` with `answered_by` the owner's account and the untrusted-fields notice. Goal 2 (answer from a phone) works end to end. Tagged v0.22.0. Session 6 had written a home path and the tailnet host name here, which failed CI's path guard on main; removed (host details live in the vault sidecar).
+Waiting on the owner: approve on a decision page giving the second reviewer Tailscale on her computer (a stop point: something for her to install), or pick another route for her.
+Next: second reviewer setup and a real set on her computer; wiki pages for remote mode; final manual step count.
 2026-11-08 (remote answers, session 5): PC signed in to Tailscale (it was still logged out after the owner's first sign-in, which had happened off the PC; `tailscale up` printed a fresh link). `ask.py remote --enable` done (host found automatically, owner set, no extra people). `serve --remote` on a test set with two videos stops cleanly and reports the HTTPS enable link (the session-3 fix works on a real install). Test set: session scratchpad `phone-test` (lost when the session ends; rebuild with two lancers clips).
 Waiting on the owner: turn on HTTPS Certificates (Tailscale admin DNS page, or the link `serve` prints); install Tailscale on the phone, same account.
 Next: `ask.py serve <set> --remote --detach`, open the printed ts.net link on the phone off the home network, check play and seek; then second reviewer, wiki, tag v0.22.0.

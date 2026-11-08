@@ -115,3 +115,6 @@ PC on Tailscale, remote mode enabled; serve --remote waits on the owner turning 
 
 ## 2026-11-08: remote answers session 6
 HTTPS certs and phone ready; phone-test set served over ts.net, waiting on the owner's phone check. Curl from the PC to its own ts.net port timed out.
+
+## 2026-11-08 remote answers session 7
+- Phone test passed (play, seek, remote identity in read). Removed private path and host name from HANDOFF (CI path guard). Tag v0.22.0.

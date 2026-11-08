@@ -106,3 +106,6 @@ Read the owner's route answers and built opt-in Tailscale mode with answer safet
 
 ## 2026-11-07: remote answers session 3 (continue prompt)
 The owner approved installing Tailscale after PR 53 merges; it is still open, so nothing was installed. Checked the unproven Tailscale assumptions against source and fixed a lost HTTPS enable link in the PR.
+
+## 2026-11-08: remote answers session 4 (continue prompt)
+PR 53 merged by the owner. Installed Tailscale 1.104.5 on the PC (approved). Sign-in, phone install and HTTPS Certificates wait on the owner.

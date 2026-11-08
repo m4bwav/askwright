@@ -190,6 +190,13 @@ Write an entry the moment a real signal happens: a user correction, the same err
 - Scope: repo:askwright
 - Status: active · helpful 1 · harmful 0 · last_confirmed 2026-10-31
 
+### L-024 · 2026-11-08 · `tag-push-makes-release`: a manual release blocks the release workflow
+- Trigger: session 7 pushed tag v0.22.0 and ran `gh release create`; release.yml then failed ("a release with the same tag name already exists") and no zip was attached.
+- Rule: push the tag only; release.yml creates the release and attaches the zip. If it collided, delete the manual release (keep the tag) and rerun the workflow.
+- Evidence: v0.22.0 release run, rerun passed with askwright-0.22.0.zip, 2026-11-08
+- Scope: repo:askwright
+- Status: active · helpful 1 · harmful 0 · last_confirmed 2026-11-08
+
 <!-- Example (delete once you have a real entry):
 ### L-001 · 2026-10-24 · One-line lesson in plain words
 - Trigger: what happened, with dates or counts

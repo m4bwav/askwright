@@ -1,6 +1,9 @@
 # Handoff
 
 ## Current state
+2026-11-08 (remote answers, session 5): PC signed in to Tailscale (it was still logged out after the owner's first sign-in, which had happened off the PC; `tailscale up` printed a fresh link). `ask.py remote --enable` done (host found automatically, owner set, no extra people). `serve --remote` on a test set with two videos stops cleanly and reports the HTTPS enable link (the session-3 fix works on a real install). Test set: session scratchpad `phone-test` (lost when the session ends; rebuild with two lancers clips).
+Waiting on the owner: turn on HTTPS Certificates (Tailscale admin DNS page, or the link `serve` prints); install Tailscale on the phone, same account.
+Next: `ask.py serve <set> --remote --detach`, open the printed ts.net link on the phone off the home network, check play and seek; then second reviewer, wiki, tag v0.22.0.
 2026-11-08 (remote answers, session 4): PR 53 merged (0.22.0 on main, not tagged yet). Tailscale 1.104.5 installed on the PC via winget (approved in `remote-setup-1`); it is logged out.
 Waiting on the owner: (1) sign in on the PC: run `tailscale up` (it prints a login link) or use the tray icon; (2) install Tailscale on the phone and sign in to the same account; (3) on the Tailscale admin DNS page, turn on MagicDNS and HTTPS Certificates (publishes the PC's name on a public ledger; rename the PC first if needed).
 Next: once `tailscale status` shows the PC online, run `ask.py remote --enable`, serve a real set holding a video with `--remote`, test it from the phone off the home network, then the second reviewer's run, wiki update, tag v0.22.0.

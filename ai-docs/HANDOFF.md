@@ -1,6 +1,9 @@
 # Handoff
 
 ## Current state
+2026-11-08 (remote answers, session 4): PR 53 merged (0.22.0 on main, not tagged yet). Tailscale 1.104.5 installed on the PC via winget (approved in `remote-setup-1`); it is logged out.
+Waiting on the owner: (1) sign in on the PC: run `tailscale up` (it prints a login link) or use the tray icon; (2) install Tailscale on the phone and sign in to the same account; (3) on the Tailscale admin DNS page, turn on MagicDNS and HTTPS Certificates (publishes the PC's name on a public ledger; rename the PC first if needed).
+Next: once `tailscale status` shows the PC online, run `ask.py remote --enable`, serve a real set holding a video with `--remote`, test it from the phone off the home network, then the second reviewer's run, wiki update, tag v0.22.0.
 2026-11-07 (remote answers, session 3): `remote-setup-1` is answered: yes, install Tailscale on the PC once PR 53 merges. It has not merged, so nothing is installed. Built 0.22.0 stays on `feat/remote-mode`. Decisions: [decisions/2026-11-07-remote-mode.md](decisions/2026-11-07-remote-mode.md). Setup steps are in the PR, at skills/askwright/references/remote.md.
 This session checked the Tailscale assumptions against its source ([research](research/2026-11-07-remote-answers.md), last section): Host, forwarding headers, high ports and the target all hold. Added to the PR: the lost HTTPS enable link now reports, and setup names the HTTPS step and its public ledger. Still not run on a real install; video seeks on a phone are unknown.
 Waiting on the owner: review and merge PR 53 (https://github.com/m4bwav/askwright/pull/53, security boundary, left open). During setup the owner signs in and turns on HTTPS Certificates, which publishes the PC's name on a public ledger.

@@ -2,7 +2,7 @@
 
 ## Current state
 2026-11-08 (remote answers, session 7): the phone test passed. Off the home network, over Tailscale, both test clips played and seeked on the owner's phone, and `ask.py read` showed both answers as `source: remote` with `answered_by` the owner's account and the untrusted-fields notice. Goal 2 (answer from a phone) works end to end. Tagged v0.22.0. Session 6 had written a home path and the tailnet host name here, which failed CI's path guard on main; removed (host details live in the vault sidecar).
-Waiting on the owner: approve on a decision page giving the second reviewer Tailscale on her computer (a stop point: something for her to install), or pick another route for her.
+Waiting on the owner: decision set `askwright-remote-setup-2` (folder beside the repository, served on a local port; `ask.py serve` it again if stopped): her route (guess: Tailscale) and whether setup is a guided session or a one-page guide (guess: guide).
 Next: second reviewer setup and a real set on her computer; wiki pages for remote mode; final manual step count.
 2026-11-08 (remote answers, session 5): PC signed in to Tailscale (it was still logged out after the owner's first sign-in, which had happened off the PC; `tailscale up` printed a fresh link). `ask.py remote --enable` done (host found automatically, owner set, no extra people). `serve --remote` on a test set with two videos stops cleanly and reports the HTTPS enable link (the session-3 fix works on a real install). Test set: session scratchpad `phone-test` (lost when the session ends; rebuild with two lancers clips).
 Waiting on the owner: turn on HTTPS Certificates (Tailscale admin DNS page, or the link `serve` prints); install Tailscale on the phone, same account.

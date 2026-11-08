@@ -118,3 +118,4 @@ HTTPS certs and phone ready; phone-test set served over ts.net, waiting on the o
 
 ## 2026-11-08 remote answers session 7
 - Phone test passed (play, seek, remote identity in read). Removed private path and host name from HANDOFF (CI path guard). Tag v0.22.0.
+- Release: manual `gh release create` collided with release.yml; deleted it, reran, zip attached (L-024 `tag-push-makes-release`). Decision set askwright-remote-setup-2 served (second reviewer route).

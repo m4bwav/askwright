@@ -50,7 +50,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-VERSION = "0.22.0"
+VERSION = "0.23.0"
 PAGE = Path(__file__).resolve().parent / "page"
 BUNDLE = re.compile(r"^(those|these|both|all of)\b|\bplus\b", re.I)
 KINDS = ("choice", "multi", "compare", "rank", "text", "scale", "confirm")
@@ -2270,8 +2270,98 @@ def self_check(srv):
 # ---------------------------------------------------------------- commands
 
 def emit(obj, code=None):
-    print(json.dumps(obj, ensure_ascii=True))
+    if sys.stdout is not None:  # None under pythonw, which the desktop shortcut uses
+        print(json.dumps(obj, ensure_ascii=True))
     return code if code is not None else (0 if obj.get("ok") else 1)
+
+
+def icon_png(size=64):
+    """The dashboard icon (green rounded square, three white lines) as PNG bytes, drawn with the standard library."""
+    import struct
+    import zlib
+    k = size / 32
+    r = 8 * k
+    lines = [(9 * k, 23 * k, 10.5 * k), (9 * k, 23 * k, 16 * k), (9 * k, 18 * k, 21.5 * k)]
+    half = 1.3 * k
+    rows = []
+    for y in range(size):
+        row = bytearray([0])
+        for x in range(size):
+            px, py = x + 0.5, y + 0.5
+            cx = min(max(px, r + k), size - r - k)
+            cy = min(max(py, r + k), size - r - k)
+            inside = (px - cx) ** 2 + (py - cy) ** 2 <= r * r
+            white = any((px - min(max(px, x0), x1)) ** 2 + (py - ly) ** 2 <= half * half for x0, x1, ly in lines)
+            row += bytes((255, 255, 255, 255) if inside and white else (0x3d, 0x7a, 0x4f, 255) if inside else (0, 0, 0, 0))
+        rows.append(bytes(row))
+
+    def chunk(t, data):
+        return struct.pack(">I", len(data)) + t + data + struct.pack(">I", zlib.crc32(t + data) & 0xFFFFFFFF)
+    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", size, size, 8, 6, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(b"".join(rows), 9)) + chunk(b"IEND", b""))
+
+
+def icon_ico(size=64):
+    """A Windows .ico holding one PNG image (supported since Windows Vista)."""
+    import struct
+    png = icon_png(size)
+    return struct.pack("<HHH", 0, 1, 1) + struct.pack("<BBBBHHII", size, size, 0, 0, 1, 32, len(png), 22) + png
+
+
+def desktop_dir():
+    if os.name == "nt":  # the desktop may be redirected (OneDrive), so ask Windows
+        try:
+            out = subprocess.run(["powershell", "-NoProfile", "-Command", "[Environment]::GetFolderPath('Desktop')"],
+                                 capture_output=True, text=True, timeout=30).stdout.strip()
+            if out:
+                return Path(out)
+        except (OSError, subprocess.SubprocessError):
+            pass
+    return Path.home() / "Desktop"
+
+
+def cmd_shortcut(a):
+    """Put an Askwright icon on the desktop: it starts the dashboard if stopped and opens it in the browser."""
+    import shlex
+    folder = Path(a.dir).expanduser().resolve() if a.dir else desktop_dir()
+    if not folder.is_dir():
+        return emit({"ok": False, "error": f"no such folder: {folder}"})
+    home = state_dir()
+    home.mkdir(parents=True, exist_ok=True)
+    script = str(Path(__file__).resolve())
+    args = ["dashboard", "--detach", "--open"]
+    icon = None
+    if os.name == "nt":
+        icon = home / "askwright.ico"
+        icon.write_bytes(icon_ico())
+        exe = Path(sys.executable)
+        pyw = exe.with_name("pythonw.exe")
+        target = pyw if pyw.exists() else exe  # pythonw: no console window flashes up
+        path = folder / "Askwright.lnk"
+
+        def q(v):
+            return "'" + str(v).replace("'", "''") + "'"
+        ps = ("$s=(New-Object -ComObject WScript.Shell).CreateShortcut(%s);$s.TargetPath=%s;$s.Arguments=%s;"
+              "$s.IconLocation=%s;$s.WorkingDirectory=%s;$s.Description='Open the Askwright dashboard';"
+              "$s.WindowStyle=7;$s.Save()") % (q(path), q(target), q(subprocess.list2cmdline([script] + args)),
+                                               q(str(icon) + ",0"), q(home))
+        r = subprocess.run(["powershell", "-NoProfile", "-Command", ps], capture_output=True, text=True, timeout=60)
+        if r.returncode != 0 or not path.exists():
+            return emit({"ok": False, "error": "could not create the shortcut: " + (r.stderr.strip() or "unknown")})
+    else:
+        cmdline = " ".join([shlex.quote(sys.executable), shlex.quote(script)] + args)
+        if sys.platform == "darwin":
+            path = folder / "Askwright.command"
+            path.write_text("#!/bin/sh\nexec %s\n" % cmdline, encoding="utf-8")
+        else:
+            icon = home / "askwright.png"
+            icon.write_bytes(icon_png(128))
+            path = folder / "askwright.desktop"
+            path.write_text("[Desktop Entry]\nType=Application\nName=Askwright\nComment=Open the Askwright dashboard\n"
+                            "Exec=%s\nIcon=%s\nTerminal=false\n" % (cmdline, icon), encoding="utf-8")
+        path.chmod(0o755)
+    return emit({"ok": True, "shortcut": str(path), "icon": str(icon) if icon else None,
+                 "runs": "ask.py " + " ".join(args)})
 
 
 def cmd_lint(a):
@@ -2889,6 +2979,8 @@ def main(argv=None):
     s.add_argument("--note", help="add a dated entry to the project's history")
     s.add_argument("--prompt-run", metavar="FILE", help="record that a continue or session prompt was run")
     s.add_argument("--list", action="store_true")
+    s = sub.add_parser("shortcut", help="put an icon on the desktop that starts and opens the dashboard")
+    s.add_argument("--dir", default="", help="folder for the shortcut instead of the desktop")
     s = sub.add_parser("dashboard", help="serve the shared session dashboard")
     s.add_argument("--port", type=int, default=0)
     s.add_argument("--detach", action="store_true")

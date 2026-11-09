@@ -4,6 +4,11 @@ Every change to [README.md](README.md) and its companions, newest first, each wi
 
 Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (IDs or "user request"), `files:` (file and section), and a sentence on what changed. Cite section headings, not line numbers.
 
+### C-20261109-1 · 2026-11-09 · 0.23.0: desktop shortcut that starts and opens the dashboard
+- because: user request ("add a way to initialize askwright with an icon or something if its not running")
+- files: ask.py (shortcut, icon_png, icon_ico, emit under pythonw), README.md, plugin.json, ask.py VERSION, tests
+- `ask.py shortcut` writes Askwright.lnk (Windows, pythonw, generated .ico), Askwright.command (macOS) or askwright.desktop (Linux) that runs `dashboard --detach --open`. The icon is the dashboard favicon drawn with the standard library.
+
 ### C-20261107-2 · 2026-11-07 · 0.22.0: opt-in remote answers over Tailscale, with answer safety
 - because: user request (answer from a phone and from a second person's computer); owner's answers to remote-answers-1; ai-docs/research/2026-11-07-remote-answers.md
 - files: ask.py (gate, screen_text, remote, release, serve --remote/--for, read, status), page/app.js, references/remote.md, SKILL.md Step 3, README.md, SECURITY.md, AGENTS.md, plugin.json, scripts/budget.py, tests

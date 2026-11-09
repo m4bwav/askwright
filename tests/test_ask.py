@@ -510,6 +510,30 @@ class ServerTests(ServerCase):
         self.assertEqual(c["media"], 206)
 
 
+class ShortcutTests(unittest.TestCase):
+    def test_icon_png_is_a_valid_png_of_the_asked_size(self):
+        png = ask.icon_png(48)
+        self.assertEqual(png[:4], bytes([0x89]) + b"PNG")
+        self.assertEqual(int.from_bytes(png[16:20], "big"), 48)
+        ico = ask.icon_ico(64)
+        self.assertEqual(ico[:6], bytes([0, 0, 1, 0, 1, 0]))
+        self.assertEqual(ico[22:], ask.icon_png(64))
+
+    def test_shortcut_writes_a_launcher_that_opens_the_dashboard(self):
+        with tempfile.TemporaryDirectory() as d:
+            code, out = run_cli("shortcut", "--dir", d)
+            self.assertEqual(code, 0, out)
+            self.assertTrue(Path(out["shortcut"]).exists())
+            self.assertEqual(out["runs"], "ask.py dashboard --detach --open")
+            if out["icon"]:
+                self.assertTrue(Path(out["icon"]).exists())
+
+    def test_shortcut_refuses_a_missing_folder(self):
+        code, out = run_cli("shortcut", "--dir", str(Path(tempfile.gettempdir()) / "askw-no-such-dir-x"))
+        self.assertEqual(code, 1)
+        self.assertIn("no such folder", out["error"])
+
+
 class DashboardTests(ServerCase):
     def setUp(self):
         super().setUp()

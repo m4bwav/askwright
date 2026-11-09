@@ -106,6 +106,9 @@ lists every field.
 
     python skills/askwright/scripts/ask.py dashboard --detach --open
 
+Or run `ask.py shortcut` once: it puts an Askwright icon on the desktop (`--dir` for another folder) that starts
+the dashboard if it is not running and opens it. Opening a set from the dashboard restarts that set's page too.
+
 A master page for every registered question set on this computer, with a bookmarkable URL. Sets register when
 agents create or serve them. Sessions are a table (filter by project or product, search, sort, snooze, archive,
 copy the continue prompt); the Projects tab lists every project with its status. A project page shows its goals,
@@ -130,6 +133,7 @@ and the folders' work logs. Details: [Dashboard and projects](https://github.com
 | `stop <set>` | Stops the set's server by its PID, after the server answers a ping proving it owns that PID. |
 | `register <set>` | Adds an existing set to the shared local dashboard, deduplicated by its resolved folder. |
 | `project [NAME]` | Creates or updates a project record (`--description`, `--repo`, `--dir`, `--goal`, `--status`, `--needs-direction Q`, `--note TEXT`, `--prompt-run FILE`); with no name, lists projects. |
+| `shortcut` | Puts an icon on the desktop that starts the dashboard when it is stopped and opens it. `--dir` picks another folder. |
 | `dashboard` | Serves the shared session inbox. Supports `--detach`, `--open`, `--port N` and `--stop`. |
 
 Every command prints one JSON object, except `--version` (plain text) and a usage mistake (argparse text on

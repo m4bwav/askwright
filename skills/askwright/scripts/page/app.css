@@ -390,3 +390,8 @@ dialog::backdrop { background: rgb(0 0 0 / .5); }
   .ref-actions { grid-column: 2; grid-row: 1 / span 3; align-self: center; margin-top: 0; }
 }
 .media.media-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 12rem), 1fr)); align-items: start; }
+/* Hover zoom: a large copy of a small picture beside it. */
+#hover-zoom { position: fixed; z-index: 50; pointer-events: none; object-fit: contain; max-width: none; background: var(--bg);
+  border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 32px rgb(0 0 0 / .45); }
+#hover-zoom[hidden] { display: none; }
+@media (hover: none) { #hover-zoom { display: none; } }

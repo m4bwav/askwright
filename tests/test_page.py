@@ -709,6 +709,22 @@ class GalleryPageTests(PageCase):
         self.assertEqual(p.locator("#ans input:checked").count(), 0)
         self.assertEqual(self.errors, [])
 
+    def test_hover_shows_large_copy_beside_small_picture(self):
+        p = self.open()
+        img = p.locator("#main img").first
+        img.evaluate("i => { i.style.width = '20px'; i.style.height = 'auto'; }")
+        p.wait_for_function("document.querySelector('#main img').complete")
+        zoom = p.locator("#hover-zoom")
+        self.assertTrue(zoom.is_hidden())
+        img.hover()
+        self.assertTrue(zoom.is_visible())
+        zb, ib = zoom.bounding_box(), img.bounding_box()
+        self.assertGreater(zb["width"], ib["width"] * 1.3)
+        self.assertTrue(zb["x"] >= ib["x"] + ib["width"] or zb["x"] + zb["width"] <= ib["x"])
+        p.mouse.move(1, 1)
+        self.assertTrue(zoom.is_hidden())
+        self.assertEqual(self.errors, [])
+
     def test_gallery_position_survives_question_navigation(self):
         p = self.open()
         p.get_by_label("Go to case").select_option("2")

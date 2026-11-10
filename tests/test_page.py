@@ -181,6 +181,19 @@ class DashboardPageTests(PageCase):
         p.click("#tab-projects")
         p.wait_for_selector("#projects .status:has-text('Needs direction')")
 
+    def test_unconsumed_tab_lists_read_unused_sets(self):
+        ask.append_event(self.other, {"type": "answer"})
+        ask.log_use(self.other, "read", "s1")
+        p = self.page
+        p.goto(self.url + "sessions#unconsumed")
+        p.wait_for_selector("#unconsumed tbody")
+        self.assertEqual(p.locator("#tab-unconsumed").inner_text(), "Unconsumed (1)")
+        self.assertEqual(p.locator("#unconsumed tbody strong").all_inner_texts(), ["Site review"])
+        ask.log_use(self.other, "consumed", "s1", "used")
+        p.reload()
+        p.wait_for_selector("#unconsumed .empty")
+        self.assertEqual(p.locator("#tab-unconsumed").inner_text(), "Unconsumed (0)")
+
     def expand(self, title):
         toggle = self.page.get_by_role("button", name=title, exact=True)
         if toggle.get_attribute("aria-expanded") != "true":

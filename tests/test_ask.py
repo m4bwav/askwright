@@ -1982,6 +1982,31 @@ class WakeTests(unittest.TestCase):
         self.assertEqual(run_cli("pending")[1]["count"], 0)
         self.assertEqual(run_cli("claim", self.s.dir)[1]["reason"], "already-claimed")
 
+    def test_read_then_consume_and_new_answers_reopen(self):
+        st = ask.use_state(self.s.dir)
+        self.assertFalse(st["unconsumed"])  # nothing answered or read yet
+        self.mark("answer")
+        self.assertFalse(ask.use_state(self.s.dir)["unconsumed"])  # answered but unread
+        self.assertEqual(run_cli("read", self.s.dir, "--by", "s1")[0], 0)
+        row = next(r for r in ask.list_sessions()["sessions"] if r["path"] == str(self.s.dir))
+        self.assertTrue(row["unconsumed"])
+        self.assertTrue(row["read_at"])
+        code, out = run_cli("consume", self.s.dir, "--by", "s1", "--note", "applied the picks")
+        self.assertTrue(out["ok"])
+        run_cli("read", self.s.dir)  # re-reading answers already used does not reopen the set
+        self.assertFalse(ask.use_state(self.s.dir)["unconsumed"])
+        self.assertFalse(out["state"]["unconsumed"])
+        self.assertEqual(out["state"]["consumed_note"], "applied the picks")
+        time.sleep(1.1)  # timestamps have one-second resolution
+        self.mark("answer")
+        self.assertTrue(ask.use_state(self.s.dir)["unconsumed"])  # answers newer than the last use
+
+    def test_old_wake_claims_count_as_read(self):
+        self.mark("answer")
+        self.mark("done")
+        ask.claim_wake(self.s.dir, "hook")
+        self.assertTrue(ask.use_state(self.s.dir)["unconsumed"])
+
     def test_new_records_the_working_folder(self):
         target = Path(self.home) / "s1"
         run_cli("new", target, "--title", "T", "--project", "P", "--project-description", "D")

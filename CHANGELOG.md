@@ -4,6 +4,11 @@ Every change to [README.md](README.md) and its companions, newest first, each wi
 
 Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (IDs or "user request"), `files:` (file and section), and a sentence on what changed. Cite section headings, not line numbers.
 
+### C-20261110-2 · 2026-11-10 · 0.25.1: hover a small picture to see it large
+- because: user request ("when we hover on a image ... shows a large version of it next to the image, hovering over other content")
+- files: page/app.js (hover zoom), page/app.css (#hover-zoom), plugin.json, tests/test_page.py
+- Pointing at any picture drawn smaller than its file floats a large copy (up to 900 px, fitted to the window) beside it, on whichever side has more room, over the rest of the page. It ignores the pointer, so clicking still picks, and it hides on mouse-out, on scroll and on touch screens.
+
 ### C-20261110-1 · 2026-11-10 · 0.25.0: Unconsumed tab, ask.py consume
 - because: user request ("another Unconsumed tab ... for answer sets that have been read, but not consumed by anything")
 - files: ask.py (log_use, use_state, cmd_consume, read --by, list_sessions fields), page/dashboard.html, page/dashboard.js, page/dashboard.css, SKILL.md Step 6 (one line; Step 4 and 5 lines shortened to stay inside the 10 KB body band), README.md, scripts/budget.py (install ceiling 360 to 384 KB), plugin.json, tests

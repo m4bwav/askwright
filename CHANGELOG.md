@@ -4,6 +4,11 @@ Every change to [README.md](README.md) and its companions, newest first, each wi
 
 Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (IDs or "user request"), `files:` (file and section), and a sentence on what changed. Cite section headings, not line numbers.
 
+### C-20261109-3 · 2026-11-09 · 0.24.1: steerwright link in the page headers
+- because: user request (link back to steerwright when it is installed)
+- files: ask.py (steerwright_link, page serving; section rule comments shortened to stay under the 360 KB install ceiling), page/index.html, page/dashboard.html, page/project.html, plugin.json, tests
+- When `~/.steerwright/server.json` (or `$STEERWRIGHT_HOME/server.json`) has a `url`, the served pages show a small "steerwright" link to it; otherwise nothing.
+
 ### C-20261109-2 · 2026-11-09 · 0.24.0: picks build and picks export, one image per item from a batch
 - because: user request (make the game repo's card-art pick bridge a generic askwright feature)
 - files: ask.py (cmd_picks_build, cmd_picks_export, picks parser), SKILL.md Step 1 (one pointer; three sentences shortened to stay under the 10 KB body band), references/schema.md Picks, README.md ask.py table, plugin.json, tests (PicksTests)

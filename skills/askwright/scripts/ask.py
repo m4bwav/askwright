@@ -50,7 +50,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-VERSION = "0.24.0"
+VERSION = "0.24.1"
 PAGE = Path(__file__).resolve().parent / "page"
 BUNDLE = re.compile(r"^(those|these|both|all of)\b|\bplus\b", re.I)
 KINDS = ("choice", "multi", "compare", "rank", "text", "scale", "confirm")
@@ -98,7 +98,7 @@ class AskError(Exception):
     pass
 
 
-# ---------------------------------------------------------------- files
+# ---- files
 
 def now():
     return datetime.datetime.now().astimezone().isoformat(timespec="seconds")
@@ -178,7 +178,7 @@ def register_set(path):
     return sid
 
 
-# ---------------------------------------------------------------- projects and timestamps
+# ---- projects and timestamps
 
 def iso_mtime(f):
     try:
@@ -572,7 +572,7 @@ def continue_prompt(d, data):
             f'4. If new questions come up, add them to the set ({py} "{me}" add "{d}" <file>) instead of guessing.')
 
 
-# ---------------------------------------------------------------- media paths
+# ---- media paths
 
 def media_roots(d, data):
     roots = [d]
@@ -618,7 +618,7 @@ def probe_codecs(path):
     return out
 
 
-# ---------------------------------------------------------------- figures (graphs, force diagrams, shapes)
+# ---- figures (graphs, force diagrams, shapes)
 
 FIG_W, FIG_H = 480, 300
 INK, MUTED, PALETTE = "#1b1b1f", "#4f4f57", ("#0b57d0", "#b3261e", "#13692c", "#8e4a00", "#6f2da8")
@@ -785,7 +785,7 @@ def figure_url(fig):
     return "data:image/svg+xml;base64," + base64.b64encode(render_figure(fig).encode("utf-8")).decode("ascii")
 
 
-# ---------------------------------------------------------------- lint
+# ---- lint
 
 def sentences(s):
     return len(re.findall(r"[.!?](?:\s|$)", (s or "").strip()))
@@ -1177,7 +1177,7 @@ def lint_study_question(q, qid, kind, E, W, longest_right):
         E("study-rubric", "a written question needs a model_answer or a rubric for whoever grades it", qid)
 
 
-# ---------------------------------------------------------------- study (quiz) mode
+# ---- study (quiz) mode
 
 def is_study(data):
     return isinstance(data, dict) and data.get("mode") == "study"
@@ -1321,7 +1321,7 @@ def page_study(srv, data, qs, answers):
     return info, review
 
 
-# ---------------------------------------------------------------- state
+# ---- state
 
 def answer_state(q, a):
     if not a:
@@ -1524,7 +1524,7 @@ def read_answers(d, since=None, include_all=False, attempt=None):
             "answers": out}
 
 
-# ---------------------------------------------------------------- answers from the page
+# ---- answers from the page
 
 def clean_answer(q, body, d, study=False):
     kind = q.get("kind")
@@ -1588,7 +1588,17 @@ def sniff_image(data):
     return None
 
 
-# ---------------------------------------------------------------- remote mode (off unless a person turned it on)
+def steerwright_link(page):  # steerwright hub link, '' when not installed
+    try:
+        url = json.loads(Path(os.environ.get("STEERWRIGHT_HOME") or Path.home() / ".steerwright", "server.json")
+                         .read_text("utf-8"))["url"]
+        assert url.startswith("http")
+        return '<a class="chip secondary" href="%s" title="all projects">steerwright</a>' % escape(url, {'"': "&quot;"})
+    except Exception:
+        return ""
+
+
+# ---- remote mode (off unless a person turned it on)
 
 REMOTE_GET = ("/", "/index.html", "/favicon.ico", "/api/set")
 REMOTE_POST = ("/api/answer", "/api/event", "/api/attachment")
@@ -1728,7 +1738,7 @@ def cmd_release(a):
     return emit({"ok": True, "qid": a.qid, "released": not a.reject})
 
 
-# ---------------------------------------------------------------- server
+# ---- server
 
 class Server(ThreadingHTTPServer):
     daemon_threads = True
@@ -1949,7 +1959,7 @@ class Handler(BaseHTTPRequestHandler):
             name = "dashboard.html" if path == "/sessions" or getattr(self.server, "dashboard", False) else "index.html"
             if path.startswith("/projects/"):
                 name = "project.html"
-            html = (PAGE / name).read_text(encoding="utf-8").replace("__ASK_TOKEN__", self.server.token)
+            html = (PAGE / name).read_text(encoding="utf-8").replace("__ASK_TOKEN__", self.server.token).replace("<!--STEERWRIGHT-->", steerwright_link(name))
             return self.send_bytes(200, html.encode("utf-8"), "text/html; charset=utf-8",
                                    {"Content-Security-Policy": CSP, "Referrer-Policy": "no-referrer"})
         if path in PAGE_FILES:
@@ -2267,7 +2277,7 @@ def self_check(srv):
     return out
 
 
-# ---------------------------------------------------------------- commands
+# ---- commands
 
 def emit(obj, code=None):
     if sys.stdout is not None:  # None under pythonw, which the desktop shortcut uses
@@ -2885,7 +2895,7 @@ def cmd_inline(a):
     return emit({"ok": True, "eligible": True, "text": "\n".join(lines), "ask_user_question": {"questions": aq}})
 
 
-# ---------------------------------------------------------------- picks: one image per item from a batch
+# ---- picks: one image per item from a batch
 
 PICK_GROUP = r"^(?P<item>.+)_(?P<label>[A-Za-z0-9]+)\.(png|jpe?g|gif|webp|avif)$"
 PICK_SIDE = "picks-source.json"

@@ -2086,6 +2086,16 @@ class PicksTests(unittest.TestCase):
         self.assertEqual(run_cli("picks", "export", self.src, "--out", out)[0], 1)
         out.write_text("[1]", encoding="utf-8")
         self.assertEqual(run_cli("picks", "export", d["sets"][0]["path"], "--out", out)[0], 1)
+class SteerwrightLink(unittest.TestCase):
+    def test_link_only_when_server_json_has_url(self):
+        with tempfile.TemporaryDirectory() as d, mock.patch.dict(os.environ, {"STEERWRIGHT_HOME": d}):
+            self.assertEqual(ask.steerwright_link("x"), "")
+            Path(d, "server.json").write_text('{"url": "http://127.0.0.1:47630/"}', encoding="utf-8")
+            link = ask.steerwright_link("x")
+            self.assertIn('href="http://127.0.0.1:47630/"', link)
+            self.assertIn('title="all projects"', link)
+            for name in ("index.html", "dashboard.html", "project.html"):
+                self.assertIn("<!--STEERWRIGHT-->", (ask.PAGE / name).read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

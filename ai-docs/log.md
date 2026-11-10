@@ -122,3 +122,6 @@ HTTPS certs and phone ready; phone-test set served over ts.net, waiting on the o
 
 ## 2026-11-09 picks (0.24.0)
 - `ask.py picks build` / `picks export` added, generalizing a game repo's card-art pick bridge (askpicks.py). Install size sits at 359 KB of the 360 KB ceiling and the SKILL.md body at 10.2 KB of 10 KB yellow: the next feature needs the install-size split or a trim first.
+
+## 2026-11-09: steerwright header link (0.24.1)
+Served pages fill a `<!--STEERWRIGHT-->` placeholder with a link to the steerwright hub url from its server.json, or with nothing when steerwright is absent.

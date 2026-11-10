@@ -50,7 +50,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-VERSION = "0.24.1"
+VERSION = "0.24.2"
 PAGE = Path(__file__).resolve().parent / "page"
 BUNDLE = re.compile(r"^(those|these|both|all of)\b|\bplus\b", re.I)
 KINDS = ("choice", "multi", "compare", "rank", "text", "scale", "confirm")
@@ -1039,8 +1039,8 @@ def lint_set(d, data, probe=True):
 
         check_media(q.get("media"), qid, "media")
         layout = q.get("media_layout", "auto")
-        if layout not in ("auto", "gallery", "stack", "listen"):
-            E("media-layout", "media_layout must be auto, gallery, stack or listen", qid)
+        if layout not in ("auto", "gallery", "grid", "stack", "listen"):
+            E("media-layout", "media_layout must be auto, gallery, grid, stack or listen", qid)
         media = q.get("media")
         if isinstance(media, list):
             image_count = sum(1 for m in media if isinstance(m, dict) and
@@ -1049,8 +1049,8 @@ def lint_set(d, data, probe=True):
                               media_type(m.get("src", ""), m.get("type")) == "audio")
             if layout == "listen" and (not media or audio_count != len(media)):
                 E("media-layout", "the listen bench plays audio only; put video and images in another question", qid)
-            if layout == "gallery" and image_count != len(media):
-                E("media-layout", "gallery supports images only; keep a comparison together in one image", qid)
+            if layout in ("gallery", "grid") and image_count != len(media):
+                E("media-layout", f"{layout} supports images only; keep a comparison together in one image", qid)
             if status == "open" and layout == "stack" and image_count >= 4:
                 W("long-media", "stacking four or more images makes a long page; use a gallery for examples "
                   "of one decision, or split independent decisions into smaller questions", qid)
@@ -2957,7 +2957,7 @@ def cmd_picks_build(a):
             q = {"id": qid, "kind": "choice", "title": item[:80], "question": f"Which image should {item} use?",
                  "why": a.why, "look_for": a.look_for or ["Shows what this item should show, at the size it is used",
                                                           "Fits the style of the items already accepted"],
-                 "media_layout": "gallery", "guess": g,
+                 "media_layout": "grid", "guess": g,
                  "media": [{"src": str(p), "option": x, "alt": f"Candidate {x} for {item}"} for x, p in c],
                  "options": [{"id": x, "label": f"Use candidate {x}"} for x in labs]
                  + [{"id": "reroll", "label": "Re-roll: make new candidates (say what to change in the note)"}]}

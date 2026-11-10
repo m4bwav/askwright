@@ -4,6 +4,10 @@ Every change to [README.md](README.md) and its companions, newest first, each wi
 
 Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (IDs or "user request"), `files:` (file and section), and a sentence on what changed. Cite section headings, not line numbers.
 
+### C-20261109-4 · 2026-11-09 · 0.24.2: picks show every candidate side by side
+
+Mark, on the first `picks build` page: it showed one candidate per "case" behind Previous/Next. New `media_layout: "grid"` puts every image on screen at once, each with its own pick button (images only, like gallery); `picks build` now uses it.
+
 ### C-20261109-3 · 2026-11-09 · 0.24.1: steerwright link in the page headers
 - because: user request (link back to steerwright when it is installed)
 - files: ask.py (steerwright_link, page serving; section rule comments shortened to stay under the 360 KB install ceiling), page/index.html, page/dashboard.html, page/project.html, plugin.json, tests

@@ -66,7 +66,7 @@ combinations into one-pick options ("A and B", "those two plus C and D"); lint w
 - Use galleries for supporting views of one judgment, or an explicitly requested aggregate judgment. A
   slideshow does not replace collecting separate case-level picks. Keep each round short and synthesize the
   answers before asking for any overall policy change.
-- Keep both sides of a comparison in the same case. Caption the difference, use `media_layout: "gallery"` for
+- Keep both sides of a comparison in the same case. Caption the difference, use `media_layout: "grid"` to show every image side by side (each one pickable, as `picks build` does), or `media_layout: "gallery"` for
   two tall images (three or more image-only items use a gallery automatically), and leave shared background
   in the collapsed one-pager. A short table can replace repeated detail. Avoid forcing a slideshow where the
   reader needs several images visible together; `media_layout: "stack"` is available.

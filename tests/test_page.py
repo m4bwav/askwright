@@ -746,6 +746,14 @@ class GalleryPageTests(PageCase):
         p = self.open()
         self.assertIn("Case 1 of 2", p.locator(".gallery-count").inner_text())
 
+    def test_grid_shows_every_image_at_once(self):
+        _, data = ask.load_set(self.dir)
+        data["questions"][0]["media_layout"] = "grid"
+        ask.write_json_atomic(self.dir / "questions.json", data)
+        p = self.open()
+        self.assertEqual(p.locator(".gallery").count(), 0)
+        self.assertEqual(p.locator(".media-grid img").count(), len(data["questions"][0]["media"]))
+
     def test_single_frame_keeps_full_size_access(self):
         _, data = ask.load_set(self.dir)
         data["questions"][0]["media"] = data["questions"][0]["media"][:1]

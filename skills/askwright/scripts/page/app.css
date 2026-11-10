@@ -389,3 +389,4 @@ dialog::backdrop { background: rgb(0 0 0 / .5); }
   .ref-head, .ref-path, .ref-note { grid-column: 1; }
   .ref-actions { grid-column: 2; grid-row: 1 / span 3; align-self: center; margin-top: 0; }
 }
+.media.media-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 12rem), 1fr)); align-items: start; }

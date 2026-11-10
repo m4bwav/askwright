@@ -40,11 +40,11 @@ steps 1 and 2 below are for decision sets.
 
 One folder per set, `<project>/ask/<set-id>/` unless the project already keeps review files somewhere (then put
 it beside them). Start it with `ask.py new <folder> --title "<what this round decides>" --product "<your agent product>" --session "<session name or id>" --asked-by "<your role>"`, then add questions.
-Use the actual product and session, never invent them; omit unknown metadata. Every set must have `--project NAME` (`new` and lint refuse without it; a new project also needs `--project-description TEXT`)
-(and `--project-path DIR`), even one made up on the spot; related sets, above all one continue-prompt chain, reuse
-the same name so they group; a chain across projects gets an umbrella project (every page links its project page; `ask.py project`, `--back-link`, `--continue-prompt`: schema.md).
-Media stays where it is: list its folders in `media_roots` and refer to files by name. A graph, a force diagram or a
-simple drawing needs no file: a media item `{"figure": {...}, "alt": "..."}` is drawn by ask.py (schema.md, Media).
+Use the real product and session; omit what you do not know. Every set needs `--project NAME` (lint refuses without it; a new one also needs `--project-description TEXT`)
+(and `--project-path DIR`), even a made-up one; related sets, above all one continue-prompt chain, share
+a name; a chain across projects gets an umbrella project (every page links its project page; `ask.py project`, `--back-link`, `--continue-prompt`: schema.md).
+Media stays where it is: list its folders in `media_roots` and refer to files by name. A graph, force diagram or
+drawing needs no file: a media item `{"figure": {...}, "alt": "..."}` is drawn by ask.py (schema.md, Media).
 
 Every question has:
 - `question`: one real question that ends in `?`. The short label goes in `title` ("The arrow shot").
@@ -52,7 +52,7 @@ Every question has:
 - `look_for`: on any question with media or a comparison, the concrete things that decide it, with times
   ("The arrow from 6.0 s: does it stay in his neck?"). Times become "Play from 6.0 s" buttons.
 - `options` that name the action or the thing ("Re-render tonight (10 to 12 h)", "Take 5"), never "Left", "A",
-  "Yes" or "No". The page adds "Not sure, ask me later" and "Something else" to every question itself.
+  "Yes" or "No". The page adds "Not sure, ask me later" and "Something else" itself.
 - `guess`: your answer and why, with an honest `confidence`. `high` shows under the options; `low` hides behind
   a "Show my guess" button, and the read-back tells you whether it was opened before the pick. The guess is
   never pre-selected. Vary which option it is; do not always list your pick first.
@@ -61,11 +61,12 @@ Kinds: `choice`, `multi` (checkboxes: use it when several options can be true, n
 "Left"/"Right" until the pick and stores the option id; `randomized: true` only if the sides were drawn at random,
 and a clip with a known fixed order gets `false`: keep the lint warning or remake the pair in random order), `rank`, `text`, `scale`, `confirm`. A question that only
 matters after another answer gets `show_if`. A major decision gets a `one_pager` (text, facts, a pros and cons
-table, images, a chart) above it; lots of it goes in `tabs`. When code or a build is involved, `refs` say where to test it and link the source. Keep a set to 12 open questions or fewer.
+table, images, a chart) above it; lots of it goes in `tabs`. When code or a build is involved, `refs` say where to test it and link the source. Keep a set to 12 open questions at most.
 
 Long reviews: one comparison per independent frame, take or edit; each case states the requested result and has
 **Good / Keep / Reject** checks; offer "Both meet the request" and "Neither meets the request". Galleries,
-listen benches for voices and `media_layout`: writing-questions.md.
+listen benches and `media_layout`: writing-questions.md. One image per item from a folder of candidates:
+`ask.py picks build`, then `picks export` (schema.md, Picks).
 
 ## Step 2: review, then lint
 

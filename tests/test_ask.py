@@ -1987,5 +1987,106 @@ class WakeTests(unittest.TestCase):
         self.assertTrue(json.loads((target / "questions.json").read_text(encoding="utf-8"))["working_dir"])
 
 
+class PicksTests(unittest.TestCase):
+    """picks build turns a folder of candidates into one-item-per-screen sets; picks export writes picks.json."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="askw-picks-"))
+        self.src = self.tmp / "batch-1"
+        self.src.mkdir()
+        png = (FIX / "media" / "swatch.png").read_bytes()
+        for item in ("alpha_card", "beta", "gamma"):
+            for lab in "ABCD":
+                (self.src / f"{item}_{lab}.png").write_bytes(png)
+        (self.src / "notes.txt").write_text("not an image", encoding="utf-8")
+        self.out = self.tmp / "ask"
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def build(self, *extra):
+        return run_cli("picks", "build", self.src, "--out", self.out, "--project", "Picks",
+                       "--project-description", "test picks", *extra)
+
+    def answer(self, set_dir, answers):
+        (Path(set_dir) / "answers.json").write_text(json.dumps({"askwright": 1, "rev": 1, "answers": answers}),
+                                                   encoding="utf-8")
+
+    def test_build_groups_items_into_sets_that_lint(self):
+        code, d = self.build("--per-set", "2")
+        self.assertEqual(code, 0, d)
+        self.assertEqual([s["items"] for s in d["sets"]], [2, 1])
+        data = json.loads((Path(d["sets"][0]["path"]) / "questions.json").read_text(encoding="utf-8"))
+        q = data["questions"][0]
+        self.assertEqual(q["id"], "pick.alpha_card")
+        self.assertEqual([o["id"] for o in q["options"]], ["A", "B", "C", "D", "reroll"])
+        self.assertEqual([m["option"] for m in q["media"]], ["A", "B", "C", "D"])
+        self.assertEqual(q["guess"]["confidence"], "low")
+        self.assertEqual(run_cli("lint", d["sets"][0]["path"], "--no-probe")[0], 0)
+
+    def test_build_caps_sets_at_twelve_and_refuses_to_overwrite(self):
+        self.assertEqual(self.build("--per-set", "13")[0], 1)
+        self.assertEqual(self.build()[0], 0)
+        code, d = self.build()
+        self.assertEqual(code, 1)
+        self.assertIn("already has a set", d["error"])
+        self.assertEqual(self.build("--replace")[0], 0)
+
+    def test_custom_group_and_guesses(self):
+        for f in self.src.glob("*.png"):
+            f.rename(self.src / f.name.replace("_", "--"))
+        g = self.tmp / "g.json"
+        g.write_text(json.dumps({"beta": {"option": "C", "why": "cleanest silhouette", "confidence": "high"}}),
+                     encoding="utf-8")
+        code, d = self.build("--group", r"^(?P<item>.+)--(?P<label>[A-D])\.png$", "--guesses", g)
+        self.assertEqual(code, 0, d)
+        qs = json.loads((Path(d["sets"][0]["path"]) / "questions.json").read_text(encoding="utf-8"))["questions"]
+        self.assertEqual({q["id"]: q["guess"]["option"] for q in qs}["pick.beta"], "C")
+        self.assertEqual(self.build("--group", r"(?P<item>.+)\.png", "--replace")[0], 1)
+
+    def test_existing_picks_become_guesses_or_are_skipped(self):
+        old = self.tmp / "picks.json"
+        old.write_text(json.dumps({"batch": "b", "families": {"beta": {"pick": "B", "reroll": False, "note": "warm"}}}),
+                       encoding="utf-8")
+        code, d = self.build("--existing", old)
+        qs = {q["id"]: q for q in json.loads((Path(d["sets"][0]["path"]) / "questions.json")
+                                             .read_text(encoding="utf-8"))["questions"]}
+        self.assertEqual(qs["pick.beta"]["guess"]["option"], "B")
+        self.assertIn("warm", qs["pick.beta"]["hint"])
+        code, d = self.build("--existing", old, "--skip-picked", "--replace")
+        self.assertEqual(d["skipped"], {"beta": "picked already"})
+
+    def test_export_writes_schema_and_merges_without_touching_open_items(self):
+        code, d = self.build()
+        sd = d["sets"][0]["path"]
+        self.answer(sd, {"pick.alpha_card": {"choice": "C", "note": "sharp"},
+                         "pick.beta": {"choice": "unsure"},
+                         "pick.gamma": {"choice": "reroll", "note": "too dark"}})
+        out = self.tmp / "picks.json"
+        out.write_text(json.dumps({"batch": "kept", "updated": "x", "families": {
+            "beta": {"pick": "A", "reroll": False, "note": ""}, "other": {"pick": "B", "reroll": False, "note": ""}}}),
+            encoding="utf-8")
+        code, r = run_cli("picks", "export", sd, "--out", out)
+        self.assertEqual(code, 0, r)
+        self.assertEqual(sorted(r["written"]), ["alpha_card", "gamma"])
+        self.assertEqual(r["skipped"], {"beta": "unsure"})
+        p = json.loads(out.read_text(encoding="utf-8"))
+        self.assertEqual(p["batch"], "kept")
+        self.assertEqual(p["families"]["alpha_card"], {"pick": "C", "reroll": False, "note": "sharp"})
+        self.assertEqual(p["families"]["gamma"], {"pick": None, "reroll": True, "note": "too dark"})
+        self.assertEqual(p["families"]["beta"]["pick"], "A")
+        self.assertIn("other", p["families"])
+
+    def test_export_with_nothing_answered_leaves_no_file_and_refuses_strangers(self):
+        code, d = self.build()
+        out = self.tmp / "picks.json"
+        code, r = run_cli("picks", "export", d["sets"][0]["path"], "--out", out)
+        self.assertEqual((code, r["written"]), (0, []))
+        self.assertFalse(out.exists())
+        self.assertEqual(run_cli("picks", "export", self.src, "--out", out)[0], 1)
+        out.write_text("[1]", encoding="utf-8")
+        self.assertEqual(run_cli("picks", "export", d["sets"][0]["path"], "--out", out)[0], 1)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=1)

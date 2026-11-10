@@ -119,3 +119,6 @@ HTTPS certs and phone ready; phone-test set served over ts.net, waiting on the o
 ## 2026-11-08 remote answers session 7
 - Phone test passed (play, seek, remote identity in read). Removed private path and host name from HANDOFF (CI path guard). Tag v0.22.0.
 - Release: manual `gh release create` collided with release.yml; deleted it, reran, zip attached (L-024 `tag-push-makes-release`). Decision set askwright-remote-setup-2 served (second reviewer route).
+
+## 2026-11-09 picks (0.24.0)
+- `ask.py picks build` / `picks export` added, generalizing a game repo's card-art pick bridge (askpicks.py). Install size sits at 359 KB of the 360 KB ceiling and the SKILL.md body at 10.2 KB of 10 KB yellow: the next feature needs the install-size split or a trim first.

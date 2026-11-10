@@ -1988,7 +1988,7 @@ class WakeTests(unittest.TestCase):
         self.mark("answer")
         self.assertFalse(ask.use_state(self.s.dir)["unconsumed"])  # answered but unread
         self.assertEqual(run_cli("read", self.s.dir, "--by", "s1")[0], 0)
-        row = next(r for r in ask.list_sessions()["sessions"] if r["path"] == str(self.s.dir))
+        row = next(r for r in ask.list_sessions()["sessions"] if Path(r["path"]).resolve() == self.s.dir.resolve())
         self.assertTrue(row["unconsumed"])
         self.assertTrue(row["read_at"])
         code, out = run_cli("consume", self.s.dir, "--by", "s1", "--note", "applied the picks")

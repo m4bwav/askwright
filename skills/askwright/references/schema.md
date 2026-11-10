@@ -193,6 +193,15 @@ the chosen attempt's `score` with `by_topic`, and per question `status` (`right`
 `unanswered`, `pending`), `picked` and `right` labels or the written `text` and `grade`. `ask.py grade <set>` lists
 `ungraded` and `graded` written answers; `--apply <file>` takes `{"<qid>": {"points", "feedback"}}`.
 
+## Picks
+
+`ask.py picks build <dir> --out <folder> --project P` groups `<dir>`'s images by item (`--group` regex with groups
+`item` and `label`; default `<item>_<label>.png`) into sets of at most 12 (`--per-set`): one choice per item, its
+candidates plus `reroll`. Guesses: `--guesses` (`{item: guess}`), else `--existing` picks.json's earlier pick, else
+a low `reroll`. `picks export <set>... --out picks.json` merges answers as
+`{"batch", "updated", "families": {item: {"pick": label or null, "reroll": bool, "note": text}}}`; unanswered,
+not-sure, note-only, stale and closed items are left as they were.
+
 ## What comes back
 
 `ask.py read <set>` prints, per answered question: `state` (`answered`, `unsure`, `note_only`), `choice` and

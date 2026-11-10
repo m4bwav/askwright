@@ -1,6 +1,7 @@
 # Handoff
 
 ## Current state
+2026-11-09 (owner request): 0.24.0 `ask.py picks build <dir> --out <folder>` and `picks export <set>... --out picks.json` (one image per item from a folder of candidates). Budget is at its ceiling (install 359 of 360 KB, SKILL.md body 10.2 KB): split or trim before the next feature. Game repos can retire their bridges in favour of it.
 2026-11-09 (owner request): 0.23.0 `ask.py shortcut` puts an Askwright icon on the desktop that runs `dashboard --detach --open` (pythonw on Windows, generated .ico from the favicon). Created on the owner's desktop. The remote-answers items below still wait.
 2026-11-08 (remote answers, session 7): the phone test passed. Off the home network, over Tailscale, both test clips played and seeked on the owner's phone, and `ask.py read` showed both answers as `source: remote` with `answered_by` the owner's account and the untrusted-fields notice. Goal 2 (answer from a phone) works end to end. Tagged v0.22.0. Session 6 had written a home path and the tailnet host name here, which failed CI's path guard on main; removed (host details live in the vault sidecar).
 Waiting on the owner: decision set `askwright-remote-setup-2` (folder beside the repository, served on a local port; `ask.py serve` it again if stopped): her route (guess: Tailscale) and whether setup is a guided session or a one-page guide (guess: guide).

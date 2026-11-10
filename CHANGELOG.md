@@ -4,6 +4,11 @@ Every change to [README.md](README.md) and its companions, newest first, each wi
 
 Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (IDs or "user request"), `files:` (file and section), and a sentence on what changed. Cite section headings, not line numbers.
 
+### C-20261109-2 · 2026-11-09 · 0.24.0: picks build and picks export, one image per item from a batch
+- because: user request (make the game repo's card-art pick bridge a generic askwright feature)
+- files: ask.py (cmd_picks_build, cmd_picks_export, picks parser), SKILL.md Step 1 (one pointer; three sentences shortened to stay under the 10 KB body band), references/schema.md Picks, README.md ask.py table, plugin.json, tests (PicksTests)
+- `picks build` groups a folder's candidate images by item with a filename regex and writes lint-clean sets of at most 12 items, each a choice of its candidates plus `reroll` (the page adds "Not sure" itself), with the given guesses or an earlier pick as a low guess. `picks export` merges answered items into a picks.json (`batch`, `updated`, `families: {item: {pick, reroll, note}}`) and leaves unanswered, not-sure, note-only, held, stale and closed items alone; remote answers are listed with the untrusted-data notice.
+
 ### C-20261109-1 · 2026-11-09 · 0.23.0: desktop shortcut that starts and opens the dashboard
 - because: user request ("add a way to initialize askwright with an icon or something if its not running")
 - files: ask.py (shortcut, icon_png, icon_ico, emit under pythonw), README.md, plugin.json, ask.py VERSION, tests

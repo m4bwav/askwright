@@ -133,6 +133,7 @@ and the folders' work logs. Details: [Dashboard and projects](https://github.com
 | `stop <set>` | Stops the set's server by its PID, after the server answers a ping proving it owns that PID. |
 | `register <set>` | Adds an existing set to the shared local dashboard, deduplicated by its resolved folder. |
 | `project [NAME]` | Creates or updates a project record (`--description`, `--repo`, `--dir`, `--goal`, `--status`, `--needs-direction Q`, `--note TEXT`, `--prompt-run FILE`); with no name, lists projects. |
+| `picks build <dir> --out D` | One image per item: candidate images to sets (`--group REGEX`, `--guesses`, `--existing`); `picks export <set>... --out picks.json` merges the picks. |
 | `shortcut` | Puts an icon on the desktop that starts the dashboard when it is stopped and opens it. `--dir` picks another folder. |
 | `dashboard` | Serves the shared session inbox. Supports `--detach`, `--open`, `--port N` and `--stop`. |
 

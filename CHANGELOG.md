@@ -4,6 +4,11 @@ Every change to [README.md](README.md) and its companions, newest first, each wi
 
 Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (IDs or "user request"), `files:` (file and section), and a sentence on what changed. Cite section headings, not line numbers.
 
+### C-20261110-1 · 2026-11-10 · 0.25.0: Unconsumed tab, ask.py consume
+- because: user request ("another Unconsumed tab ... for answer sets that have been read, but not consumed by anything")
+- files: ask.py (log_use, use_state, cmd_consume, read --by, list_sessions fields), page/dashboard.html, page/dashboard.js, page/dashboard.css, SKILL.md Step 6 (one line; Step 4 and 5 lines shortened to stay inside the 10 KB body band), README.md, scripts/budget.py (install ceiling 360 to 384 KB), plugin.json, tests
+- `ask.py read` appends a read record to the set's `uses.jsonl`; the new `ask.py consume` appends a consumed record with who and what for. A set is unconsumed when it was read (a read record or an older wake claim) and its latest answer is newer than its latest consume, so re-reading used answers changes nothing and new answers reopen it. The dashboard's third tab lists those sets with a button that copies the consume command.
+
 ### C-20261109-4 · 2026-11-09 · 0.24.2: picks show every candidate side by side
 
 Mark, on the first `picks build` page: it showed one candidate per "case" behind Previous/Next. New `media_layout: "grid"` puts every image on screen at once, each with its own pick button (images only, like gallery); `picks build` now uses it.

@@ -124,7 +124,8 @@ and the folders' work logs. Details: [Dashboard and projects](https://github.com
 | `lint <set>` | Checks the set: questions end in `?`, every question says why, review questions say what to look for, options name actions rather than "left" or "yes", every question carries a guess with a confidence, media exists and sits inside the allowed folders, superseded questions are not left open. Warnings for two asks in one, leading words, a guess that is always the first option, over 12 open questions, and video that is not H.264/AAC (when ffprobe is installed). |
 | `serve <set>` | Lints, then serves the page on 127.0.0.1 after fetching the page, the API and a clip with a Range request itself. `--detach` returns at once; `--open` opens your browser. |
 | `status <set>` | Counts and lists; `--wait-done --timeout S` waits for "All done". |
-| `read <set>` | Every answer; `--since REV` only newer ones. |
+| `read <set>` | Every answer; `--since REV` only newer ones. Logs the read (`--by WHO`) in the set's `uses.jsonl`. |
+| `consume <set> --by WHO --note TEXT` | Records that the answers were acted on. The dashboard's Unconsumed tab lists sets that were read but have answers newer than their last consume. |
 | `close <set> <qid>...` | Closes questions, or marks them `--superseded-by X` or `--withdrawn "reason"`. |
 | `add <set> <file>` | Adds questions (a new round); a question with `supersedes` retires the old one. Refuses anything that fails the lint. |
 | `inline <set>` | A chat version of a small set (4 or fewer plain questions), plus an AskUserQuestion mapping. |
@@ -135,7 +136,7 @@ and the folders' work logs. Details: [Dashboard and projects](https://github.com
 | `project [NAME]` | Creates or updates a project record (`--description`, `--repo`, `--dir`, `--goal`, `--status`, `--needs-direction Q`, `--note TEXT`, `--prompt-run FILE`); with no name, lists projects. |
 | `picks build <dir> --out D` | One image per item: candidate images to sets (`--group REGEX`, `--guesses`, `--existing`); `picks export <set>... --out picks.json` merges the picks. |
 | `shortcut` | Puts an icon on the desktop that starts the dashboard when it is stopped and opens it. `--dir` picks another folder. |
-| `dashboard` | Serves the shared session inbox. Supports `--detach`, `--open`, `--port N` and `--stop`. |
+| `dashboard` | Serves the shared session inbox (tabs: Sessions, Projects, Unconsumed). Supports `--detach`, `--open`, `--port N` and `--stop`. |
 
 Every command prints one JSON object, except `--version` (plain text) and a usage mistake (argparse text on
 standard error, exit code 2).

@@ -306,10 +306,56 @@ function renderProjects() {
   panel.replaceChildren(table);
 }
 
-// Sessions and Projects tabs; the choice is remembered per browser and #projects opens the Projects tab.
-let tab = location.hash === "#projects" ? "projects" : "sessions";
+// The Unconsumed tab: sets whose answers were read but that no agent has recorded acting on (ask.py consume).
+function renderUnconsumed() {
+  const panel = document.querySelector("#unconsumed");
+  const items = rows.filter(row => row.unconsumed && !row.error)
+    .sort((a, b) => (Date.parse(b.read_at) || 0) - (Date.parse(a.read_at) || 0));
+  document.querySelector("#tab-unconsumed").textContent = `Unconsumed (${items.length})`;
+  if (!items.length) {
+    panel.replaceChildren(node("p", "Every answer set that was read has been used.", "empty"));
+    return;
+  }
+  const table = node("table", "", "sessions project-list unconsumed-list");
+  const head = node("tr", "");
+  for (const label of ["Set", "Project", "Answered", "Read", "Last used", "Action"]) head.append(node("th", label));
+  const thead = node("thead", "");
+  thead.append(head);
+  const body = node("tbody", "");
+  for (const row of items) {
+    const tr = node("tr", "", "row");
+    const title = node("td", "", "title");
+    title.append(node("strong", row.title || row.id));
+    if (row.path) title.append(node("p", row.path, "path"));
+    const read = node("td", "", "updated");
+    if (row.read_at) read.append(askTime.el(row.read_at, ""));
+    const used = node("td", "", "updated");
+    if (row.consumed_at) {
+      used.append(askTime.el(row.consumed_at, ""));
+      used.append(node("p", `by ${row.consumed_by || "agent"}; answered again since`, "meta"));
+    } else used.textContent = "never";
+    const action = node("td", "", "actions");
+    const copy = node("button", "Copy consume command");
+    copy.type = "button";
+    copy.addEventListener("click", async () => {
+      const ok = await copyText(`python ask.py consume "${row.path}" --by "<session>" --note "<what the answers were used for>"`);
+      document.querySelector("#action-status").textContent = ok ? `Copied the consume command for ${row.title}.` :
+        "Could not copy; your browser blocked the clipboard.";
+    });
+    action.append(copy);
+    tr.append(title, node("td", row.project ? row.project.name : "", ""), node("td", String(row.answered || 0), "num"),
+      read, used, action);
+    body.append(tr);
+  }
+  table.append(thead, body);
+  panel.replaceChildren(table);
+}
+
+// Sessions, Projects and Unconsumed tabs; the choice is remembered per browser and #projects or #unconsumed opens one.
+const TABS = ["sessions", "projects", "unconsumed"];
+let tab = TABS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "sessions";
 if (!location.hash) {
-  try { if (localStorage.getItem("askwright-tab") === "projects") tab = "projects"; } catch (e) { /* keep the default */ }
+  try { const saved = localStorage.getItem("askwright-tab"); if (TABS.includes(saved)) tab = saved; } catch (e) { /* keep the default */ }
 }
 function showTab(key, focus) {
   tab = key;
@@ -326,7 +372,8 @@ for (const button of document.querySelectorAll("[data-tab]")) {
   button.addEventListener("click", () => showTab(button.dataset.tab));
   button.addEventListener("keydown", event => {
     if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
-    showTab(tab === "sessions" ? "projects" : "sessions", true);
+    const step = event.key === "ArrowRight" ? 1 : TABS.length - 1;
+    showTab(TABS[(TABS.indexOf(tab) + step) % TABS.length], true);
   });
 }
 showTab(tab);
@@ -426,6 +473,7 @@ async function loadSessions() {
       projectFilter.value = chosen;
       if (projectFilter.selectedIndex < 0) projectFilter.value = "";
       render();
+      renderUnconsumed();
     }
     try {
       const list = (await api("/api/projects")).projects;

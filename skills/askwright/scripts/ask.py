@@ -10,6 +10,7 @@ foreground prints one JSON line when it is ready and then keeps serving until st
   ask.py status <set> [--wait-done]     counts and the lists the agent reports; --claim takes the one continuation
   ask.py claim <set>                    take this All done for one continuation
   ask.py pending [--cwd DIR] [--hook]   answered sets no session has picked up
+  ask.py consume <set> [--by W] [--note N]  record that the answers were acted on (Unconsumed tab)
   ask.py read <set> [--since REV]       every answer, with notes, attachments and the guess comparison
   ask.py close <set> <qid>...           mark questions closed, superseded or withdrawn
   ask.py add <set> <file.json>          add questions to a set (a reroll round), linting first
@@ -50,7 +51,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-VERSION = "0.24.2"
+VERSION = "0.25.0"
 PAGE = Path(__file__).resolve().parent / "page"
 BUNDLE = re.compile(r"^(those|these|both|all of)\b|\bplus\b", re.I)
 KINDS = ("choice", "multi", "compare", "rank", "text", "scale", "confirm")
@@ -476,7 +477,7 @@ def list_sessions():
                        next_prompt=next_prompt_path(d, data),
                        answered=len(st["answered"]), waiting=len(st["waiting"]),
                        unsure=len(st["unsure"]), note_only=len(st["note_only"]), stale=len(st["stale"]),
-                       done=st["done"], paused=st["paused"],
+                       done=st["done"], paused=st["paused"], **use_state(d),
                        next_questions=[{"id": q["id"], "question": q["question"]}
                                        for q in data.get("questions", []) if isinstance(q, dict)
                                        and q.get("id") in pending][:5])
@@ -2649,6 +2650,49 @@ def claim_wake(d, by):
     return {"claimed": True, "mark": mark[0]}
 
 
+def log_use(d, kind, by="agent", note=""):
+    """Appends a read or consumed record to the set's uses.jsonl: who read the answers, and who acted on them."""
+    rec = {"t": now(), "kind": kind, "by": str(by or "agent")[:200]}
+    if note and str(note).strip():
+        rec["note"] = str(note).strip()[:1000]
+    with open(Path(d) / "uses.jsonl", "a", encoding="utf-8") as f:
+        f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    return rec
+
+
+def use_state(d):
+    """Whether a set's answers were read and consumed. Read counts ask.py read and the older wake claims; a read set
+    is unconsumed until an ask.py consume at or after its latest answer, so re-reading used answers changes nothing."""
+    uses = []
+    try:
+        for line in (Path(d) / "uses.jsonl").read_text(encoding="utf-8").splitlines():
+            try:
+                u = json.loads(line)
+            except ValueError:
+                continue
+            if isinstance(u, dict) and isinstance(u.get("t"), str):
+                uses.append(u)
+    except OSError:
+        pass
+    reads = [u["t"] for u in uses if u.get("kind") == "read"]
+    for f in (Path(d) / "wake").glob("*.claim"):
+        try:
+            t = json.loads(f.read_text(encoding="utf-8")).get("t")
+        except (OSError, ValueError, AttributeError):
+            t = None
+        if isinstance(t, str):
+            reads.append(t)
+    last = max(reads, key=parse_time) if reads else None
+    answers = [e.get("t") for e in load_events(d) if e.get("type") == "answer" and e.get("t")]
+    last_answer = max(answers, key=parse_time) if answers else None
+    used = [u for u in uses if u.get("kind") == "consumed"]
+    c = max(used, key=lambda u: parse_time(u["t"])) if used else None
+    consumed = bool(c and parse_time(c["t"]) >= parse_time(last_answer))
+    return {"read_at": last, "last_answer_at": last_answer, "consumed_at": c["t"] if c else None,
+            "consumed_by": c.get("by") if c else None, "consumed_note": c.get("note", "") if c else "",
+            "unconsumed": bool(last and last_answer and not consumed)}
+
+
 def inside(child, parent):
     try:
         return Path(child).resolve().is_relative_to(Path(parent).resolve())
@@ -2719,7 +2763,15 @@ def cmd_status(a):
 def cmd_read(a):
     out = read_answers(a.set, since=a.since, include_all=a.all, attempt=a.attempt)
     claim_wake(a.set, "read")  # whoever read the answers has picked them up, so "pending" stops listing them
+    log_use(load_set(a.set)[0], "read", a.by)
     return emit(out)
+
+
+def cmd_consume(a):
+    """Records that an agent acted on the answers, so the dashboard's Unconsumed tab stops listing the set."""
+    d, _ = load_set(a.set)
+    rec = log_use(d, "consumed", a.by, a.note)
+    return emit(dict({"ok": True, "set": str(d)}, **rec, state=use_state(d)))
 
 
 def cmd_figure(a):
@@ -3074,6 +3126,11 @@ def main(argv=None):
     s.add_argument("--since", type=int)
     s.add_argument("--all", action="store_true", help="include unanswered questions")
     s.add_argument("--attempt", type=int, help="study sets: that attempt instead of the latest submitted one")
+    s.add_argument("--by", default="agent", help="who read it (shown on the dashboard)")
+    s = sub.add_parser("consume", help="record that the answers were acted on")
+    s.add_argument("set")
+    s.add_argument("--by", default="agent", help="the session or agent that used them")
+    s.add_argument("--note", default="", help="what the answers were used for")
     s = sub.add_parser("figure")
     s.add_argument("spec")
     s.add_argument("out")

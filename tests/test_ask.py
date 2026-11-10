@@ -168,10 +168,11 @@ class LintTests(unittest.TestCase):
                 self.assertEqual(errs, set())
         self.assertError(qmod("arrow", lambda q: q.update(media_layout="slides")), "media-layout")
         self.assertError(qmod("arrow", lambda q: q.update(media_layout="gallery")), "media-layout")
+        self.assertError(qmod("arrow", lambda q: q.update(media_layout="grid")), "media-layout")
 
     def test_image_gallery_and_long_stack(self):
         images = [{"src": "../media/swatch.png", "alt": "Case %d" % i} for i in range(4)]
-        for layout in ("auto", "gallery"):
+        for layout in ("auto", "gallery", "grid"):
             with self.subTest(layout=layout):
                 errs, warns = lint(qmod("arrow", lambda q: q.update(media=images, media_layout=layout)))
                 self.assertEqual(errs, set())

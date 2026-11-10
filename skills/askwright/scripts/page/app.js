@@ -643,10 +643,10 @@
       return listenBench(q);
     }
     const imagesOnly = items.every((m) => m.type === "image");
-    const gallery = imagesOnly && items.length > 1 &&
+    const gallery = q.media_layout !== "grid" && imagesOnly && items.length > 1 &&
       (q.media_layout === "gallery" || (!q.media_layout || q.media_layout === "auto") && items.length >= 3);
     const sides = sidePicks(q);
-    if (!gallery) return h("div", { class: "media" }, items.map((m, i) => sides ? sideClickable(mediaEl(m, i === 0), q, sides, m) : pickable(mediaEl(m, i === 0), q, mediaOption(q, m, i), m)),
+    if (!gallery) return h("div", { class: q.media_layout === "grid" ? "media media-grid" : "media" }, items.map((m, i) => sides ? sideClickable(mediaEl(m, i === 0), q, sides, m) : pickable(mediaEl(m, i === 0), q, mediaOption(q, m, i), m)),
       sides ? h("div", { class: "side-picks" }, sides.map(([side, oid]) => pickButton(q, oid, side === "left" ? "the left take" : "the right take"))) : null,
       items.length === 1 && imagesOnly && items[0].url && !items[0].missing
         ? h("a", { class: "link", href: items[0].url, target: "_blank", rel: "noopener noreferrer",

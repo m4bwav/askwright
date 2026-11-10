@@ -125,3 +125,8 @@ HTTPS certs and phone ready; phone-test set served over ts.net, waiting on the o
 
 ## 2026-11-09: steerwright header link (0.24.1)
 Served pages fill a `<!--STEERWRIGHT-->` placeholder with a link to the steerwright hub url from its server.json, or with nothing when steerwright is absent.
+
+## 2026-11-09: grid media layout for picks (0.24.2)
+
+`picks build` used `gallery`, the one-at-a-time slider, so a pick page hid the candidates behind Previous/Next. Added `grid` (app.js skips the slider, `.media-grid` auto-fill columns, lint treats it as images-only) and switched picks build to it. Test: `test_grid_shows_every_image_at_once`.
+

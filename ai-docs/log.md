@@ -137,3 +137,7 @@ Served pages fill a `<!--STEERWRIGHT-->` placeholder with a link to the steerwri
 - Rule chosen after trying "latest read newer than latest consume": that one flagged ~35 sets because sweeps and bulk reads re-read sets already used. "Answers newer than the last consume" matches the question "has this data been used?".
 - Install size passed the 360 KB ceiling (365 KB); the ceiling went to 384 KB. SKILL.md body sits at exactly 10240 bytes, the yellow edge: the next SKILL.md line needs a cut elsewhere.
 - Existing sets were backfilled from Claude Code transcripts by a one-off scan (not in the repo): a read is a tool call naming the set with `ask.py read`/`status`, `answers`, `askpicks`, `picks export` or `sync`; consumed when that session made an edit or ran 3+ other commands afterwards, stamped at the session's last action, by "claude session <id8> (backfill)". Of 130 answered sets, 113 had a consuming session; 23 stay unconsumed (6 steerwright reviews with no transcript evidence, and sets answered again after their last use). Heuristic: a busy session counts as consuming even if the work was unrelated.
+
+## 2026-11-10 hover zoom (0.25.1)
+
+Pointing at a small picture on the question page floats a large copy beside it (page/app.js hover zoom, #hover-zoom in app.css, test_hover_shows_large_copy_beside_small_picture). PR #66 merged, v0.25.1 tagged, installed copy updated. CI page job flaked once on test_keyboard_only_to_all_done (timeout) and passed on re-run.

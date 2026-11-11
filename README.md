@@ -141,6 +141,16 @@ and the folders' work logs. Details: [Dashboard and projects](https://github.com
 Every command prints one JSON object, except `--version` (plain text) and a usage mistake (argparse text on
 standard error, exit code 2).
 
+## Works with
+
+askwright is the place other plugins put their questions, so it pairs with almost anything that would otherwise stop and wait for you.
+
+- [grindwright](https://github.com/m4bwav/grindwright): grindwright keeps a game or film moving and hands every open decision to an askwright set. You answer a stack of questions on one page when you get to it, and the next session picks the answers up from disk.
+- [musicwright](https://github.com/m4bwav/musicwright), [sfxwright](https://github.com/m4bwav/sfxwright), [pixelwright](https://github.com/m4bwav/pixelwright), [voicewright](https://github.com/m4bwav/voicewright) and [cinewright](https://github.com/m4bwav/cinewright): when a take, a sound, a sprite or a voice needs your pick, they put the candidates side by side on a page rather than a list in chat. You listen or look, choose, and add a note.
+- [tokenwright](https://github.com/m4bwav/tokenwright): keeps askwright's own skill small enough to load cheaply in every session that asks something.
+
+More on each handoff: [Works with](https://github.com/m4bwav/askwright/wiki/Works-With) on the wiki.
+
 ## Security
 
 The server binds 127.0.0.1 only, on a free port. It serves the page files and media files (by extension) from the

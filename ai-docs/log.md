@@ -141,3 +141,7 @@ Served pages fill a `<!--STEERWRIGHT-->` placeholder with a link to the steerwri
 ## 2026-11-10 hover zoom (0.25.1)
 
 Pointing at a small picture on the question page floats a large copy beside it (page/app.js hover zoom, #hover-zoom in app.css, test_hover_shows_large_copy_beside_small_picture). PR #66 merged, v0.25.1 tagged, installed copy updated. CI page job flaked once on test_keyboard_only_to_all_done (timeout) and passed on re-run.
+
+## 2026-11-11 Works with
+
+At the owner's request: a README "Works with" section and a Works-With wiki page (linked from the sidebar and Home), each entry naming the real handoff with a partner plugin (taken from the skills that name each other) and why the pair helps.

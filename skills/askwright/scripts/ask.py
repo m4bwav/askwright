@@ -1792,6 +1792,7 @@ def remote_view(out):
     out["remote"] = True
     out["refs"] = links(out.get("refs"))
     out["continue_prompt"] = out["next_prompt"] = ""
+    out["github"] = None
     out["project"] = {"name": out["project"]["name"]} if out.get("project") else None
     for q in out["questions"]:
         q["refs"] = links(q.get("refs"))
@@ -1800,6 +1801,14 @@ def remote_view(out):
             if m.get("missing"):
                 m["missing"] = "a file"
     return out
+
+
+def github_of(d):
+    try:
+        g = json.loads((Path(d) / "github.json").read_text(encoding="utf-8"))
+        return {k: g.get(k) for k in ("repo", "number", "comment_url", "answers_url")}
+    except (FileNotFoundError, ValueError, AttributeError):
+        return None
 
 
 def page_set(srv, remote=False):
@@ -1869,7 +1878,7 @@ def page_set(srv, remote=False):
            "questions": qs, "answers": ans["answers"], "rev": ans.get("rev", 0), "note": note,
            "last_visit": visits[-1]["t"] if visits else None,
            "last_answer": {"q": answered[-1].get("q"), "t": answered[-1]["t"]} if answered else None,
-           "server_time": now()}
+           "server_time": now(), "github": github_of(d)}
     if is_study(data):
         out["study"], out["review"] = page_study(srv, data, qs, out["answers"])
     return remote_view(out) if remote else out
@@ -2067,7 +2076,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self.fail(429, "too many requests; wait a minute")
         allowed = ("/api/open", "/api/session-state") if getattr(self.server, "dashboard", False) else (
             "/api/open", "/api/session-state", "/api/answer", "/api/event", "/api/attachment",
-            "/api/submit", "/api/retake", "/api/open-ref")
+            "/api/submit", "/api/retake", "/api/open-ref", "/api/gh-reply")
         try:
             n = int(self.headers.get("Content-Length", ""))
         except ValueError:
@@ -2114,6 +2123,13 @@ class Handler(BaseHTTPRequestHandler):
                 d = self.server.set_dir
                 return self.send_json(200, open_ref_folder(d, load_set(d)[1], payload.get("path")))
             except (AskError, OSError, ValueError) as e:
+                return self.fail(400, str(e))
+        if path == "/api/gh-reply":
+            try:
+                with self.server.lock:
+                    return self.send_json(200, gh_call(lambda g: g.reply(self.server.set_dir, load_set, read_answers,
+                                                                          write_json_atomic)))
+            except (AskError, OSError, subprocess.SubprocessError) as e:
                 return self.fail(400, str(e))
         if path == "/api/answer":
             return self.answer(payload)
@@ -3068,6 +3084,36 @@ def cmd_picks_export(a):
     return emit(res)
 
 
+def _gh():
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import gh
+    return gh
+
+
+def gh_call(fn):
+    g = _gh()
+    try:
+        return fn(g)
+    except g.GhError as e:
+        raise AskError(str(e))
+
+
+def cmd_gh_post(a):
+    return emit(gh_call(lambda g: g.post(a.set, a.repo, a.issue, load_set, write_json_atomic)))
+
+
+def cmd_gh_pull(a):
+    return emit(gh_call(lambda g: g.pull(a.ref, a.out, write_json_atomic)))
+
+
+def cmd_gh_reply(a):
+    return emit(gh_call(lambda g: g.reply(a.set, load_set, read_answers, write_json_atomic)))
+
+
+def cmd_gh_answers(a):
+    return emit(gh_call(lambda g: g.answers(a.ref)))
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(prog="ask.py", description=__doc__.split("\n")[0])
     p.add_argument("--version", action="version", version=VERSION)
@@ -3191,6 +3237,12 @@ def main(argv=None):
     s.add_argument("--batch")
     s = sub.add_parser("shortcut", help="put an icon on the desktop that starts and opens the dashboard")
     s.add_argument("--dir", default="", help="folder for the shortcut instead of the desktop")
+    s = sub.add_parser("gh-post", help="post the questions to a GitHub issue or pull request comment")
+    s.add_argument("set"); s.add_argument("--repo", required=True); s.add_argument("--issue", type=int, required=True)
+    s = sub.add_parser("gh-pull", help="make a local set from a GitHub askwright comment")
+    s.add_argument("ref", help="OWNER/REPO#N or a comment URL"); s.add_argument("--out")
+    sub.add_parser("gh-reply", help="post this set's answers back to its GitHub comment").add_argument("set")
+    sub.add_parser("gh-answers", help="read answers posted by gh-reply").add_argument("ref")
     s = sub.add_parser("dashboard", help="serve the shared session dashboard")
     s.add_argument("--port", type=int, default=0)
     s.add_argument("--detach", action="store_true")
@@ -3198,7 +3250,7 @@ def main(argv=None):
     s.add_argument("--stop", action="store_true")
     a = p.parse_args(argv)
     try:
-        return globals()["cmd_" + a.cmd](a)
+        return globals()["cmd_" + a.cmd.replace("-", "_")](a)
     except AskError as e:
         return emit({"ok": False, "error": str(e)})
     except (OSError, subprocess.SubprocessError) as e:

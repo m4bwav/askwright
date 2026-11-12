@@ -4,6 +4,13 @@ Every change to [README.md](README.md) and its companions, newest first, each wi
 
 Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (IDs or "user request"), `files:` (file and section), and a sentence on what changed. Cite section headings, not line numbers.
 
+## 0.26.0
+
+### C-20261111-2 · 2026-11-11 · GitHub issues and pull requests carry askwright questions and answers
+- because: user request ("paste a askwright payload to an issue or pull request ... then have askwright paste the answers back to the issue or comment that had the question payload")
+- files: scripts/gh.py (new), scripts/ask.py (gh-post, gh-pull, gh-reply, gh-answers; /api/gh-reply; page_set github), page/app.js (finish screen "Answer on GitHub"), SKILL.md (Step 3), README.md (ask.py table), tests (GitHubTests, GitHubPageTests, fixtures/fake_gh.py)
+Questions go out as one comment with a hidden base64 payload; answers come back as a reply comment with a hidden answers block. All calls use `gh api`; tests use a fake gh through ASKWRIGHT_GH.
+
 ### C-20261110-2 · 2026-11-10 · 0.25.1: hover a small picture to see it large
 - because: user request ("when we hover on a image ... shows a large version of it next to the image, hovering over other content")
 - files: page/app.js (hover zoom), page/app.css (#hover-zoom), plugin.json, tests/test_page.py

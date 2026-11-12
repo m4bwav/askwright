@@ -840,6 +840,20 @@ class RefsAndTabsTests(PageCase):
         self.assertEqual(p.locator("#ans input:checked").count(), 1)
 
 
+class GitHubPageTests(PageCase):
+    def test_github_set_offers_post_answers_on_finish(self):
+        # 0.26.0: a set pulled from a GitHub comment can post its answers back from the finish screen.
+        _, data = ask.load_set(self.dir)
+        ask.write_json_atomic(self.dir / "answers.json", {"askwright": 1, "rev": 1, "answers": {
+            q["id"]: {"choice": "unsure", "rev": 1} for q in data["questions"]}})
+        ask.write_json_atomic(self.dir / "github.json", {"repo": "o/r", "number": 7})
+        p = self.open()
+        self.assertEqual(p.locator("h1").inner_text(), "Check your answers")
+        self.assertEqual(p.locator("#gh-reply").inner_text(), "Post answers to GitHub")
+        self.assertIn("o/r#7", p.locator("main").inner_text())
+        self.assertEqual(self.errors, [])
+
+
 class ClickMediaTests(PageCase):
     """0.9.0: click a picture, or the Pick button under a clip or sound, to pick the option it stands for."""
 

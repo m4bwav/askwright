@@ -134,6 +134,7 @@
     document.title = (d.set.title || "Questions") + " · askwright";
     S.project = d.project || null;
     S.continuePrompt = d.continue_prompt || "";
+    S.github = d.github || null;
     S.refs = d.refs || [];
     S.tabs = d.tabs || [];
     S.nextPrompt = d.next_prompt || "";
@@ -1100,7 +1101,25 @@
       h("div", { class: "continue-box" },
         h("h2", { text: "Hand the answers back" }),
         h("p", { text: "Copy a prompt that tells your agent to read these answers, act on them and carry on with the work the questions were for. Paste it into the agent's chat." }),
-        h("button", { type: "button", class: "btn" + (counts.unanswered + counts.note_only + counts.unsure ? "" : " primary"), id: "finish-copy", text: "Copy prompt to continue", onclick: copyPrompt }))));
+        h("button", { type: "button", class: "btn" + (counts.unanswered + counts.note_only + counts.unsure ? "" : " primary"), id: "finish-copy", text: "Copy prompt to continue", onclick: copyPrompt })),
+      S.github ? ghBox() : null));
+  }
+
+  // ------------------------------------------------------------ GitHub: post the answers back to the comment that asked
+  function ghBox() {
+    const out = h("p", { class: "hint", role: "status" });
+    const btn = h("button", { type: "button", class: "btn", id: "gh-reply", text: "Post answers to GitHub", onclick: async () => {
+      btn.disabled = true;
+      await flush();
+      try {
+        const r = await api("/api/gh-reply", post({}));
+        out.replaceChildren("Posted: ", h("a", { href: r.answers_url, target: "_blank", rel: "noopener", text: r.answers_url }));
+      } catch (e) { out.textContent = "Could not post: " + e.message + "."; }
+      btn.disabled = false;
+    } });
+    return h("div", { class: "continue-box" }, h("h2", { text: "Answer on GitHub" }),
+      h("p", { text: "These questions came from " + S.github.repo + "#" + S.github.number + ". Post your answers there as a comment." }),
+      btn, out);
   }
 
   // ------------------------------------------------------------ study mode: submit, review, try again

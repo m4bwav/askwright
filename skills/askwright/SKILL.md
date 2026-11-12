@@ -97,6 +97,11 @@ Projects: keep the project page current. When you run a continue prompt, record 
 `ask.py project NAME --prompt-run <prompt file>`. Add `--goal`, `--note "<what changed>"`, and
 `--needs-direction "<question>"` when blocked on the owner (`--status active` clears it). schema.md, Projects.
 
+GitHub: when the questions belong on an issue or pull request, `ask.py gh-post <set> --repo O/R --issue N` posts
+them as one comment (readable list plus a hidden payload; local media are not attached). Whoever answers runs
+`ask.py gh-pull <comment URL | O/R#N>` and `serve`; the page's "Post answers to GitHub" button or
+`ask.py gh-reply <set>` posts the answers back, and `ask.py gh-answers O/R#N` reads them. Needs a logged-in `gh`.
+
 ## Step 4: wait without guessing
 
 Silence is never an answer. Either ask the person to say "done" in chat when they have answered, or wait in the

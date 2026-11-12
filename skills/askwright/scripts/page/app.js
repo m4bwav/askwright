@@ -1299,7 +1299,7 @@
       h("p", { text: e.message + ". Ask the agent to run ask.py serve again and open the new link." }));
   });
   // ------------------------------------------------------------ hover a small picture: a large copy floats beside it
-  // Only pictures drawn smaller than their file get one; it never takes the pointer, so clicks still pick.
+  // Any picture gets one when there is room to show it 1.3x larger; it never takes the pointer, so clicks still pick.
   const zoom = h("img", { id: "hover-zoom", alt: "", "aria-hidden": "true" });
   zoom.hidden = true;
   document.body.append(zoom);
@@ -1307,8 +1307,10 @@
     const r = img.getBoundingClientRect(), gap = 16, vw = innerWidth, vh = innerHeight;
     const ratio = img.naturalWidth / img.naturalHeight || 1;
     const room = Math.max(vw - r.right, r.left) - gap * 2;
-    const w = Math.min(img.naturalWidth, room, (vh - gap * 2) * ratio, 900);
+    // Small files (a 96 px card icon) are scaled up to at least 480 px, pixel-sharp.
+    const w = Math.min(Math.max(img.naturalWidth, 480), room, (vh - gap * 2) * ratio, 900);
     if (w < r.width * 1.3) { zoom.hidden = true; return; }
+    zoom.style.imageRendering = img.naturalWidth < w ? "pixelated" : "";
     const ht = w / ratio;
     const left = vw - r.right >= r.left ? r.right + gap : r.left - gap - w;
     const top = Math.min(Math.max(gap, r.top + r.height / 2 - ht / 2), vh - gap - ht);
@@ -1317,7 +1319,7 @@
   }
   main.addEventListener("mouseover", (e) => {
     const img = e.target.closest && e.target.closest("img");
-    if (!img || !img.complete || img.naturalWidth <= img.getBoundingClientRect().width * 1.3) return;
+    if (!img || !img.complete || !img.naturalWidth) return;
     zoom.src = img.currentSrc || img.src;
     placeZoom(img);
   });

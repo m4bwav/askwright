@@ -156,3 +156,6 @@ Mark saw no zoom on the SpaceDeckBuilder2 Atlas picks page: the candidates are 9
 ## 2026-11-11 required background section
 
 Mark's Atlas picks screen showed only the card id and a generic why. New required field `background` (lint error `background` on open decide questions; study mode exempt; warning past 6 sentences), rendered inside the existing collapsed details (summary "Background: what this is and how we got here") ahead of one_pager blocks. `picks build` takes `--background FILE` ({item: text}) or `--background-all TEXT` ({item} substituted) and fails listing `missing` items. Running servers do not re-lint, so live pages keep working; a new serve/add of an old set fails lint until backgrounds are added (or --force). The SpaceDeckBuilder2 Atlas sets need backgrounds (the card's rules text and role) before their next serve. Tests 216 pass.
+
+## 2026-11-11 · PR #70 merged
+CI failed: install size 385 KB (cap 384 KB) and the answer box 4 px too low at 390 px. Fixed by pointing README sections that repeat SECURITY.md and the wiki there instead, and shortening the Background summary to "Background". Headroom is now under 1 KB; the next feature will need a real trim (README table or references).

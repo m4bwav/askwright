@@ -87,20 +87,16 @@ python <this folder>/scripts/ask.py serve <set> --detach
 ```
 
 It lints, binds 127.0.0.1 on a free port, self-checks, prints `{"ok": true, "url": ...}` and writes `server.json`.
-Give the person the URL with one line on what the set decides and how many questions. A running server's URL is
-reused. `--open` opens their browser. Answering from another device is opt-in: see `references/remote.md`.
+Give the person the URL with one line on what the set decides and how many questions. A running server is
+reused. `--open` opens their browser. Other devices (opt-in): `references/remote.md`;
+GitHub: `references/github.md`.
 
-`new` and `serve` register sets in the shared inbox (`~/.askwright`, or `ASKWRIGHT_HOME`); share `dashboard_url`
+`new` and `serve` register sets in the shared inbox (`~/.askwright`; schema.md); share `dashboard_url`
 too. `ask.py dashboard --detach` starts or reuses it; `ask.py register <set>` adds an older set.
 
 Projects: keep the project page current. When you run a continue prompt, record it:
 `ask.py project NAME --prompt-run <prompt file>`. Add `--goal`, `--note "<what changed>"`, and
 `--needs-direction "<question>"` when blocked on the owner (`--status active` clears it). schema.md, Projects.
-
-GitHub: when the questions belong on an issue or pull request, `ask.py gh-post <set> --repo O/R --issue N` posts
-them as one comment (readable list plus a hidden payload; local media are not attached). Whoever answers runs
-`ask.py gh-pull <comment URL | O/R#N>` and `serve`; the page's "Post answers to GitHub" button or
-`ask.py gh-reply <set>` posts the answers back, and `ask.py gh-answers O/R#N` reads them. Needs a logged-in `gh`.
 
 ## Step 4: wait without guessing
 

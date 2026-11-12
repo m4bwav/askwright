@@ -15,6 +15,7 @@
       "title": "The arrow shot",
       "question": "Which take of the arrow shot should go in the cut?",
       "why": "This is the only arrow shot; the take you pick gets the high-quality re-render.",
+      "background": "The test reel is a short film made to exercise the page; this item comes from its rough cut.",
       "look_for": ["The arrow from 1.0 s: does it stay in place when he falls?", "Does the line finish before the hit?"],
       "media": [{"src": "clip.mp4", "type": "video", "start": 0.5}],
       "sides": {"left": "t2", "right": "t5", "randomized": true},
@@ -33,6 +34,7 @@
       "title": "How to redo the arrow",
       "question": "How should the arrow shot be redone?",
       "why": "A redo can change the prompt or only the seed; a prompt change takes longer.",
+      "background": "The test reel is a short film made to exercise the page; this item comes from its rough cut.",
       "show_if": {"question": "arrow", "option": ["redo"]},
       "options": [
         {"id": "seed", "label": "New seeds, same prompt"},
@@ -46,6 +48,7 @@
       "title": "Music under the intro",
       "question": "Which music should play under the intro?",
       "why": "The intro sets the tone for the whole reel.",
+      "background": "The test reel is a short film made to exercise the page; this item comes from its rough cut.",
       "look_for": ["Listen for the tone at the start: is it too sharp?"],
       "media": [{"src": "tone.wav", "type": "audio"}],
       "options": [
@@ -61,6 +64,7 @@
       "title": "Shots to cut",
       "question": "Which shots should be cut from the reel?",
       "why": "The reel runs 20 seconds over its target.",
+      "background": "The test reel is a short film made to exercise the page; this item comes from its rough cut.",
       "options": [
         {"id": "s3", "label": "Shot 3, the long walk"},
         {"id": "s7", "label": "Shot 7, the crowd pan"},
@@ -74,6 +78,7 @@
       "title": "Running order",
       "question": "In what order should the three segments run?",
       "why": "The order decides which joke lands last.",
+      "background": "The test reel is a short film made to exercise the page; this item comes from its rough cut.",
       "options": [
         {"id": "news", "label": "The news desk"},
         {"id": "field", "label": "The field report"},
@@ -87,6 +92,7 @@
       "title": "Title card",
       "question": "What should the title card say?",
       "why": "It is the first thing on screen.",
+      "background": "The test reel is a short film made to exercise the page; this item comes from its rough cut.",
       "guess": {"text": "Test Reel, Take One", "why": "Plain and short.", "confidence": "low"}
     },
     {
@@ -95,6 +101,7 @@
       "title": "Pace",
       "question": "How fast does the reel feel right now?",
       "why": "Tells me whether to trim more.",
+      "background": "The test reel is a short film made to exercise the page; this item comes from its rough cut.",
       "look_for": ["The colour swatch is the reel's grade: is it too cold?"],
       "media": [{"src": "swatch.png", "type": "image", "alt": "A flat blue colour swatch"}],
       "options": [
@@ -111,6 +118,7 @@
       "title": "Final render",
       "question": "When should the final render run?",
       "why": "It takes the machine for about 10 hours.",
+      "background": "The test reel is a short film made to exercise the page; this item comes from its rough cut.",
       "one_pager": [
         {"type": "text", "text": "The final render uses **every** chosen take at full quality.\n\n- about 10 hours\n- the machine is busy the whole time"},
         {"type": "facts", "items": [{"label": "Takes chosen", "value": "7 of 9"}, {"label": "Disk needed", "value": "40 GB"}]},
@@ -135,6 +143,7 @@
       "title": "Intro music (old)",
       "question": "Which music should play under the intro?",
       "why": "Replaced by the music question.",
+      "background": "The test reel is a short film made to exercise the page; this item comes from its rough cut.",
       "options": [
         {"id": "a", "label": "The old tone"},
         {"id": "b", "label": "Nothing"}

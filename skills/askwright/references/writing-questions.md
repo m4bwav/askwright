@@ -31,6 +31,10 @@ the question-evaluation research (QAS-99 adapted, R-T11); models under-flag poin
 - Start with the decision, not the background: "Which take of the arrow shot goes in the cut?"
 - Put the short label in `title` ("The arrow"), never in `question`.
 - `why` answers "what changes if I pick differently?": a render, a cost, an hour of work, what ships.
+- `background` (required) answers "what is this and how did we get here?" for a reader who has forgotten the
+  project: what the item is (a card's rules text, a scene's beat), where it shows up, earlier answers and the
+  prompt or source the candidates came from. It sits in a collapsed section, so write it for the reader who opens it.
+  `ask.py picks build` takes it per item from `--background FILE` (JSON `{item: text}`) or `--background-all`.
 - Group nothing: one decision per screen. A decision with sub-parts becomes a `show_if` chain.
 
 ## Options

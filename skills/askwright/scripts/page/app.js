@@ -745,7 +745,7 @@
     const kids = [background ? h("div", { class: "background" }, md(background)) : null].concat(blockEls(blocks || []));
     return h("details", { class: "onepager", open: !!S.backgroundOpen[qid],
       ontoggle: (e) => { S.backgroundOpen[qid] = e.currentTarget.open; } },
-      h("summary", { text: "Background: what this is and how we got here" }), kids);
+      h("summary", { text: "Background" }), kids);
   }
 
   function refRow(r) {

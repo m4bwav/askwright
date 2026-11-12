@@ -149,3 +149,6 @@ At the owner's request: a README "Works with" section and a Works-With wiki page
 ## 2026-11-11 GitHub payloads (0.26.0, unreleased)
 
 Mark asked to post askwright questions to an issue or PR and get the answers pasted back. New scripts/gh.py (kept out of ask.py, which is 3,200 lines) with gh-post / gh-pull / gh-reply / gh-answers, wired into ask.py and a finish-screen button (POST /api/gh-reply, local only; remote pages get github=None). Hidden blocks: `<!-- askwright:payload v1 B64 -->` and `<!-- askwright:answers v1 B64 -->`. GitHub has no API for comment attachments, so local media are listed as not attached; web media show inline and gh-pull downloads them. Comments are capped at 65,536 characters, so a large set fails with a clear error. Tests: fake gh via ASKWRIGHT_GH (a JSON list) + FAKE_GH_STATE. Version bump left to the release (0.25.2 zoom fix lands first).
+## 2026-11-11 hover zoom for small files (0.26.0)
+
+Mark saw no zoom on the SpaceDeckBuilder2 Atlas picks page: the candidates are 96x96 PNGs drawn at 96 px, and the zoom was gated on naturalWidth > drawn width x 1.3. It now scales up to at least 480 px with image-rendering: pixelated. Test test_hover_scales_up_a_picture_whose_file_is_small (swatch.png, 64 px). Next request queued: GitHub issue/PR payloads (post questions to a comment, answer locally, reply with answers).

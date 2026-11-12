@@ -864,6 +864,18 @@ class ClickMediaTests(PageCase):
         ask.write_json_atomic(self.dir / "questions.json", data)
         return self.open()
 
+    def test_hover_scales_up_a_picture_whose_file_is_small(self):
+        # 96 px card icons drawn at their own size still get a large copy (0.25.2).
+        p = self.with_arrow(media=[{"src": "swatch.png", "alt": "take A"}])
+        img = p.locator("#main img").first
+        p.wait_for_function("document.querySelector('#main img').complete")
+        self.assertEqual(img.evaluate("i => i.naturalWidth"), 64)
+        img.hover()
+        zoom = p.locator("#hover-zoom")
+        self.assertTrue(zoom.is_visible())
+        self.assertGreater(zoom.bounding_box()["width"], img.bounding_box()["width"] * 1.3)
+        self.assertEqual(self.errors, [])
+
     def test_click_image_picks_its_side(self):
         p = self.with_arrow(media=[{"src": "swatch.png", "alt": "take A"}, {"src": "swatch.png", "alt": "take B"}])
         figs = p.locator("figure.pickable")

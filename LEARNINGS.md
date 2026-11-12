@@ -197,6 +197,13 @@ Write an entry the moment a real signal happens: a user correction, the same err
 - Scope: repo:askwright
 - Status: active · helpful 1 · harmful 0 · last_confirmed 2026-11-08
 
+### L-025 · 2026-11-12 · `open-asks-give-full-path`: a question asked Mark to open a project by bare name
+- Trigger: the roof-snow set asked him to "open ArvumElectrum-snow in Unity" with no path; he asked that this never happen again.
+- Rule: any question, option, look_for or background that asks the person to open, run or look at a file, folder or project gives its full absolute path.
+- Evidence: Mark, 2026-11-12, arvum-roof-snow set
+- Scope: skill:askwright
+- Status: active · helpful 0 · harmful 0 · last_confirmed 2026-11-12
+
 <!-- Example (delete once you have a real entry):
 ### L-001 · 2026-10-24 · One-line lesson in plain words
 - Trigger: what happened, with dates or counts

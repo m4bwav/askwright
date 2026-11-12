@@ -2126,3 +2126,69 @@ class SteerwrightLink(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=1)
+
+
+class GitHubTests(ServerCase):
+    """0.26.0: questions travel in a GitHub comment and the answers go back as a reply (a fake gh, no network)."""
+
+    def setUp(self):
+        super().setUp()
+        self.state = self.s.tmp / "gh-state.json"
+        self._env = mock.patch.dict(os.environ, {
+            "ASKWRIGHT_GH": json.dumps([sys.executable, str(FIX / "fake_gh.py")]), "FAKE_GH_STATE": str(self.state)})
+        self._env.start()
+
+    def tearDown(self):
+        self._env.stop()
+        super().tearDown()
+
+    def gh_state(self):
+        return json.loads(self.state.read_text(encoding="utf-8"))
+
+    def test_post_pull_answer_reply_round_trip(self):
+        code, out = run_cli("gh-post", self.s.dir, "--repo", "o/r", "--issue", 7)
+        self.assertEqual(code, 0, out)
+        body = self.gh_state()["comments"][0]["body"]
+        self.assertIn("<!-- askwright:payload v1 ", body)
+        self.assertIn("`tone`", body)  # readable options for people who never run askwright
+        self.assertIn("not attached", body)  # local media cannot ride in a comment
+        self.assertEqual(json.loads((self.s.dir / "github.json").read_text())["number"], 7)
+
+        dest = self.s.tmp / "pulled"
+        code, got = run_cli("gh-pull", out["comment_url"], "--out", dest)
+        self.assertEqual(code, 0, got)
+        self.assertEqual(ask.load_set(dest)[1]["questions"], self.s.data["questions"])
+        code, got = run_cli("gh-pull", "o/r#7", "--out", dest)  # newest payload on the issue
+        self.assertEqual(code, 0, got)
+
+        st, d = self.api("/api/answer", {"qid": "music", "choice": "tone", "note": "a bit loud", "q_rev": 1})
+        self.assertEqual(st, 200, d)
+        st, page = self.api("/api/set")
+        self.assertEqual(page["github"]["number"], 7)  # the page shows its "Post answers to GitHub" button
+        st, d = self.api("/api/gh-reply", {})
+        self.assertEqual(st, 200, d)
+        reply = self.gh_state()["comments"][-1]["body"]
+        self.assertIn(out["comment_url"], reply)
+        self.assertIn("a bit loud", reply)
+
+        code, ans = run_cli("gh-answers", "o/r#7")
+        self.assertEqual(code, 0, ans)
+        music = next(r for r in ans["answers"] if r["qid"] == "music")
+        self.assertEqual(music["choice"], "tone")
+
+    def test_review_comment_reply_uses_the_thread(self):
+        ask.write_json_atomic(self.s.dir / "github.json", {"repo": "o/r", "number": 3, "kind": "review", "comment_id": 55})
+        code, out = run_cli("gh-reply", self.s.dir)
+        self.assertEqual(code, 0, out)
+        self.assertEqual(self.gh_state()["calls"][-1]["path"], "repos/o/r/pulls/3/comments/55/replies")
+
+    def test_bad_reference_and_missing_payload_fail_cleanly(self):
+        self.assertEqual(run_cli("gh-pull", "not a ref")[0], 1)
+        code, out = run_cli("gh-pull", "o/r#9")
+        self.assertEqual(code, 1)
+        self.assertIn("no askwright comment", out["error"])
+        self.assertIn("no github.json", run_cli("gh-reply", self.s.dir)[1]["error"])
+
+    def test_remote_page_hides_github(self):
+        ask.write_json_atomic(self.s.dir / "github.json", {"repo": "o/r", "number": 3})
+        self.assertIsNone(ask.page_set(self.srv, remote=True)["github"])

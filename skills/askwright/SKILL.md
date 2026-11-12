@@ -87,10 +87,11 @@ python <this folder>/scripts/ask.py serve <set> --detach
 ```
 
 It lints, binds 127.0.0.1 on a free port, self-checks, prints `{"ok": true, "url": ...}` and writes `server.json`.
-Give the person the URL with one line on what the set decides and how many questions. A running server's URL is
-reused. `--open` opens their browser. Answering from another device is opt-in: see `references/remote.md`.
+Give the person the URL with one line on what the set decides and how many questions. A running server is
+reused. `--open` opens their browser. Other devices (opt-in): `references/remote.md`;
+GitHub: `references/github.md`.
 
-`new` and `serve` register sets in the shared inbox (`~/.askwright`, or `ASKWRIGHT_HOME`); share `dashboard_url`
+`new` and `serve` register sets in the shared inbox (`~/.askwright`; schema.md); share `dashboard_url`
 too. `ask.py dashboard --detach` starts or reuses it; `ask.py register <set>` adds an older set.
 
 Projects: keep the project page current. When you run a continue prompt, record it:

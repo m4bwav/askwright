@@ -136,6 +136,10 @@ and the folders' work logs. Details: [Dashboard and projects](https://github.com
 | `project [NAME]` | Creates or updates a project record (`--description`, `--repo`, `--dir`, `--goal`, `--status`, `--needs-direction Q`, `--note TEXT`, `--prompt-run FILE`); with no name, lists projects. |
 | `picks build <dir> --out D` | One image per item: candidate images to sets (`--group REGEX`, `--guesses`, `--existing`); `picks export <set>... --out picks.json` merges the picks. |
 | `shortcut` | Puts an icon on the desktop that starts the dashboard when it is stopped and opens it. `--dir` picks another folder. |
+| `gh-post <set> --repo O/R --issue N` | Posts the questions as one comment on an issue or pull request: a readable list plus a hidden `askwright:payload` block. Web media show inline; local media are listed as not attached. Writes `github.json`. |
+| `gh-pull <ref>` | Makes a local set from the newest payload comment on `O/R#N`, or from a comment URL (`--out DIR`, default `ask/gh-<repo>-<n>`). Web images are downloaded into the set. |
+| `gh-reply <set>` | Posts the answers back as a comment that links the question comment (a thread reply for a pull request review comment). The page's "Post answers to GitHub" button does the same. |
+| `gh-answers <ref>` | Reads the answers a `gh-reply` comment carries, as JSON. |
 | `dashboard` | Serves the shared session inbox (tabs: Sessions, Projects, Unconsumed). Supports `--detach`, `--open`, `--port N` and `--stop`. |
 
 Every command prints one JSON object, except `--version` (plain text) and a usage mistake (argparse text on

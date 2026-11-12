@@ -145,3 +145,7 @@ Pointing at a small picture on the question page floats a large copy beside it (
 ## 2026-11-11 Works with
 
 At the owner's request: a README "Works with" section and a Works-With wiki page (linked from the sidebar and Home), each entry naming the real handoff with a partner plugin (taken from the skills that name each other) and why the pair helps.
+
+## 2026-11-11 GitHub payloads (0.26.0, unreleased)
+
+Mark asked to post askwright questions to an issue or PR and get the answers pasted back. New scripts/gh.py (kept out of ask.py, which is 3,200 lines) with gh-post / gh-pull / gh-reply / gh-answers, wired into ask.py and a finish-screen button (POST /api/gh-reply, local only; remote pages get github=None). Hidden blocks: `<!-- askwright:payload v1 B64 -->` and `<!-- askwright:answers v1 B64 -->`. GitHub has no API for comment attachments, so local media are listed as not attached; web media show inline and gh-pull downloads them. Comments are capped at 65,536 characters, so a large set fails with a clear error. Tests: fake gh via ASKWRIGHT_GH (a JSON list) + FAKE_GH_STATE. Version bump left to the release (0.25.2 zoom fix lands first).

@@ -4,6 +4,18 @@ Every change to [README.md](README.md) and its companions, newest first, each wi
 
 Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (IDs or "user request"), `files:` (file and section), and a sentence on what changed. Cite section headings, not line numbers.
 
+## Unreleased
+
+### C-20261111-4 · 2026-11-11 · fit the background change in the size budget and on a phone screen
+- because: CI on PR #70 (install size 385 KB over the 384 KB cap; the answer box sat 4 px too low at 390 px wide)
+- files: README.md (Works with, Security, ask.py lint row, dashboard, Testing), page/app.js (onePager summary)
+README sections that repeat SECURITY.md and the wiki now point there; the Background summary reads "Background" so it stays on one line.
+
+### C-20261111-3 · 2026-11-11 · required `background` on every open question, shown in a collapsed section
+- because: user request (the Atlas picks page asked "Which image should atlas_automated_triage use?" with no word on what the card is)
+- files: scripts/ask.py (lint `background`; picks build `--background`, `--background-all`), page/app.js (onePager), references/schema.md, references/writing-questions.md (Questions), tests (fixture, BackgroundTests in lint and picks)
+Open decide-mode questions must carry `background`: what the item is, where it is used, what led here. The page shows it in the openable Background section above any `one_pager` blocks; `picks build` refuses items without it.
+
 ## 0.26.0
 
 ### C-20261111-2 · 2026-11-11 · GitHub issues and pull requests carry askwright questions and answers

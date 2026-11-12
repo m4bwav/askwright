@@ -741,11 +741,11 @@
       }
     });
   }
-  function onePager(blocks, qid) {
-    const kids = blockEls(blocks);
+  function onePager(blocks, qid, background) {
+    const kids = [background ? h("div", { class: "background" }, md(background)) : null].concat(blockEls(blocks || []));
     return h("details", { class: "onepager", open: !!S.backgroundOpen[qid],
       ontoggle: (e) => { S.backgroundOpen[qid] = e.currentTarget.open; } },
-      h("summary", { text: "Background for this question" }), kids);
+      h("summary", { text: "Background" }), kids);
   }
 
   function refRow(r) {
@@ -819,7 +819,7 @@
     art = h("div");
     if (q.hint) art.append(h("p", { class: "hint", text: q.hint }));
     if (q.why) art.append(h("section", { class: "why", "aria-labelledby": "why-h" }, h("h2", { id: "why-h", text: "Why this matters" }), h("p", { text: q.why })));
-    if ((q.one_pager || []).length) art.append(onePager(q.one_pager, q.id));
+    if (q.background || (q.one_pager || []).length) art.append(onePager(q.one_pager, q.id, q.background));
     const refs = refsSection(q);
     if (refs) art.append(refs);
     if ((q.look_for || []).length) {

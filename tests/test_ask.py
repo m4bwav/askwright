@@ -200,6 +200,11 @@ class LintTests(unittest.TestCase):
         self.assertError(qmod("music", lambda q: q.pop("why")), "why")
         self.assertError(qmod("music", lambda q: q.update(why="  ")), "why")
 
+    def test_background_required_on_open_questions(self):
+        self.assertError(qmod("music", lambda q: q.pop("background")), "background")
+        self.assertError(qmod("music", lambda q: q.update(background=" ")), "background")
+        self.assertError(qmod("music", lambda q: q.update(background=["x"])), "background")
+
     def test_look_for_required_on_compare_and_media(self):
         self.assertError(qmod("arrow", lambda q: q.pop("look_for")), "look-for")
         self.assertError(qmod("music", lambda q: q.pop("look_for")), "look-for")
@@ -2030,9 +2035,22 @@ class PicksTests(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
-    def build(self, *extra):
+    def build(self, *extra, bg=("--background-all", "{item} is a card in the test deck.")):
         return run_cli("picks", "build", self.src, "--out", self.out, "--project", "Picks",
-                       "--project-description", "test picks", *extra)
+                       "--project-description", "test picks", *bg, *extra)
+
+    def test_build_needs_background_per_item(self):
+        code, d = self.build(bg=())
+        self.assertEqual(code, 1)
+        self.assertIn("background", d["error"])
+        self.assertIn("beta", d["missing"])
+        b = self.tmp / "bg.json"
+        b.write_text(json.dumps({"beta": "Beta is the shield card."}), encoding="utf-8")
+        code, d = self.build("--background", b)
+        qs = {q["id"]: q for q in json.loads((Path(d["sets"][0]["path"]) / "questions.json")
+                                             .read_text(encoding="utf-8"))["questions"]}
+        self.assertEqual(qs["pick.beta"]["background"], "Beta is the shield card.")
+        self.assertIn("alpha_card is a card", qs["pick.alpha_card"]["background"])
 
     def answer(self, set_dir, answers):
         (Path(set_dir) / "answers.json").write_text(json.dumps({"askwright": 1, "rev": 1, "answers": answers}),

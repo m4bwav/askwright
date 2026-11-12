@@ -1018,6 +1018,13 @@ def lint_set(d, data, probe=True):
             E("question-mark", "question must be a question that ends in '?' (put the label in title)", qid)
         if not study and not str(q.get("why") or "").strip():
             E("why", "why is missing: say what the answer changes", qid)
+        bg = q.get("background")
+        if bg is not None and not isinstance(bg, str):
+            E("background", "background must be text", qid)
+        elif not study and status == "open" and not str(bg or "").strip():
+            E("background", "background is missing: say what this is, where it is used and what led here", qid)
+        elif sentences(bg) > 6:
+            W("long-text", "background is longer than 6 sentences; move detail to a one_pager or tabs", qid)
         for field in ("why", "hint"):
             if sentences(q.get(field)) > 3:
                 W("long-text", f"{field} is longer than 3 sentences; move detail to a one_pager", qid)
@@ -2980,10 +2987,11 @@ def cmd_picks_build(a):
         assert {"item", "label"} <= set(rx.groupindex)
         old = json.loads(Path(a.existing).read_text(encoding="utf-8"))["families"] if a.existing else {}
         guesses = json.loads(Path(a.guesses).read_text(encoding="utf-8")) if a.guesses else {}
+        backgrounds = json.loads(Path(a.background).read_text(encoding="utf-8")) if a.background else {}
     except (re.error, AssertionError):
         return emit({"ok": False, "error": "--group must be a regex with named groups item and label"})
     except (OSError, ValueError, KeyError, TypeError) as e:
-        return emit({"ok": False, "error": f"cannot read --existing or --guesses: {e}"})
+        return emit({"ok": False, "error": f"cannot read --existing, --guesses or --background: {e}"})
     if not 1 <= a.per_set <= 12 or not a.project.strip():
         return emit({"ok": False, "error": "--project is required and --per-set must be 1 to 12"})
     if not a.project_description.strip() and not load_project(project_slug(a.project)):
@@ -3004,7 +3012,7 @@ def cmd_picks_build(a):
         del groups[item]
     if not groups:
         return emit({"ok": False, "error": f"no candidate images in {src} matched --group", "skipped": skipped})
-    items, sets, used = sorted(groups.items()), [], set()
+    items, sets, used, missing = sorted(groups.items()), [], set(), []
     prefix = a.prefix or re.sub(r"[^A-Za-z0-9_.-]+", "-", src.name).strip("-")[:56] or "picks"
     for n in range(0, len(items), a.per_set):
         sid = f"{prefix}-{n // a.per_set + 1}"
@@ -3022,8 +3030,11 @@ def cmd_picks_build(a):
                 {"option": prev["pick"], "why": f"picked {prev['pick']} earlier", "confidence": "low"}
                 if prev.get("pick") in labs else
                 {"option": "reroll", "why": "no guess made: the candidates were not compared", "confidence": "low"})
+            bg = str(backgrounds.get(item) or backgrounds.get(qid) or a.background_all.replace("{item}", item)).strip()
+            if not bg:
+                missing.append(item)
             q = {"id": qid, "kind": "choice", "title": item[:80], "question": f"Which image should {item} use?",
-                 "why": a.why, "look_for": a.look_for or ["Shows what this item should show, at the size it is used",
+                 "why": a.why, "background": bg, "look_for": a.look_for or ["Shows what this item should show, at the size it is used",
                                                           "Fits the style of the items already accepted"],
                  "media_layout": "grid", "guess": g,
                  "media": [{"src": str(p), "option": x, "alt": f"Candidate {x} for {item}"} for x, p in c],
@@ -3037,6 +3048,9 @@ def cmd_picks_build(a):
                       "project": a.project, "working_dir": str(Path.cwd()), "media_roots": [str(src)],
                       "questions": qs})
         d.mkdir(parents=True, exist_ok=True)
+        if missing:
+            return emit({"ok": False, "error": "every item needs background: what it is and where it is used "
+                         "(--background FILE or --background-all TEXT)", "missing": missing, "built": sets})
         errs = lint_set(d, data, probe=False)[0]
         if errs:
             return emit({"ok": False, "error": f"set {sid} failed lint", "errors": errs, "built": sets})
@@ -3227,6 +3241,8 @@ def main(argv=None):
     s.add_argument("--why", default="The picked image is used for this item; a re-roll makes new candidates.")
     s.add_argument("--look-for", action="append", default=[])
     s.add_argument("--guesses", help="JSON: {item: {option, why, confidence}}")
+    s.add_argument("--background", help="JSON: {item: text}; what the item is, where it is used, what led here")
+    s.add_argument("--background-all", default="", help="background for items missing from --background; {item} is replaced")
     s.add_argument("--existing", help="a picks.json: earlier picks become low guesses")
     s.add_argument("--skip-picked", action="store_true")
     s.add_argument("--batch", default="")

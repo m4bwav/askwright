@@ -34,6 +34,7 @@ A set is one folder holding `questions.json`. The server writes `answers.json`, 
 | `title` | yes | Short label, shown above the question and in lists (80 characters at most). Unique among open questions. |
 | `question` | yes | One question, ending in `?`. Unique among open questions. |
 | `why` | yes | What the answer changes. Three sentences at most; put more in a `one_pager`. |
+| `background` | yes (open, decide mode) | Context for someone arriving cold, shown in a collapsed "Background" section: what the item is, where it is used, what was decided before, what the options came from. Two to six sentences, markdown. Not needed in study mode. |
 | `look_for` | with media or `compare` | List of the concrete things that decide it. `6.0 s` in the text becomes a "Play from 6.0 s" button. |
 | `hint` | no | One extra line under the question. |
 | `reversible` | no | `false` marks a decision that is hard to undo ("· hard to undo" beside the title); give such questions a `one_pager`. |

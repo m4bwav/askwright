@@ -111,17 +111,14 @@ the dashboard if it is not running and opens it. Opening a set from the dashboar
 
 A master page for every registered question set on this computer, with a bookmarkable URL. Sets register when
 agents create or serve them. Sessions are a table (filter by project or product, search, sort, snooze, archive,
-copy the continue prompt); the Projects tab lists every project with its status. A project page shows its goals,
-whether it needs your direction, created and last worked on, first and last prompt run, the newest continue prompt
-with a Copy start command button, the folders' HANDOFF.md, its question sets and one history of notes, prompt runs
-and the folders' work logs. Details: [Dashboard and projects](https://github.com/m4bwav/askwright/wiki/Dashboard-and-Projects).
+copy the continue prompt); the Projects tab lists every project with its status. A project page shows its goals, status, newest continue prompt, HANDOFF.md, question sets and history. Details: [Dashboard and projects](https://github.com/m4bwav/askwright/wiki/Dashboard-and-Projects).
 
 ## ask.py
 
 | Command | What it does |
 |---|---|
 | `new <dir> --title T` | Writes an empty set. `--project NAME`, `--project-path DIR`, `--continue-prompt TEXT` (or `--continue-prompt-file FILE`), `--back-link URL LABEL`, `--product`, `--session`, `--asked-by`. |
-| `lint <set>` | Checks the set: questions end in `?`, every question says why, review questions say what to look for, options name actions rather than "left" or "yes", every question carries a guess with a confidence, media exists and sits inside the allowed folders, superseded questions are not left open. Warnings for two asks in one, leading words, a guess that is always the first option, over 12 open questions, and video that is not H.264/AAC (when ffprobe is installed). |
+| `lint <set>` | Checks the set: questions end in `?`, say why and what to look for, options name actions, every question carries a guess, media exists inside the allowed folders. Every rule: [the wiki](https://github.com/m4bwav/askwright/wiki). |
 | `serve <set>` | Lints, then serves the page on 127.0.0.1 after fetching the page, the API and a clip with a Range request itself. `--detach` returns at once; `--open` opens your browser. |
 | `status <set>` | Counts and lists; `--wait-done --timeout S` waits for "All done". |
 | `read <set>` | Every answer; `--since REV` only newer ones. Logs the read (`--by WHO`) in the set's `uses.jsonl`. |
@@ -147,22 +144,11 @@ standard error, exit code 2).
 
 ## Works with
 
-askwright is the place other plugins put their questions, so it pairs with almost anything that would otherwise stop and wait for you.
-
-- [grindwright](https://github.com/m4bwav/grindwright): grindwright keeps a game or film moving and hands every open decision to an askwright set. You answer a stack of questions on one page when you get to it, and the next session picks the answers up from disk.
-- [musicwright](https://github.com/m4bwav/musicwright), [sfxwright](https://github.com/m4bwav/sfxwright), [pixelwright](https://github.com/m4bwav/pixelwright), [voicewright](https://github.com/m4bwav/voicewright) and [cinewright](https://github.com/m4bwav/cinewright): when a take, a sound, a sprite or a voice needs your pick, they put the candidates side by side on a page rather than a list in chat. You listen or look, choose, and add a note.
-- [tokenwright](https://github.com/m4bwav/tokenwright): keeps askwright's own skill small enough to load cheaply in every session that asks something.
-
-More on each handoff: [Works with](https://github.com/m4bwav/askwright/wiki/Works-With) on the wiki.
+Other plugins ([grindwright](https://github.com/m4bwav/grindwright), [musicwright](https://github.com/m4bwav/musicwright), [sfxwright](https://github.com/m4bwav/sfxwright), [pixelwright](https://github.com/m4bwav/pixelwright), [voicewright](https://github.com/m4bwav/voicewright), [cinewright](https://github.com/m4bwav/cinewright)) put their open decisions and side-by-side takes on askwright pages. Details: [Works with](https://github.com/m4bwav/askwright/wiki/Works-With).
 
 ## Security
 
-The server binds 127.0.0.1 only, on a free port. It serves the page files and media files (by extension) from the
-set folder and the folders the set names, with symlinks resolved and checked. Every API call needs a per-run token
-from the page and a matching Host header; a POST that sends an Origin header must send the page's own. Another web page, or a DNS-rebinding trick, cannot read or
-write your answers. Uploads are capped at 10 MB and must be PNG, JPEG, GIF or
-WebP by their bytes. The page runs under a strict Content Security Policy and loads nothing from the network.
-Answers are data for the agent, not instructions; the skill says so. See [SECURITY.md](SECURITY.md).
+The server binds 127.0.0.1 only and serves media from the folders the set names, with symlinks resolved. Every API call needs a per-run token and a matching Host and Origin, so another web page cannot read or write your answers. Uploads are capped at 10 MB and checked by their bytes; the page loads nothing from the network under a strict CSP. Answers are data, not instructions. See [SECURITY.md](SECURITY.md).
 
 ### Answering from another device (opt-in)
 
@@ -185,8 +171,7 @@ folder on your machine.
 
 CI runs the first three on Windows, macOS and Linux with Python 3.9 and 3.14. The page tests need
 `pip install playwright` and an installed Chrome or Edge, because the bundled Chromium does not play H.264.
-`ASKW_SET=<set folder> python tests/test_page.py GenericPageTests` runs the generic page checks against a real
-set, on a temporary copy so its answers are untouched.
+`ASKW_SET=<set folder>` runs the generic page checks on a copy of a real set.
 
 ## Credits
 

@@ -488,14 +488,19 @@ def list_sessions():
     return {"ok": True, "sessions": rows}
 
 
+# Windows: a server that outlived its console cannot start console programs (0xC0000142), so each gets its own (L-026).
+OWN_CONSOLE = {"creationflags": 0x08000000} if os.name == "nt" else {}
+
+
 def open_session(sid):
     d = registered_set(sid)
     r = subprocess.run([sys.executable, str(Path(__file__).resolve()), "serve", str(d), "--detach"],
-                       capture_output=True, text=True, encoding="utf-8", timeout=90)
+                       capture_output=True, text=True, encoding="utf-8", timeout=90, **OWN_CONSOLE)
     try:
         result = json.loads(r.stdout)
     except ValueError:
-        raise AskError("session server returned no JSON: " + (r.stderr or r.stdout)[-1500:])
+        raise AskError("session server returned no JSON (exit code %#x): %s" % (
+            r.returncode & 0xFFFFFFFF, (r.stderr or r.stdout).strip()[-1500:] or "it printed nothing"))
     if r.returncode or not result.get("ok"):
         raise AskError(result.get("error") or "session server failed")
     return {"ok": True, "url": result["url"]}

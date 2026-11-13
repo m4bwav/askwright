@@ -807,6 +807,60 @@ class DashboardTests(ServerCase):
         self.assertIn("lint", result["error"])
         self.assertFalse((self.s.dir / "server.json").exists())
 
+    def test_open_names_the_exit_code_when_the_child_prints_nothing(self):
+        sid = ask.register_set(self.s.dir)
+        dead = subprocess.CompletedProcess([], 0xC0000142 - 2**32, stdout="", stderr="")
+        with mock.patch.object(ask.subprocess, "run", return_value=dead) as run:
+            status, result = self.api("/api/open", {"id": sid})
+        self.assertEqual(status, 400)
+        self.assertIn("exit code 0xc0000142", result["error"])
+        self.assertIn("printed nothing", result["error"])
+        if os.name == "nt":
+            self.assertEqual(run.call_args.kwargs.get("creationflags"), 0x08000000)
+
+    @unittest.skipUnless(os.name == "nt", "consoles are a Windows matter")
+    def test_open_from_a_server_that_outlived_its_console(self):
+        """A set server started in a terminal that has since closed must still open another set."""
+        other = TempSet()
+        startup = subprocess.STARTUPINFO()
+        startup.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startup.wShowWindow = 0
+        proc = subprocess.Popen([sys.executable, str(ASK), "serve", str(self.s.dir), "--port", "0"],
+                                creationflags=subprocess.CREATE_NEW_CONSOLE, startupinfo=startup,
+                                stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        try:
+            deadline = time.time() + 30
+            info = None
+            while time.time() < deadline and not (info and info.get("pid") == proc.pid and info.get("alive")):
+                time.sleep(0.2)
+                info = ask.server_info(self.s.dir)
+            self.assertTrue(info and info.get("alive"), info)
+            found = subprocess.run(
+                ["powershell", "-NoProfile", "-Command", "(Get-CimInstance Win32_Process -Filter "
+                 "\"ParentProcessId=%d AND Name='conhost.exe'\").ProcessId" % proc.pid],
+                capture_output=True, text=True, timeout=60).stdout.split()
+            if not found:
+                self.skipTest("the server's console host is not its child here")
+            for pid in found:  # by PID only: the console host of the server this test started
+                subprocess.run(["taskkill", "/PID", pid, "/F"], capture_output=True, timeout=30)
+            time.sleep(1)
+            self.assertIsNone(proc.poll(), "the server should outlive its console")
+            sid = ask.register_set(other.dir)
+            c = http.client.HTTPConnection("127.0.0.1", info["port"], timeout=120)
+            c.request("POST", "/api/open", body=json.dumps({"id": sid}),
+                      headers={"X-Ask-Token": info["token"], "Origin": "http://127.0.0.1:%d" % info["port"],
+                               "Content-Type": "application/json"})
+            r = c.getresponse()
+            result = json.loads(r.read())
+            c.close()
+            self.assertEqual(r.status, 200, result)
+            self.assertTrue(ask.server_info(other.dir)["alive"])
+        finally:
+            run_cli("stop", other.dir)
+            proc.kill()
+            proc.wait(timeout=30)
+            other.cleanup()
+
     def test_dashboard_detach_reuse_stop_and_bookmark(self):
         try:
             code, started = run_cli("dashboard", "--detach")

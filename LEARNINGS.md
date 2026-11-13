@@ -204,6 +204,13 @@ Write an entry the moment a real signal happens: a user correction, the same err
 - Scope: skill:askwright
 - Status: active · helpful 0 · harmful 0 · last_confirmed 2026-11-12
 
+### L-026 · 2026-11-12 · `server-outlives-console`: a server left on a closed terminal's console cannot start programs
+- Trigger: "Open questions" answered "session server returned no JSON:" with an empty tail. One set server, started a day earlier from an agent's shell with `serve SET --port 0 > /dev/null 2>&1 &` instead of `--detach`, had outlived that session's console; every child it spawned exited with 0xC0000142 before printing. Every other server (all detached) opened the same set.
+- Rule: start servers with `--detach`, never with a shell `&`. In ask.py, any program a server starts on Windows takes `**OWN_CONSOLE`; an error built from a child's output also names its exit code.
+- Evidence: reproduced by starting a server with CREATE_NEW_CONSOLE and killing its conhost; test_open_from_a_server_that_outlived_its_console fails without the flag.
+- Scope: skill:askwright
+- Status: active · helpful 0 · harmful 0 · last_confirmed 2026-11-12
+
 <!-- Example (delete once you have a real entry):
 ### L-001 · 2026-10-24 · One-line lesson in plain words
 - Trigger: what happened, with dates or counts
@@ -213,3 +220,7 @@ Write an entry the moment a real signal happens: a user correction, the same err
 - Scope: skill | repo:<slug> | env:<name> | global
 - Status: active · helpful 1 · harmful 0 · last_confirmed 2026-10-24
 -->
+
+- 2026-11-12 `per-item-series-duplicate-lint`: a series of same-shaped A/B questions (one per piece) fails lint as duplicate-question; name the item in each question text instead of passing --force.
+
+- 2026-11-12 `blind-set-guess-cannot-name-hidden-take`: on a blind listening question the options are "Take A/B/C", but the agent's real guess is about a source ("the sampled one"), and it either does not know the letter or, if it does, a guess naming the letter gives the answer away when opened. Arvum guitar-song r6 put the guess on "neither" (not the real guess); r7 named the letter at low confidence and said in the guess text that opening it reveals the source. Idea: a `guess.source` field resolved through the blind key at read time, shown to the person only after they pick.

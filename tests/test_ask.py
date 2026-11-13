@@ -214,7 +214,8 @@ class LintTests(unittest.TestCase):
     def test_guess_rules(self):
         self.assertError(qmod("music", lambda q: q.pop("guess")), "guess")
         self.assertError(qmod("music", lambda q: q["guess"].pop("confidence")), "guess-confidence")
-        self.assertError(qmod("music", lambda q: q["guess"].update(confidence="medium")), "guess-confidence")
+        self.assertError(qmod("music", lambda q: q["guess"].update(confidence="sure")), "guess-confidence")
+        self.assertWarning(qmod("music", lambda q: q["guess"].update(confidence="medium")), "guess-confidence")
         self.assertError(qmod("music", lambda q: q["guess"].update(option="nope")), "guess-option")
         self.assertError(qmod("cuts", lambda q: q["guess"].update(options=["s3", "zz"])), "guess-option")
         self.assertError(qmod("order", lambda q: q["guess"].update(order=["news"])), "guess-option")
@@ -1360,6 +1361,21 @@ class CliTests(unittest.TestCase):
         data = json.loads((nd / "questions.json").read_text(encoding="utf-8"))
         self.assertEqual((data["id"], data["askwright"]), ("fresh", 1))
         self.assertEqual(run_cli("new", nd, "--title", "Again", "--project", "P", "--project-description", "D")[0], 1)
+
+    def test_templates_list_and_seed_new(self):
+        fx = Path(__file__).parent / "fixtures" / "ask-templates"
+        new = ("--title", "x", "--project", "P", "--project-description", "D", "--template")
+        with mock.patch.dict(os.environ, {"ASKWRIGHT_TEMPLATE_PATH": str(fx)}):
+            keys = [t["key"] for t in run_cli("templates")[1]["templates"]]
+            self.assertIn("fixtures:project-setup", keys)
+            self.assertEqual(run_cli("new", self.s.tmp / "nope", *new, "missing")[0], 1)
+            nd = self.s.tmp / "ask" / "setup"
+            code, out = run_cli("new", nd, *new, "project-setup", "--var", "project=Demo \"Q\"")
+        self.assertEqual((code, out["unfilled"]), (0, []), out)
+        code, out = run_cli("lint", nd, "--no-probe")
+        self.assertTrue(out["ok"], out)
+        data = json.loads((nd / "questions.json").read_text(encoding="utf-8"))
+        self.assertEqual(data["questions"][0]["question"][:28], 'Should Demo "Q" live in a pu')
 
     def test_refs_and_tabs_lint(self):
         good = {"label": "Repo", "url": "https://github.com/o/r"}

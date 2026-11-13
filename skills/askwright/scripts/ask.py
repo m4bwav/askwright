@@ -51,7 +51,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-VERSION = "0.29.1"
+VERSION = "0.30.0"
 DEFAULT_PORT = 47631  # the shared server's port; ASKWRIGHT_PORT moves it (0 picks a free one)
 PAGE = Path(__file__).resolve().parent / "page"
 BUNDLE = re.compile(r"^(those|these|both|all of)\b|\bplus\b", re.I)
@@ -509,8 +509,11 @@ def open_session(sid, shared=False):
     d = registered_set(sid)
     if shared:  # the shared server already serves every registered set, once it lints
         d, data = load_set(d)
-        if lint_set(d, data, probe=False)[0]:
-            raise AskError("lint failed; run ask.py lint on the set and fix the errors")
+        errs = lint_set(d, data, probe=False)[0]
+        if errs:  # name the failures
+            shown = "; ".join("%s: %s" % (e.get("q") or "set", e.get("msg")) for e in errs[:3])
+            more = " (+%d more)" % (len(errs) - 3) if len(errs) > 3 else ""
+            raise AskError("lint failed: %s%s. Run ask.py lint on %s" % (shown, more, d))
         return {"ok": True, "url": "/s/%s/" % set_key(d)}
     r = subprocess.run([sys.executable, str(Path(__file__).resolve()), "serve", str(d), "--detach"],
                        capture_output=True, text=True, encoding="utf-8", timeout=90, **OWN_CONSOLE)
@@ -1133,7 +1136,10 @@ def lint_set(d, data, probe=True):
         elif not isinstance(g, dict):
             E("guess", "every question carries the agent's guess: {option, why, confidence}", qid)
         else:
-            if g.get("confidence") not in ("high", "low"):
+            conf = str(g.get("confidence") or "").strip().lower()
+            if conf in ("medium", "med", "moderate"):  # common slip; the page reads it as low
+                W("guess-confidence", 'confidence "%s" read as "low"' % g.get("confidence"), qid)
+            elif g.get("confidence") not in ("high", "low"):
                 E("guess-confidence", 'guess.confidence must be "high" or "low"', qid)
             if not str(g.get("why") or "").strip():
                 E("guess-why", "guess.why is missing", qid)
@@ -2623,8 +2629,47 @@ def cmd_lint(a):
     return emit({"ok": not errs, "set": data.get("id"), "errors": errs, "warnings": warns})
 
 
+def find_templates():
+    """ask-templates/*.json: user, installed plugins, $ASKWRIGHT_TEMPLATE_PATH."""
+    dirs = [("user", state_dir() / "templates")]
+    try:
+        reg = json.loads((Path.home() / ".claude/plugins/installed_plugins.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        reg = {}
+    for key, inst in (reg.get("plugins") or {}).items():
+        for i in inst if isinstance(inst, list) else [inst]:
+            root = Path(str((i or {}).get("installPath") or "."))
+            dirs += [(key.split("@")[0], f) for f in [root / "ask-templates", *root.glob("skills/*/ask-templates")]]
+    dirs += [(Path(x).parent.name, Path(x)) for x in os.environ.get("ASKWRIGHT_TEMPLATE_PATH", "").split(os.pathsep) if x]
+    found = {}
+    for src, folder in dirs:
+        for f in sorted(folder.glob("*.json")) if folder.is_dir() else []:
+            try:
+                t = json.loads(f.read_text(encoding="utf-8"))
+                k = "%s:%s" % (src, f.stem)
+                found.setdefault(k, {"key": k, "path": str(f), "title": t.get("title"),
+                                     "description": t.get("description", ""), "questions": len(t.get("questions") or [])})
+            except (OSError, ValueError, AttributeError):
+                pass
+    return found
+
+
+def cmd_templates(a):
+    return emit({"ok": True, "templates": list(find_templates().values())})
+
+
 def cmd_new(a):
     d = Path(a.dir).expanduser()
+    template = None
+    if a.template:  # {{name}} filled from --var; {{project}} defaults to --project
+        found = find_templates()
+        t = found.get(a.template) or next((v for k, v in found.items() if k.split(":")[1] == a.template), None)
+        if not t:
+            return emit({"ok": False, "error": f"no template {a.template!r}; run ask.py templates"})
+        vals = dict([("project", a.project)] + [v.split("=", 1) for v in a.var or [] if "=" in v])
+        text = re.sub(r"\{\{\s*(\w+)\s*\}\}", lambda m: json.dumps(vals[m.group(1)])[1:-1]
+                      if m.group(1) in vals else m.group(0), Path(t["path"]).read_text(encoding="utf-8"))
+        template = json.loads(text)
     f = d / "questions.json"
     if f.exists():
         return emit({"ok": False, "error": f"{f} already exists"})
@@ -2651,11 +2696,20 @@ def cmd_new(a):
             return emit({"ok": False, "error": f"cannot read --continue-prompt-file: {e}"})
     elif a.continue_prompt:
         data["continue_prompt"] = a.continue_prompt
+    if template:
+        data["context"] = template.get("context", "")
+        data["template"] = a.template
+        data["questions"] = [q for q in template.get("questions") or [] if isinstance(q, dict)]
+        for q in data["questions"]:
+            stamp(q)
     write_json_atomic(f, data)
     if described:
         ensure_project(a.project, description=described)
     register_set(d)
     out = {"ok": True, "path": str(f.resolve()), "next": "add questions (references/schema.md), then lint"}
+    if template:
+        left = sorted(set(re.findall(r"\{\{\s*(\w+)\s*\}\}", json.dumps(data))))
+        out.update(questions=len(data["questions"]), next="fit guesses to the project, lint, serve", unfilled=left)
     return emit(out)
 
 
@@ -3391,6 +3445,9 @@ def main(argv=None):
     cp.add_argument("--continue-prompt-file", default="", metavar="FILE", help="the same, read from a file")
     s.add_argument("--back-link", nargs=2, metavar=("URL", "LABEL"),
                    help="link in the page header back to the project's own review page")
+    s.add_argument("--template", help="start from a plugin's question template (ask.py templates lists them)")
+    s.add_argument("--var", action="append", metavar="NAME=VALUE", help="fills {{NAME}} in the template")
+    sub.add_parser("templates", help="list question templates from ~/.askwright/templates and installed plugins")
     for name in ("lint", "serve"):
         s = sub.add_parser(name)
         s.add_argument("set")

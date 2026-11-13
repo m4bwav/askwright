@@ -203,6 +203,12 @@ a low `reroll`. `picks export <set>... --out picks.json` merges answers as
 `{"batch", "updated", "families": {item: {"pick": label or null, "reroll": bool, "note": text}}}`; unanswered,
 not-sure, note-only, stale and closed items are left as they were.
 
+## Templates
+
+Setup questions a plugin ships as `ask-templates/<name>.json` (plugin root or `skills/<skill>/`); personal ones live
+in `~/.askwright/templates/`, more folders in `ASKWRIGHT_TEMPLATE_PATH`. Shape: `{"title", "description",
+"questions": [...]}`, ordinary questions. `--var name=value` fills `{{name}}` (`{{project}}` defaults to `--project`).
+
 ## What comes back
 
 `ask.py read <set>` prints, per answered question: `state` (`answered`, `unsure`, `note_only`), `choice` and

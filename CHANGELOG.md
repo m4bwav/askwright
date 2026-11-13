@@ -6,6 +6,13 @@ Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (ID
 
 ## Unreleased
 
+## 0.29.0
+
+### C-20261113-1 · 2026-11-13 · steerwright's pages on the shared server at /steer/
+- because: user request ("yes, but it should be flexible: if askwright isn't present then it should still run; if some other app has taken the port then it should choose another")
+- files: scripts/ask.py (steerwright_script, steer_module, Handler.steer, /go/steerwright, steerwright_link), README.md (dashboard), tests (SteerMountTests, SteerwrightLink)
+The shared server loads steerwright's sw.py (STEERWRIGHT_SCRIPT, the installed plugin, or a clone beside this one) and serves its pages at `/steer/`, reloading when sw.py changes. The pages go out with a CSP sandbox and no `allow-same-origin`, so the chainwright, grindwright and repo-traffic pages they include cannot read this server's token; proxied (remote) requests get 403. Without steerwright, `/steer/` is a 404 and no chip shows.
+
 ## 0.28.0
 
 ### C-20261112-2 · 2026-11-12 · one server and one port for the inbox and every set

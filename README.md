@@ -113,8 +113,9 @@ One server, one port. Since 0.28.0 the inbox and every set run in a single proce
 (`ASKWRIGHT_PORT` moves it); a set's page is `/s/<key>/` under it, so links and bookmarks survive restarts.
 `serve` starts the server when it is down and replaces one older than the script, on the same port. If another
 program holds the port, it falls back to the port it used last. `serve --own` (or `--port N`, or `--remote`)
-still gives a set a server of its own. The steerwright chip goes through `/go/steerwright`, which starts
-steerwright first when it is installed and stopped.
+still gives a set a server of its own. When steerwright 0.5.0 or later is installed, the same server carries its
+pages at `/steer/` (read-only, sandboxed so their scripts cannot reach the answer token); with an older
+steerwright, `/go/steerwright` starts steerwright's own server first.
 
 A master page for every registered question set on this computer, with a bookmarkable URL. Sets register when
 agents create or serve them. Sessions are a table (filter by project or product, search, sort, snooze, archive,

@@ -51,7 +51,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-VERSION = "0.28.0"
+VERSION = "0.29.0"
 DEFAULT_PORT = 47631  # the shared server's port; ASKWRIGHT_PORT moves it (0 picks a free one)
 PAGE = Path(__file__).resolve().parent / "page"
 BUNDLE = re.compile(r"^(those|these|both|all of)\b|\bplus\b", re.I)
@@ -1625,6 +1625,46 @@ def sniff_image(data):
     return None
 
 
+def steerwright_script():
+    """steerwright's sw.py: STEERWRIGHT_SCRIPT, the installed plugin, or a clone beside this one. None if absent."""
+    cands = [os.environ.get("STEERWRIGHT_SCRIPT")]
+    try:
+        inst = json.loads((Path.home() / ".claude" / "plugins" / "installed_plugins.json").read_text("utf-8"))
+        cands += [str(Path(r["installPath"], "skills", "steerwright", "scripts", "sw.py"))
+                  for k, recs in inst["plugins"].items() if k.startswith("steerwright@") for r in recs]
+    except Exception:
+        pass
+    cands.append(str(Path(__file__).resolve().parents[4] / "steerwright" / "skills" / "steerwright" / "scripts" / "sw.py"))
+    return next((Path(c) for c in cands if c and Path(c).is_file()), None)
+
+
+STEER = {"path": None, "mtime": None, "mod": None}
+STEER_LOCK = threading.Lock()
+STEER_CSP = "sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox allow-downloads"
+
+
+def steer_module():
+    """steerwright loaded into this process, reloaded when sw.py changes. None when it is not installed or broken."""
+    f = steerwright_script()
+    if not f:
+        return None
+    import importlib.util
+    with STEER_LOCK:
+        m = f.stat().st_mtime
+        if STEER["path"] != f or STEER["mtime"] != m:
+            try:
+                spec = importlib.util.spec_from_file_location("steerwright_mounted", f)
+                mod = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(mod)
+                if not hasattr(mod, "render"):
+                    return None  # a steerwright older than 0.5.0
+                threading.Thread(target=getattr(mod, "warm_cache", lambda: None), daemon=True).start()
+            except Exception:
+                return None
+            STEER.update(path=f, mtime=m, mod=mod)
+        return STEER["mod"]
+
+
 def steerwright_url(start=False):
     """Where steerwright's pages are. With start, a stopped steerwright is started first. None when not installed."""
     f = Path(os.environ.get("STEERWRIGHT_HOME") or Path.home() / ".steerwright", "server.json")
@@ -1650,7 +1690,7 @@ def steerwright_url(start=False):
 
 
 def steerwright_link(page):  # steerwright hub link, '' when not installed; /go/ starts it when it is down
-    if not steerwright_url():
+    if not (steerwright_script() or steerwright_url()):
         return ""
     return '<a class="chip secondary" href="/go/steerwright" title="all projects">steerwright</a>'
 
@@ -2119,9 +2159,14 @@ class Handler(BaseHTTPRequestHandler):
         if not path:
             return
         if path == "/go/steerwright" and not self.by and self.headers.get("Sec-Fetch-Site") != "cross-site":
+            if getattr(self.server, "dashboard", False) and steer_module():
+                return self.send_bytes(302, b"", "text/plain", {"Location": "/steer/"})
             url = steerwright_url(start=True)
             if url:
                 return self.send_bytes(302, b"", "text/plain", {"Location": url})
+        if (path == "/steer" or path.startswith("/steer/")) and not self.by and self.ctx is self.server \
+                and getattr(self.server, "dashboard", False):
+            return self.steer(path)
         if self.by and not (path in REMOTE_GET or path in PAGE_FILES or path.startswith("/m/")):
             return self.fail(403, "not available remotely")
         if path in ("/", "/index.html", "/sessions") or re.fullmatch(r"/projects/[a-z0-9-]+", path):
@@ -2159,6 +2204,17 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json(200, {"ok": True, "pid": os.getpid(), "set_dir": str(self.ctx.set_dir), "version": VERSION,
                                             "dashboard": getattr(self.ctx, "dashboard", False)})
         self.fail(404, "not found")
+
+    def steer(self, path):
+        """steerwright's pages, read-only, in a sandbox so their scripts cannot reach this server's token."""
+        if path == "/steer":
+            return self.send_bytes(302, b"", "text/plain", {"Location": "/steer/"})
+        mod = steer_module()
+        if not mod:
+            return self.fail(404, "steerwright is not installed")
+        code, body, ctype = mod.render(path[len("/steer"):], urllib.parse.urlsplit(self.path).query, "/steer")
+        return self.send_bytes(code, body.encode("utf-8"), ctype,
+                               {"Content-Security-Policy": STEER_CSP, "Referrer-Policy": "no-referrer"})
 
     def media(self, path):
         parts = path.split("/", 3)

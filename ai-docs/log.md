@@ -168,3 +168,5 @@ Owner asked for askwright and its linked pages to stop going down and changing p
 
 ## 2026-11-13 · steerwright on the same server (0.29.0)
 Owner: yes to one server for steerwright too, but steerwright must still run without askwright, and pick another port when one is taken. askwright now mounts steerwright 0.5.0's `render()` at `/steer/` (sandboxed CSP). Stopped the 11 per-set servers left from before 0.28.0 by PID (owner's go-ahead). Pair: steerwright 0.5.0.
+
+- 2026-11-13: 0.29.1 released (cold first /steer/ load minutes -> ~16 s). Live switch done: shared server restarted, steerwright registered inside it.

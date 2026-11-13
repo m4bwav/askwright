@@ -51,7 +51,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-VERSION = "0.25.0"
+VERSION = "0.28.0"
+DEFAULT_PORT = 47631  # the shared server's port; ASKWRIGHT_PORT moves it (0 picks a free one)
 PAGE = Path(__file__).resolve().parent / "page"
 BUNDLE = re.compile(r"^(those|these|both|all of)\b|\bplus\b", re.I)
 KINDS = ("choice", "multi", "compare", "rank", "text", "scale", "confirm")
@@ -166,10 +167,19 @@ def state_dir():
     return Path(os.environ.get("ASKWRIGHT_HOME") or Path.home() / ".askwright").expanduser().resolve()
 
 
+def set_sid(d):
+    return hashlib.sha256(os.path.normcase(str(d)).encode("utf-8")).hexdigest()
+
+
+def set_key(d):
+    """The set's part of its shared-server address, /s/<key>/."""
+    return set_sid(d)[:12]
+
+
 def register_set(path):
     d, _ = load_set(path)
     # One atomic file per canonical path: simultaneous agents cannot overwrite each other's registrations.
-    sid = hashlib.sha256(os.path.normcase(str(d)).encode("utf-8")).hexdigest()
+    sid = set_sid(d)
     folder = state_dir() / "sessions"
     folder.mkdir(parents=True, exist_ok=True)
     write_json_atomic(folder / (sid + ".json"), {"path": str(d)})
@@ -400,6 +410,9 @@ def project_page(slug):
 
 
 def registered_set(sid):
+    if isinstance(sid, str) and re.fullmatch(r"[0-9a-f]{8,63}", sid):  # the short key in a shared-server address
+        found = list((state_dir() / "sessions").glob(sid + "*.json"))
+        sid = found[0].stem if len(found) == 1 else sid
     if not isinstance(sid, str) or not re.fullmatch(r"[0-9a-f]{64}", sid):
         raise AskError("unknown session")
     f = state_dir() / "sessions" / (sid + ".json")
@@ -492,8 +505,13 @@ def list_sessions():
 OWN_CONSOLE = {"creationflags": 0x08000000} if os.name == "nt" else {}
 
 
-def open_session(sid):
+def open_session(sid, shared=False):
     d = registered_set(sid)
+    if shared:  # the shared server already serves every registered set, once it lints
+        d, data = load_set(d)
+        if lint_set(d, data, probe=False)[0]:
+            raise AskError("lint failed; run ask.py lint on the set and fix the errors")
+        return {"ok": True, "url": "/s/%s/" % set_key(d)}
     r = subprocess.run([sys.executable, str(Path(__file__).resolve()), "serve", str(d), "--detach"],
                        capture_output=True, text=True, encoding="utf-8", timeout=90, **OWN_CONSOLE)
     try:
@@ -1391,6 +1409,12 @@ def server_info(d, check=True):
         info = json.loads((Path(d) / "server.json").read_text(encoding="utf-8"))
     except (FileNotFoundError, ValueError):
         return None
+    if info.get("hub"):  # served by the shared server: its record says where and whether it is up
+        hub = server_info(state_dir() / "dashboard", check) or {}
+        info.update({k: hub.get(k) for k in ("pid", "port", "token")}, alive=bool(hub.get("alive")))
+        if hub.get("url"):
+            info.update(url="%ss/%s/" % (hub["url"], info.get("key")), dashboard_url=hub["url"])
+        return info
     if check:
         p = ping(info)
         info["alive"] = bool(p and p.get("pid") == info.get("pid"))
@@ -1601,14 +1625,34 @@ def sniff_image(data):
     return None
 
 
-def steerwright_link(page):  # steerwright hub link, '' when not installed
+def steerwright_url(start=False):
+    """Where steerwright's pages are. With start, a stopped steerwright is started first. None when not installed."""
+    f = Path(os.environ.get("STEERWRIGHT_HOME") or Path.home() / ".steerwright", "server.json")
     try:
-        url = json.loads(Path(os.environ.get("STEERWRIGHT_HOME") or Path.home() / ".steerwright", "server.json")
-                         .read_text("utf-8"))["url"]
-        assert url.startswith("http")
-        return '<a class="chip secondary" href="%s" title="all projects">steerwright</a>' % escape(url, {'"': "&quot;"})
+        info = json.loads(f.read_text("utf-8"))
+        assert info["url"].startswith("http://127.0.0.1:")
     except Exception:
+        return None
+    if start:
+        try:
+            socket.create_connection(("127.0.0.1", int(info["port"])), 0.5).close()
+        except (OSError, ValueError, KeyError):
+            try:
+                inst = json.loads((Path.home() / ".claude" / "plugins" / "installed_plugins.json").read_text("utf-8"))
+                sw = next(s for k, recs in inst["plugins"].items() if k.startswith("steerwright@") for r in recs
+                          for s in [Path(r["installPath"], "skills", "steerwright", "scripts", "sw.py")] if s.is_file())
+                subprocess.run([sys.executable, str(sw), "serve", "--detach"], capture_output=True, timeout=60,
+                               **OWN_CONSOLE)
+                info = json.loads(f.read_text("utf-8"))
+            except Exception:
+                return None
+    return info["url"]
+
+
+def steerwright_link(page):  # steerwright hub link, '' when not installed; /go/ starts it when it is down
+    if not steerwright_url():
         return ""
+    return '<a class="chip secondary" href="/go/steerwright" title="all projects">steerwright</a>'
 
 
 # ---- remote mode (off unless a person turned it on)
@@ -1792,10 +1836,90 @@ def make_dashboard_server(port=0):
     srv.token = secrets.token_urlsafe(24)
     srv.lock = threading.Lock()
     srv.dashboard = True
+    srv.sets = {}
     p = srv.server_address[1]
     srv.allowed_hosts = {f"127.0.0.1:{p}", f"localhost:{p}"}
     srv.allowed_origins = {f"http://127.0.0.1:{p}", f"http://localhost:{p}"}
     return srv
+
+
+class SetView:
+    """One registered set on the shared server: what a set's own server would hold, under /s/<key>."""
+    dashboard, remote_people = False, None
+
+
+def hub_set(srv, key):
+    view = srv.sets.get(key)
+    if view:
+        return view
+    d, data = load_set(registered_set(key))
+    with srv.lock:
+        view = srv.sets.get(set_key(d))
+        if not view:
+            view = srv.sets[set_key(d)] = SetView()
+            view.set_dir, view.token, view.lock, view.last_good = d, srv.token, threading.Lock(), data
+            view.prefix = "/s/" + set_key(d)
+        srv.sets[key] = view
+    return view
+
+
+def hub_port():
+    try:
+        return int(os.environ.get("ASKWRIGHT_PORT", DEFAULT_PORT))
+    except ValueError:
+        return DEFAULT_PORT
+
+
+def version_tuple(v):
+    return tuple(int(x) for x in re.findall(r"[0-9]+", str(v or "0"))[:3])
+
+
+def hub_info():
+    info = server_info(state_dir() / "dashboard")
+    return info if info and info.get("alive") else None
+
+
+def ensure_hub():
+    """The shared server's record. Starts it when it is down, and replaces one older than this script, on the
+    same port, so a page left open keeps working."""
+    info = hub_info()
+    if info and version_tuple(info.get("version")) >= version_tuple(VERSION):
+        return info
+    if info:
+        stop_quietly(state_dir() / "dashboard")
+    r = subprocess.run([sys.executable, str(Path(__file__).resolve()), "dashboard", "--detach"],
+                       capture_output=True, text=True, encoding="utf-8", timeout=90, **OWN_CONSOLE)
+    for _ in range(25):  # another session may have started it in the same moment
+        info = hub_info()
+        if info:
+            return info
+        time.sleep(0.2)
+    raise AskError("the shared server did not start: " + ((r.stdout or r.stderr).strip()[-600:] or "no output"))
+
+
+def serve_on_hub(d, warns, open_browser):
+    """Hand the set to the shared server: one process and one port for the inbox and every set."""
+    hub = ensure_hub()
+    key = set_key(d)
+    info = {"url": "%ss/%s/" % (hub["url"], key), "pid": hub["pid"], "port": hub["port"], "set_dir": str(d),
+            "started": now(), "hub": True, "key": key, "dashboard_url": hub["url"]}
+    check = {"ok": False}
+    try:
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        req = urllib.request.Request(info["url"] + "api/set", headers={"X-Ask-Token": hub.get("token", "")})
+        with opener.open(req, timeout=10) as r:
+            check = {"ok": json.loads(r.read().decode("utf-8")).get("ok") is True, "api": r.status}
+    except (OSError, ValueError) as e:
+        check["error"] = f"self-check failed: {e}"
+    if not check["ok"]:
+        return emit({"ok": False, "error": check.get("error") or "the shared server did not serve the set",
+                     "check": check})
+    write_json_atomic(d / "server.json", info)
+    append_event(d, {"type": "serve", "port": hub["port"], "pid": hub["pid"]})
+    if open_browser:
+        import webbrowser
+        webbrowser.open(info["url"])
+    return emit(dict(info, ok=True, shared=True, warnings=warns, check=check))
 
 
 def remote_view(out):
@@ -1833,6 +1957,7 @@ def page_set(srv, remote=False):
     except AskError as e:
         data, note = srv.last_good, f"questions.json could not be read ({e}); showing the last good copy"
     roots = media_roots(d, data)
+    pre = getattr(srv, "prefix", "")
 
     def url(item):
         m = dict(item)
@@ -1846,11 +1971,11 @@ def page_set(srv, remote=False):
             m["missing"] = src
             return m
         rel = path.relative_to(roots[i]).as_posix()
-        m["url"] = f"/m/{i}/" + urllib.parse.quote(rel)
+        m["url"] = f"{pre}/m/{i}/" + urllib.parse.quote(rel)
         m["type"] = media_type(src, m.get("type"))
         vtt = path.with_suffix(".vtt")
         if m["type"] == "video" and vtt.is_file():
-            m["captions_url"] = f"/m/{i}/" + urllib.parse.quote(vtt.relative_to(roots[i]).as_posix())
+            m["captions_url"] = f"{pre}/m/{i}/" +urllib.parse.quote(vtt.relative_to(roots[i]).as_posix())
         return m
 
     def blocks(items):
@@ -1971,17 +2096,39 @@ class Handler(BaseHTTPRequestHandler):
     def do_HEAD(self):
         self.do_GET()
 
+    def route(self):
+        """Sets self.ctx and the path inside it: on the shared server /s/<key>/... is one set, the rest the inbox."""
+        self.ctx, path = self.server, urllib.parse.urlsplit(self.path).path
+        m = re.match(r"/s/([0-9a-f]{8,64})(/.*)?$", path) if getattr(self.server, "dashboard", False) else None
+        if m and not m.group(2):
+            self.send_bytes(302, b"", "text/plain", {"Location": path + "/"})
+            return None
+        if m:
+            try:
+                self.ctx = hub_set(self.server, m.group(1))
+            except AskError as e:
+                self.fail(404, str(e))
+                return None
+            path = m.group(2)
+        return path
+
     def do_GET(self):
         if not self.gate():
             return
-        path = urllib.parse.urlsplit(self.path).path
+        path = self.route()
+        if not path:
+            return
+        if path == "/go/steerwright" and not self.by and self.headers.get("Sec-Fetch-Site") != "cross-site":
+            url = steerwright_url(start=True)
+            if url:
+                return self.send_bytes(302, b"", "text/plain", {"Location": url})
         if self.by and not (path in REMOTE_GET or path in PAGE_FILES or path.startswith("/m/")):
             return self.fail(403, "not available remotely")
         if path in ("/", "/index.html", "/sessions") or re.fullmatch(r"/projects/[a-z0-9-]+", path):
-            name = "dashboard.html" if path == "/sessions" or getattr(self.server, "dashboard", False) else "index.html"
+            name = "dashboard.html" if path == "/sessions" or getattr(self.ctx, "dashboard", False) else "index.html"
             if path.startswith("/projects/"):
                 name = "project.html"
-            html = (PAGE / name).read_text(encoding="utf-8").replace("__ASK_TOKEN__", self.server.token).replace("<!--STEERWRIGHT-->", steerwright_link(name))
+            html = (PAGE / name).read_text(encoding="utf-8").replace("__ASK_TOKEN__", self.ctx.token).replace("<!--STEERWRIGHT-->", steerwright_link(name))
             return self.send_bytes(200, html.encode("utf-8"), "text/html; charset=utf-8",
                                    {"Content-Security-Policy": CSP, "Referrer-Policy": "no-referrer"})
         if path in PAGE_FILES:
@@ -1989,7 +2136,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_bytes(200, (PAGE / name).read_bytes(), ctype)
         if path == "/favicon.ico":
             return self.send_bytes(200, (PAGE / "favicon.svg").read_bytes(), "image/svg+xml")
-        if path.startswith("/m/") and not getattr(self.server, "dashboard", False):
+        if path.startswith("/m/") and not getattr(self.ctx, "dashboard", False):
             return self.media(path)
         if path.startswith("/api/"):
             if not self.token_ok():
@@ -2006,11 +2153,11 @@ class Handler(BaseHTTPRequestHandler):
                     return self.send_json(200, project_page(slug))
                 except AskError as e:
                     return self.fail(404, str(e))
-            if path == "/api/set" and not getattr(self.server, "dashboard", False):
-                return self.send_json(200, page_set(self.server, remote=bool(self.by)))
+            if path == "/api/set" and not getattr(self.ctx, "dashboard", False):
+                return self.send_json(200, page_set(self.ctx, remote=bool(self.by)))
             if path == "/api/ping":
-                return self.send_json(200, {"ok": True, "pid": os.getpid(), "set_dir": str(self.server.set_dir),
-                                            "dashboard": getattr(self.server, "dashboard", False)})
+                return self.send_json(200, {"ok": True, "pid": os.getpid(), "set_dir": str(self.ctx.set_dir), "version": VERSION,
+                                            "dashboard": getattr(self.ctx, "dashboard", False)})
         self.fail(404, "not found")
 
     def media(self, path):
@@ -2018,10 +2165,10 @@ class Handler(BaseHTTPRequestHandler):
         if len(parts) < 4 or not parts[2].isdigit():
             return self.fail(404, "not found")
         try:
-            _, data = load_set(self.server.set_dir)
+            _, data = load_set(self.ctx.set_dir)
         except AskError:
-            data = self.server.last_good
-        roots = media_roots(self.server.set_dir, data)
+            data = self.ctx.last_good
+        roots = media_roots(self.ctx.set_dir, data)
         i = int(parts[2])
         if i >= len(roots):
             return self.fail(404, "not found")
@@ -2079,14 +2226,16 @@ class Handler(BaseHTTPRequestHandler):
             return
         if not self.token_ok() or not self.origin_ok():
             return self.fail(403, "missing or wrong token or origin")
-        path = urllib.parse.urlsplit(self.path).path
+        path = self.route()
+        if not path:
+            return
         if self.by:
             self.close_connection = True  # a refused body stays unread, so the connection cannot be reused
             if path not in REMOTE_POST:
                 return self.fail(403, "not available remotely")
             if not self.rate_ok():
                 return self.fail(429, "too many requests; wait a minute")
-        allowed = ("/api/open", "/api/session-state") if getattr(self.server, "dashboard", False) else (
+        allowed = ("/api/open", "/api/session-state") if getattr(self.ctx, "dashboard", False) else (
             "/api/open", "/api/session-state", "/api/answer", "/api/event", "/api/attachment",
             "/api/submit", "/api/retake", "/api/open-ref", "/api/gh-reply")
         try:
@@ -2116,7 +2265,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.fail(400, f"bad JSON: {e}")
         if path == "/api/session-state":
             try:
-                with self.server.lock:
+                with self.ctx.lock:
                     result = update_session_state(payload)
                 return self.send_json(200, result)
             except AskError as e:
@@ -2125,21 +2274,21 @@ class Handler(BaseHTTPRequestHandler):
                 return self.fail(500, f"cannot save session state: {e}")
         if path == "/api/open":
             try:
-                with self.server.lock:
-                    result = open_session(payload.get("id"))
+                with self.ctx.lock:
+                    result = open_session(payload.get("id"), getattr(self.server, "dashboard", False))
                 return self.send_json(200, result)
             except (AskError, OSError, subprocess.SubprocessError) as e:
                 return self.fail(400, str(e))
         if path == "/api/open-ref":
             try:
-                d = self.server.set_dir
+                d = self.ctx.set_dir
                 return self.send_json(200, open_ref_folder(d, load_set(d)[1], payload.get("path")))
             except (AskError, OSError, ValueError) as e:
                 return self.fail(400, str(e))
         if path == "/api/gh-reply":
             try:
-                with self.server.lock:
-                    return self.send_json(200, gh_call(lambda g: g.reply(self.server.set_dir, load_set, read_answers,
+                with self.ctx.lock:
+                    return self.send_json(200, gh_call(lambda g: g.reply(self.ctx.set_dir, load_set, read_answers,
                                                                           write_json_atomic)))
             except (AskError, OSError, subprocess.SubprocessError) as e:
                 return self.fail(400, str(e))
@@ -2155,16 +2304,16 @@ class Handler(BaseHTTPRequestHandler):
                 ev["q"] = payload["q"][:64]
             if self.by:
                 ev["by"] = self.by
-            with self.server.lock:
-                append_event(self.server.set_dir, ev)
+            with self.ctx.lock:
+                append_event(self.ctx.set_dir, ev)
             return self.send_json(200, {"ok": True})
         self.fail(404, "not found")
 
     def question(self, qid):
         try:
-            _, data = load_set(self.server.set_dir)
+            _, data = load_set(self.ctx.set_dir)
         except AskError:
-            data = self.server.last_good
+            data = self.ctx.last_good
         for q in data.get("questions") or []:
             if isinstance(q, dict) and q.get("id") == qid and isinstance(qid, str):
                 return q
@@ -2176,7 +2325,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.fail(400, "unknown question")
         if self.by and q.get("status", "open") != "open":
             return self.fail(409, "this question is no longer open")
-        d = self.server.set_dir
+        d = self.ctx.set_dir
         try:
             study = bool(self.study_data())
             if study and payload.get("choice") is not None:  # the page sends the neutral id; store the real one
@@ -2185,7 +2334,7 @@ class Handler(BaseHTTPRequestHandler):
             a = clean_answer(q, payload, d, study=study)
         except ValueError as e:
             return self.fail(400, str(e))
-        with self.server.lock:
+        with self.ctx.lock:
             if self.study_data():
                 res = load_results(d)
                 if res["attempts"] and res["attempts"][-1].get("submitted"):
@@ -2212,9 +2361,9 @@ class Handler(BaseHTTPRequestHandler):
 
     def study_data(self):
         try:
-            _, data = load_set(self.server.set_dir)
+            _, data = load_set(self.ctx.set_dir)
         except AskError:
-            data = self.server.last_good
+            data = self.ctx.last_good
         return data if is_study(data) else None
 
     def study_step(self, submit):
@@ -2222,8 +2371,8 @@ class Handler(BaseHTTPRequestHandler):
         data = self.study_data()
         if not data:
             return self.fail(400, "this set is not a study set")
-        d = self.server.set_dir
-        with self.server.lock:
+        d = self.ctx.set_dir
+        with self.ctx.lock:
             res = load_results(d)
             cur = res["attempts"][-1] if res["attempts"] else new_attempt(res)
             if submit:
@@ -2257,8 +2406,8 @@ class Handler(BaseHTTPRequestHandler):
         ext = sniff_image(body)
         if not ext:
             return self.fail(400, "only PNG, JPEG, GIF and WebP images can be attached")
-        att = self.server.set_dir / "attachments"
-        with self.server.lock:
+        att = self.ctx.set_dir / "attachments"
+        with self.ctx.lock:
             att.mkdir(exist_ok=True)
             if self.by and sum(1 for _ in att.iterdir()) >= REMOTE_ATTACHMENTS:
                 return self.fail(429, "this set has too many attachments")
@@ -2269,7 +2418,8 @@ class Handler(BaseHTTPRequestHandler):
             tmp.write_bytes(body)
             os.replace(tmp, att / name)
         rel = f"attachments/{name}"
-        self.send_json(200, {"ok": True, "path": rel, "url": "/m/0/" + urllib.parse.quote(rel)})
+        self.send_json(200, {"ok": True, "path": rel,
+                             "url": getattr(self.ctx, "prefix", "") + "/m/0/" + urllib.parse.quote(rel)})
 
 
 def self_check(srv):
@@ -2285,7 +2435,7 @@ def self_check(srv):
                 out["error"] = "the page has no token"
                 return out
         dashboard = getattr(srv, "dashboard", False)
-        req = urllib.request.Request(base + ("/api/sessions" if dashboard else "/api/set"),
+        req = urllib.request.Request(base + ("/api/ping" if dashboard else "/api/set"),  # the inbox can be slow
                                      headers={"X-Ask-Token": srv.token})
         with opener.open(req, timeout=10) as r:
             st = json.loads(r.read().decode("utf-8"))
@@ -2362,13 +2512,19 @@ def desktop_dir():
 def cmd_shortcut(a):
     """Put an Askwright icon on the desktop: it starts the dashboard if stopped and opens it in the browser."""
     import shlex
+    startup = getattr(a, "startup", False)
+    if startup and os.name != "nt":
+        return emit({"ok": False, "error": "--startup is Windows only; elsewhere add 'ask.py dashboard --detach' "
+                                           "to your login items"})
     folder = Path(a.dir).expanduser().resolve() if a.dir else desktop_dir()
+    if startup and not a.dir:
+        folder = Path(os.environ.get("APPDATA", "")) / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "Startup"
     if not folder.is_dir():
         return emit({"ok": False, "error": f"no such folder: {folder}"})
     home = state_dir()
     home.mkdir(parents=True, exist_ok=True)
     script = str(Path(__file__).resolve())
-    args = ["dashboard", "--detach", "--open"]
+    args = ["dashboard", "--detach"] + ([] if startup else ["--open"])
     icon = None
     if os.name == "nt":
         icon = home / "askwright.ico"
@@ -2376,7 +2532,7 @@ def cmd_shortcut(a):
         exe = Path(sys.executable)
         pyw = exe.with_name("pythonw.exe")
         target = pyw if pyw.exists() else exe  # pythonw: no console window flashes up
-        path = folder / "Askwright.lnk"
+        path = folder / ("Askwright server.lnk" if startup else "Askwright.lnk")
 
         def q(v):
             return "'" + str(v).replace("'", "''") + "'"
@@ -2452,8 +2608,9 @@ def detach(a):
     cmd = [sys.executable, str(Path(__file__).resolve()), a.cmd]
     if not dashboard:
         cmd.append(str(d))
-    cmd.extend(["--port", str(a.port)])
-    for flag in ("force", "no_probe", "open", "remote"):
+    if a.port is not None:
+        cmd.extend(["--port", str(a.port)])
+    for flag in ("force", "no_probe", "open", "remote", "own"):
         if getattr(a, flag, False):
             cmd.append("--" + flag.replace("_", "-"))
     for person in getattr(a, "for", None) or []:
@@ -2476,6 +2633,8 @@ def detach(a):
             info.pop("token", None)
             return emit(dict(info, ok=True, detached=True))
         if proc.poll() is not None:
+            if dashboard and hub_info():  # another session started it in the same moment
+                return show_existing(hub_info(), False)
             tail = (d / "server.log").read_text(encoding="utf-8", errors="replace")[-1500:]
             return emit({"ok": False, "error": "the server exited", "log": tail})
         time.sleep(0.2)
@@ -2519,12 +2678,22 @@ def cmd_dashboard(a):
     if a.detach:
         return detach(a)
     d.mkdir(parents=True, exist_ok=True)
-    # Preserve the bookmark across restarts unless the caller requests a particular port.
-    port = a.port or (info or {}).get("port", 0)
-    try:
-        srv = make_dashboard_server(port)
-    except OSError as e:
-        return emit({"ok": False, "error": f"cannot listen on 127.0.0.1:{port}: {e}"})
+    # One fixed address, so bookmarks and open pages survive restarts; a taken port falls back to the last one used.
+    want, last = hub_port(), (info or {}).get("port", 0)
+    ports = [a.port] if a.port is not None else list(dict.fromkeys([want, last, 0] if want else [last, 0]))
+    for port in ports:
+        try:
+            srv = make_dashboard_server(port)
+            break
+        except OSError as e:
+            err = f"cannot listen on 127.0.0.1:{port}: {e}"
+            for _ in range(150 if port and port == want else 1):  # another start holds it: wait for its record
+                other = hub_info()
+                if other:
+                    return show_existing(other, a.open)
+                time.sleep(0.2)
+    else:
+        return emit({"ok": False, "error": err})
     return run_server(srv, d, [], a.open)
 
 
@@ -2540,6 +2709,12 @@ def cmd_serve(a):
             return emit({"ok": False, "error": "study sets stay local"})
         people = remote_people(cfg, getattr(a, "for"))
     info = server_info(d)
+    shared = not a.remote and a.port is None and not a.own
+    if info and info.get("hub"):
+        info = None  # the shared server is checked, and restarted if need be, below
+    elif info and info.get("alive") and shared:  # its own server from before: move it to the shared one
+        stop_quietly(d)
+        info = None
     if info and info.get("alive"):
         if a.remote and info.get("remote_people") != people:  # keep the port, so open local pages can reconnect
             a.port = info["port"]
@@ -2552,10 +2727,12 @@ def cmd_serve(a):
         return emit({"ok": False, "error": "lint failed; fix the errors or pass --force", "errors": errs,
                      "warnings": warns})
     register_set(d)
+    if shared:
+        return serve_on_hub(d, warns, a.open)
     if a.detach:
         return detach(a)
     try:
-        srv = make_server(d, a.port, remote=[p for p in people if p != load_remote()["owner"].casefold()]
+        srv = make_server(d, a.port or 0, remote=[p for p in people if p != load_remote()["owner"].casefold()]
                           if a.remote else None)
     except OSError as e:
         return emit({"ok": False, "error": f"cannot listen on 127.0.0.1:{a.port}: {e}"})
@@ -2572,7 +2749,7 @@ def run_server(srv, d, warns, open_browser):
         return emit({"ok": False, "error": check.get("error"), "check": check})
     port = srv.server_address[1]
     info = {"url": f"http://127.0.0.1:{port}/", "pid": os.getpid(), "port": port, "set_dir": str(d),
-            "started": now(), "token": srv.token}
+            "started": now(), "token": srv.token, "version": VERSION}
     dashboard = getattr(srv, "dashboard", False)
     info["dashboard_url"] = info["url"] if dashboard else info["url"] + "sessions"
     if getattr(srv, "remote_people", None) is not None:
@@ -2636,6 +2813,10 @@ def stop_quietly(d):
     info = server_info(d, check=False)
     if not info:
         return {"ok": True, "stopped": False, "note": "no server.json: nothing is serving this set"}
+    if info.get("hub"):
+        (d / "server.json").unlink(missing_ok=True)
+        return {"ok": True, "stopped": False, "note": "the shared server serves this set and stays up for the "
+                                                      "others; ask.py dashboard --stop stops it"}
     unexpose(info)
     p = ping(info)
     if not p or p.get("pid") != info.get("pid") or p.get("set_dir") != str(d):
@@ -3157,7 +3338,8 @@ def main(argv=None):
         s.add_argument("set")
         s.add_argument("--no-probe", action="store_true", help="skip the ffprobe codec check")
         if name == "serve":
-            s.add_argument("--port", type=int, default=0)
+            s.add_argument("--port", type=int, help="give the set its own server on this port (0: any free one)")
+            s.add_argument("--own", action="store_true", help="its own server, not the shared one")
             s.add_argument("--open", action="store_true", help="open the page in the default browser")
             s.add_argument("--detach", action="store_true", help="run in the background and return at once")
             s.add_argument("--force", action="store_true", help="serve despite lint errors")
@@ -3258,14 +3440,15 @@ def main(argv=None):
     s.add_argument("--batch")
     s = sub.add_parser("shortcut", help="put an icon on the desktop that starts and opens the dashboard")
     s.add_argument("--dir", default="", help="folder for the shortcut instead of the desktop")
+    s.add_argument("--startup", action="store_true", help="start the shared server at sign-in instead (Windows)")
     s = sub.add_parser("gh-post", help="post the questions to a GitHub issue or pull request comment")
     s.add_argument("set"); s.add_argument("--repo", required=True); s.add_argument("--issue", type=int, required=True)
     s = sub.add_parser("gh-pull", help="make a local set from a GitHub askwright comment")
     s.add_argument("ref", help="OWNER/REPO#N or a comment URL"); s.add_argument("--out")
     sub.add_parser("gh-reply", help="post this set's answers back to its GitHub comment").add_argument("set")
     sub.add_parser("gh-answers", help="read answers posted by gh-reply").add_argument("ref")
-    s = sub.add_parser("dashboard", help="serve the shared session dashboard")
-    s.add_argument("--port", type=int, default=0)
+    s = sub.add_parser("dashboard", help="run the shared server: the inbox and every registered set, on one port")
+    s.add_argument("--port", type=int, help="default 47631, or ASKWRIGHT_PORT")
     s.add_argument("--detach", action="store_true")
     s.add_argument("--open", action="store_true")
     s.add_argument("--stop", action="store_true")

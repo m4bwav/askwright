@@ -211,6 +211,13 @@ Write an entry the moment a real signal happens: a user correction, the same err
 - Scope: skill:askwright
 - Status: active · helpful 0 · harmful 0 · last_confirmed 2026-11-12
 
+### L-027 · 2026-11-12 · `shared-server-start-race`: two starts at once put the shared server on a random port
+- Trigger: a timed-out `dashboard --detach` and a retry both started; the first held 47631 while it self-checked, the second fell back to port 0 and overwrote server.json, so the record pointed at the wrong server. The first start had timed out because the self-check listed 182 cold sets (45 s).
+- Rule: when the wanted port is taken, wait for a live server.json before falling back; the inbox self-check pings instead of listing sessions.
+- Evidence: C-20261112-2; reproduced on the owner's machine 2026-11-12.
+- Scope: skill:askwright
+- Status: active · helpful 0 · harmful 0 · last_confirmed 2026-11-12
+
 <!-- Example (delete once you have a real entry):
 ### L-001 · 2026-10-24 · One-line lesson in plain words
 - Trigger: what happened, with dates or counts

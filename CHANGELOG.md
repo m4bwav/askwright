@@ -6,6 +6,13 @@ Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (ID
 
 ## Unreleased
 
+## 0.29.1
+
+### C-20261113-2 · 2026-11-13 · warm steerwright when the shared server starts
+- because: user request follow-up (the first `/steer/` load after a restart took minutes while steerwright scanned every project cold; later loads took 0.03 s)
+- files: scripts/ask.py (make_dashboard_server)
+The shared server loads steerwright in the background as it starts, which starts steerwright's own cache warmer, so the first click finds the scan done or under way.
+
 ## 0.29.0
 
 ### C-20261113-1 · 2026-11-13 · steerwright's pages on the shared server at /steer/

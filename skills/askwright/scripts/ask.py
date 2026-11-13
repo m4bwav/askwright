@@ -51,7 +51,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-VERSION = "0.29.0"
+VERSION = "0.29.1"
 DEFAULT_PORT = 47631  # the shared server's port; ASKWRIGHT_PORT moves it (0 picks a free one)
 PAGE = Path(__file__).resolve().parent / "page"
 BUNDLE = re.compile(r"^(those|these|both|all of)\b|\bplus\b", re.I)
@@ -1877,6 +1877,8 @@ def make_dashboard_server(port=0):
     srv.lock = threading.Lock()
     srv.dashboard = True
     srv.sets = {}
+    if port or os.environ.get("ASKWRIGHT_WARM_STEER"):  # warm steerwright's project scan before the first click
+        threading.Thread(target=steer_module, daemon=True).start()
     p = srv.server_address[1]
     srv.allowed_hosts = {f"127.0.0.1:{p}", f"localhost:{p}"}
     srv.allowed_origins = {f"http://127.0.0.1:{p}", f"http://localhost:{p}"}

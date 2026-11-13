@@ -214,7 +214,8 @@ class LintTests(unittest.TestCase):
     def test_guess_rules(self):
         self.assertError(qmod("music", lambda q: q.pop("guess")), "guess")
         self.assertError(qmod("music", lambda q: q["guess"].pop("confidence")), "guess-confidence")
-        self.assertError(qmod("music", lambda q: q["guess"].update(confidence="medium")), "guess-confidence")
+        self.assertError(qmod("music", lambda q: q["guess"].update(confidence="sure")), "guess-confidence")
+        self.assertWarning(qmod("music", lambda q: q["guess"].update(confidence="medium")), "guess-confidence")
         self.assertError(qmod("music", lambda q: q["guess"].update(option="nope")), "guess-option")
         self.assertError(qmod("cuts", lambda q: q["guess"].update(options=["s3", "zz"])), "guess-option")
         self.assertError(qmod("order", lambda q: q["guess"].update(order=["news"])), "guess-option")
@@ -1360,6 +1361,25 @@ class CliTests(unittest.TestCase):
         data = json.loads((nd / "questions.json").read_text(encoding="utf-8"))
         self.assertEqual((data["id"], data["askwright"]), ("fresh", 1))
         self.assertEqual(run_cli("new", nd, "--title", "Again", "--project", "P", "--project-description", "D")[0], 1)
+
+    def test_templates_shipped_lint_and_seed_new(self):
+        code, d = run_cli("templates")
+        keys = [t["key"] for t in d["templates"]]
+        self.assertIn("askwright:project-setup", keys)
+        plug = self.s.tmp / "plug"
+        (plug / "ask-templates").mkdir(parents=True)
+        (plug / "ask-templates" / "mine.json").write_text(json.dumps({"title": "T", "questions": []}), encoding="utf-8")
+        with mock.patch.dict(os.environ, {"ASKWRIGHT_TEMPLATE_PATH": str(plug / "ask-templates")}):
+            self.assertIn("plug:mine", [t["key"] for t in run_cli("templates")[1]["templates"]])
+        for t in d["templates"]:
+            if t["key"].startswith("askwright:"):  # every template askwright ships must lint clean once filled
+                nd = self.s.tmp / "ask" / t["key"].split(":")[1]
+                code, out = run_cli("new", nd, "--title", "x", "--project", "P", "--project-description", "D",
+                                    "--template", t["key"], "--var", "project=Demo")
+                self.assertEqual((code, out["unfilled"]), (0, []), out)
+                code, out = run_cli("lint", nd, "--no-probe")
+                self.assertTrue(out["ok"], out)
+                self.assertNotIn("{{", (nd / "questions.json").read_text(encoding="utf-8"))
 
     def test_refs_and_tabs_lint(self):
         good = {"label": "Repo", "url": "https://github.com/o/r"}

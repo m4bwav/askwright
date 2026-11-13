@@ -134,6 +134,11 @@ Report in one or two lines before acting: "6 answered, 1 note only (g08-arrow), 
 
 - After acting on answers: `ask.py consume <set> --by <session> --note <use>` (the Unconsumed tab lists
   read sets without it), then `ask.py close <set> <qid>`.
+- Never edit `questions.json` by hand: `ask.py add` lints before it writes. If you must, run `ask.py lint <set>`
+  straight after; a set that fails lint will not open from the dashboard. Confidence is only `high` or `low`.
+- Setup questions: `ask.py templates` lists ready-made question sets that askwright, `~/.askwright/templates/`
+  and installed plugins ship (`ask-templates/*.json`); `ask.py new <dir> --template <key> --var project=X`
+  seeds a set from one. Set each guess for the project, then lint and serve.
 - A new round (rerolled takes, a follow-up): `ask.py add <set> <questions.json>`; give each new question
   `supersedes: "<old id>"` and the old one is marked superseded. Never leave a replaced question open.
 - `ask.py close <set> <qid> --withdrawn "<reason>"` for a question that no longer matters.

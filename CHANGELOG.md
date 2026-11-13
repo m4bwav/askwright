@@ -6,6 +6,13 @@ Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (ID
 
 ## Unreleased
 
+## 0.30.0
+
+### C-20261113-3 · 2026-11-13 · confidence "medium" warns; dashboard names lint failures; question templates
+- because: user request (a set appended by hand with `"confidence": "medium"` and no `background` would not open: "lint failed; run ask.py lint on the set")
+- files: scripts/ask.py (lint_set, open_session, template_dirs, find_templates, cmd_templates, cmd_new), ask-templates/project-setup.json, SKILL.md (Step 6), references/schema.md (Templates), tests/test_ask.py
+"medium" (and med, moderate, mid) is now a warning read as low, which is how the page already showed it. The dashboard error lists the first three failures and the set path. Plugins can ship `ask-templates/*.json` for their major setup questions; `ask.py templates` lists them and `ask.py new --template KEY --var name=value` seeds a set. askwright ships `project-setup` (visibility, licence, outputs folder, autonomy).
+
 ## 0.29.1
 
 ### C-20261113-2 · 2026-11-13 · warm steerwright when the shared server starts

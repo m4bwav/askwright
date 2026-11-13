@@ -1,0 +1,60 @@
+{
+  "askwright_template": 1,
+  "title": "Setting up {{project}}",
+  "when": "setup",
+  "description": "The major calls almost every new project or plugin setup needs: visibility, licence, where outputs go and how far the agent may go alone.",
+  "context": "Setup questions for {{project}}, from the askwright project-setup template.",
+  "questions": [
+    {
+      "id": "visibility",
+      "kind": "choice",
+      "title": "Public or private",
+      "question": "Should {{project}} live in a public or a private repository?",
+      "why": "Decides where it is pushed, whether CI runs on hosted runners and what may be committed.",
+      "background": "A new project needs a home before the first push. Public repositories get free hosted CI and can be shared; private ones keep work and assets out of sight but need self-hosted runners for CI.",
+      "options": [
+        {"id": "public", "label": "Public repository", "consequence": "Nothing private, licensed or personal is committed."},
+        {"id": "private", "label": "Private repository", "consequence": "CI runs on a self-hosted runner."},
+        {"id": "local", "label": "No remote yet, keep it local"}
+      ],
+      "guess": {"option": "private", "confidence": "low", "why": "Safer default until it is ready to share."}
+    },
+    {
+      "id": "licence",
+      "kind": "choice",
+      "title": "Licence",
+      "question": "Which licence should {{project}} carry?",
+      "why": "Decides what others may do with the code and which assets can be included.",
+      "background": "Every shared repository needs a licence file; without one nobody may legally reuse it. MIT is short and permissive; Apache-2.0 adds a patent grant; all rights reserved keeps everything.",
+      "options": [
+        {"id": "mit", "label": "MIT"},
+        {"id": "apache", "label": "Apache-2.0"},
+        {"id": "reserved", "label": "All rights reserved (no licence file)"}
+      ],
+      "guess": {"option": "mit", "confidence": "low", "why": "The usual choice for small tools and plugins."}
+    },
+    {
+      "id": "outputs",
+      "kind": "text",
+      "title": "Where outputs go",
+      "question": "Which folder should generated outputs (renders, builds, exports) be written to?",
+      "why": "Keeps large generated files out of the repository and in one place you can find.",
+      "background": "Setup scripts write outputs somewhere by default. A folder outside the repository keeps commits small; a folder inside it (git-ignored) keeps everything together.",
+      "guess": {"text": "an out/ folder inside the project, git-ignored", "confidence": "low", "why": "Easy to find and never committed."}
+    },
+    {
+      "id": "autonomy",
+      "kind": "choice",
+      "title": "How far to go alone",
+      "question": "How far may the agent go on {{project}} without asking?",
+      "why": "Sets when work stops for your review and when it carries on.",
+      "background": "Agents can stop at a pull request, merge their own once checks pass, or also tag releases. Publishing to a package registry always waits for an explicit go-ahead.",
+      "options": [
+        {"id": "pr", "label": "Open pull requests; I merge"},
+        {"id": "merge", "label": "Merge own pull requests once checks pass"},
+        {"id": "release", "label": "Merge and cut GitHub releases too"}
+      ],
+      "guess": {"option": "merge", "confidence": "low", "why": "Matches how most of your own repositories run."}
+    }
+  ]
+}

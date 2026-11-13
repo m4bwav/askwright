@@ -542,6 +542,51 @@ class ShortcutTests(unittest.TestCase):
         self.assertIn("no such folder", out["error"])
 
 
+class SteerMountTests(ServerCase):
+    """0.29.0: the shared server carries steerwright's pages at /steer/, sandboxed, when sw.py is found."""
+
+    FAKE = ("def render(path, query='', base=''):\n"
+            "    if path == '/':\n"
+            "        return 200, \"<a href='%s/p/x'>x</a><script>1</script>\" % base, 'text/html; charset=utf-8'\n"
+            "    return 404, 'nope', 'text/plain'\n")
+
+    def setUp(self):
+        super().setUp()
+        self.srv.shutdown()
+        self.srv.server_close()
+        self.fake = self.s.tmp / "sw.py"
+        self.fake.write_text(self.FAKE, encoding="utf-8")
+        self.env = mock.patch.dict(os.environ, {"STEERWRIGHT_SCRIPT": str(self.fake)})
+        self.env.start()
+        self.srv = ask.make_dashboard_server()
+        self.port = self.srv.server_address[1]
+        threading.Thread(target=self.srv.serve_forever, daemon=True).start()
+
+    def tearDown(self):
+        super().tearDown()
+        self.env.stop()
+
+    def test_pages_are_sandboxed_and_local_only(self):
+        st, hd, data = self.req("GET", "/steer/")
+        self.assertEqual(st, 200)
+        self.assertIn(b"href='/steer/p/x'", data)
+        self.assertIn("sandbox", hd["content-security-policy"])
+        self.assertNotIn("allow-same-origin", hd["content-security-policy"])
+        self.assertNotIn(self.srv.token.encode(), data)
+        self.assertEqual(self.req("GET", "/steer")[0], 302)
+        self.assertEqual(self.req("GET", "/steer/missing")[0], 404)
+        st, hd, _ = self.req("GET", "/go/steerwright")
+        self.assertEqual((st, hd["location"]), (302, "/steer/"))
+        self.assertEqual(self.req("GET", "/steer/", headers={"X-Forwarded-For": "1.2.3.4"})[0], 403)
+        self.assertEqual(self.req("GET", "/steer/", host="evil.example")[0], 403)
+
+    def test_absent_steerwright_is_a_404_and_no_chip(self):
+        with mock.patch.object(ask, "steerwright_script", return_value=None), \
+                mock.patch.dict(os.environ, {"STEERWRIGHT_HOME": str(self.s.tmp / "none")}):
+            self.assertEqual(self.req("GET", "/steer/")[0], 404)
+            self.assertEqual(ask.steerwright_link("x"), "")
+
+
 class DashboardTests(ServerCase):
     def setUp(self):
         super().setUp()
@@ -2216,7 +2261,8 @@ class PicksTests(unittest.TestCase):
         self.assertEqual(run_cli("picks", "export", d["sets"][0]["path"], "--out", out)[0], 1)
 class SteerwrightLink(unittest.TestCase):
     def test_link_only_when_server_json_has_url(self):
-        with tempfile.TemporaryDirectory() as d, mock.patch.dict(os.environ, {"STEERWRIGHT_HOME": d}):
+        with tempfile.TemporaryDirectory() as d, mock.patch.dict(os.environ, {"STEERWRIGHT_HOME": d}), \
+                mock.patch.object(ask, "steerwright_script", return_value=None):
             self.assertEqual(ask.steerwright_link("x"), "")
             Path(d, "server.json").write_text('{"url": "http://127.0.0.1:47630/"}', encoding="utf-8")
             link = ask.steerwright_link("x")

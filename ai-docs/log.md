@@ -165,3 +165,6 @@ Mark's sessions list answered "Cannot open ...: session server returned no JSON:
 
 ## 2026-11-12 · One server, one port (0.28.0)
 Owner asked for askwright and its linked pages to stop going down and changing ports. Every `serve` now hands the set to the dashboard server on 127.0.0.1:47631 (`/s/<key>/`), started or upgraded on demand; `--own` keeps the old per-set server. The steerwright chip goes through `/go/steerwright`, which starts steerwright when it is down (steerwright already serves the chainwright and grindwright indexes, on its fixed 47630). `shortcut --startup` puts a sign-in shortcut in the Windows Startup folder. Found on the way: a cold inbox of 182 sets took 45 s to list, which timed out the server's self-check (now a ping), and two concurrent starts raced onto a random port (L-027). Install ceiling raised 384 to 400 KB for it. Per-set servers already running keep their old ports until each set is served again.
+
+## 2026-11-13 · steerwright on the same server (0.29.0)
+Owner: yes to one server for steerwright too, but steerwright must still run without askwright, and pick another port when one is taken. askwright now mounts steerwright 0.5.0's `render()` at `/steer/` (sandboxed CSP). Stopped the 11 per-set servers left from before 0.28.0 by PID (owner's go-ahead). Pair: steerwright 0.5.0.

@@ -6,6 +6,13 @@ Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (ID
 
 ## Unreleased
 
+## 0.28.0
+
+### C-20261112-2 · 2026-11-12 · one server and one port for the inbox and every set
+- because: user request ("askwright and links to other products are often down and I have to restart it and then its on another port ... could they all go off one server with a semi constant port?"), L-027
+- files: scripts/ask.py (DEFAULT_PORT, set_key, hub_set, ensure_hub, serve_on_hub, Handler.route, cmd_serve `--own`, cmd_dashboard port order, open_session, steerwright_url and /go/steerwright, shortcut `--startup`, self_check pings the inbox), page/app.js (BASE prefix), SKILL.md (Step 3), README.md (dashboard), scripts/budget.py (install ceiling 384 to 400 KB), tests (test_serve_shares_one_server_and_port, DashboardTests, SteerwrightLink, DashboardPageTests)
+`serve` no longer starts a server per set on a random port. The dashboard server answers on 127.0.0.1:47631 and serves each registered set under `/s/<key>/` with the same token, Host and Origin checks; a set started with `--own`, `--port` or `--remote` keeps its own server. Two starts at once no longer race onto a random port: the loser waits for the winner's record. The steerwright chip starts steerwright when it is down. `shortcut --startup` starts the server at sign-in on Windows.
+
 ## 0.27.0
 
 ### C-20261112-1 · 2026-11-12 · "Open questions" works from a server that outlived its console

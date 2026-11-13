@@ -86,7 +86,7 @@ Errors block serving; fix them, do not `--force` past them. Warnings are judgmen
 python <this folder>/scripts/ask.py serve <set> --detach
 ```
 
-It lints, binds 127.0.0.1 on a free port, self-checks, prints `{"ok": true, "url": ...}` and writes `server.json`.
+It lints, serves it on 127.0.0.1:47631, self-checks, prints `{"ok": true, "url": ...}` and writes `server.json`.
 Give the person the URL with one line on what the set decides and how many questions. A running server is
 reused. `--open` opens their browser. Other devices (opt-in): `references/remote.md`;
 GitHub: `references/github.md`.

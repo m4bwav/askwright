@@ -5,6 +5,7 @@ Run from the repository root: python tests/test_ask.py
 
 import copy
 import http.client
+import urllib.parse
 import json
 import os
 import shutil
@@ -32,11 +33,12 @@ _env = None
 def setUpModule():
     global _home, _env
     _home = tempfile.TemporaryDirectory(prefix="askw-registry-")
-    _env = mock.patch.dict(os.environ, {"ASKWRIGHT_HOME": _home.name})
+    _env = mock.patch.dict(os.environ, {"ASKWRIGHT_HOME": _home.name, "ASKWRIGHT_PORT": "0"})
     _env.start()
 
 
 def tearDownModule():
+    run_cli("dashboard", "--stop")
     _env.stop()
     _home.cleanup()
 
@@ -554,6 +556,7 @@ class DashboardTests(ServerCase):
 
     def tearDown(self):
         super().tearDown()
+        run_cli("dashboard", "--stop")  # a set opened through a set server starts the shared one
         self.env.stop()
         self.home.cleanup()
 
@@ -782,18 +785,16 @@ class DashboardTests(ServerCase):
         sid = ask.register_set(self.s.dir)
         answers = {"askwright": 1, "rev": 1, "answers": {"music": {"choice": "tone", "q_rev": 1}}}
         ask.write_json_atomic(self.s.dir / "answers.json", answers)
-        try:
-            status, opened = self.api("/api/open", {"id": sid})
-            self.assertEqual(status, 200, opened)
-            first = ask.server_info(self.s.dir)
-            self.assertTrue(first["alive"])
-            self.assertEqual(opened["url"], first["url"])
-            self.assertEqual(self.api("/api/open", {"id": sid})[1]["url"], opened["url"])
-            self.assertEqual(ask.server_info(self.s.dir)["pid"], first["pid"])
-            self.assertEqual(run_cli("stop", self.s.dir)[0], 0)
-            status, opened = self.api("/api/open", {"id": sid})
-            self.assertEqual(status, 200, opened)
-            self.assertNotEqual(ask.server_info(self.s.dir)["pid"], first["pid"])
+        try:  # 0.28.0: the shared server serves the set itself, at a fixed address, with no new process
+            with mock.patch.object(ask.subprocess, "run") as run:
+                status, opened = self.api("/api/open", {"id": sid})
+                self.assertEqual(status, 200, opened)
+                self.assertEqual(opened["url"], "/s/%s/" % ask.set_key(self.s.dir.resolve()))
+                self.assertEqual(self.api("/api/open", {"id": sid})[1]["url"], opened["url"])
+            run.assert_not_called()
+            status, body = self.api(opened["url"] + "api/set")
+            self.assertEqual(status, 200, body)
+            self.assertEqual(body["answers"], answers["answers"])
             self.assertEqual(ask.load_answers(self.s.dir), answers)
         finally:
             run_cli("stop", self.s.dir)
@@ -810,11 +811,11 @@ class DashboardTests(ServerCase):
     def test_open_names_the_exit_code_when_the_child_prints_nothing(self):
         sid = ask.register_set(self.s.dir)
         dead = subprocess.CompletedProcess([], 0xC0000142 - 2**32, stdout="", stderr="")
-        with mock.patch.object(ask.subprocess, "run", return_value=dead) as run:
-            status, result = self.api("/api/open", {"id": sid})
-        self.assertEqual(status, 400)
-        self.assertIn("exit code 0xc0000142", result["error"])
-        self.assertIn("printed nothing", result["error"])
+        with mock.patch.object(ask.subprocess, "run", return_value=dead) as run:  # a set's own server opening another
+            with self.assertRaises(ask.AskError) as e:
+                ask.open_session(sid)
+        self.assertIn("exit code 0xc0000142", str(e.exception))
+        self.assertIn("printed nothing", str(e.exception))
         if os.name == "nt":
             self.assertEqual(run.call_args.kwargs.get("creationflags"), 0x08000000)
 
@@ -1365,14 +1366,43 @@ class CliTests(unittest.TestCase):
         for bad in ({"url": "javascript:alert(1)", "label": "x"}, {"url": "http://x/"}, "http://x/"):
             self.assertIn("back-link", lint(lambda data, bad=bad: data.update(back_link=bad))[0])
 
+    def test_serve_shares_one_server_and_port(self):
+        other = TempSet()
+        try:
+            code, a = run_cli("serve", self.s.dir, "--no-probe")
+            self.assertEqual(code, 0, a)
+            code, b = run_cli("serve", other.dir, "--no-probe", "--detach")
+            self.assertEqual(code, 0, b)
+            self.assertTrue(a["shared"] and b["shared"])
+            self.assertEqual((a["pid"], a["port"]), (b["pid"], b["port"]))
+            self.assertNotEqual(a["url"], b["url"])
+            self.assertTrue(a["url"].startswith(a["dashboard_url"] + "s/"))
+            info = ask.server_info(ask.state_dir() / "dashboard")
+            c = http.client.HTTPConnection("127.0.0.1", info["port"], timeout=10)
+            c.request("GET", urllib.parse.urlsplit(b["url"]).path + "api/set",
+                      headers={"X-Ask-Token": info["token"], "Host": "127.0.0.1:%d" % info["port"]})
+            r = c.getresponse()
+            body = json.loads(r.read())
+            c.close()
+            self.assertEqual(r.status, 200, body)
+            self.assertTrue(all(m["url"].startswith(urllib.parse.urlsplit(b["url"]).path + "m/")
+                                for q in body["questions"] for m in q.get("media") or [] if m.get("url")))
+            self.assertTrue(run_cli("status", self.s.dir)[1]["server"]["alive"])
+            code, st = run_cli("stop", self.s.dir)
+            self.assertFalse(st["stopped"])  # the others still use it
+            self.assertTrue(ask.server_info(other.dir)["alive"])
+        finally:
+            run_cli("dashboard", "--stop")
+            other.cleanup()
+
     def test_serve_detach_status_stop(self):
-        code, d = run_cli("serve", self.s.dir, "--detach", "--no-probe")
+        code, d = run_cli("serve", self.s.dir, "--detach", "--no-probe", "--own")
         self.assertEqual(code, 0, d)
         try:
             self.assertTrue(d["url"].startswith("http://127.0.0.1:"))
             sj = json.loads((self.s.dir / "server.json").read_text(encoding="utf-8"))
             self.assertEqual(sj["pid"], d["pid"])
-            code2, d2 = run_cli("serve", self.s.dir, "--no-probe")
+            code2, d2 = run_cli("serve", self.s.dir, "--no-probe", "--own")
             self.assertTrue(d2.get("already_running"), d2)
             code, st = run_cli("status", self.s.dir)
             self.assertEqual(st["server"]["url"], d["url"])
@@ -2190,7 +2220,7 @@ class SteerwrightLink(unittest.TestCase):
             self.assertEqual(ask.steerwright_link("x"), "")
             Path(d, "server.json").write_text('{"url": "http://127.0.0.1:47630/"}', encoding="utf-8")
             link = ask.steerwright_link("x")
-            self.assertIn('href="http://127.0.0.1:47630/"', link)
+            self.assertIn('href="/go/steerwright"', link)
             self.assertIn('title="all projects"', link)
             for name in ("index.html", "dashboard.html", "project.html"):
                 self.assertIn("<!--STEERWRIGHT-->", (ask.PAGE / name).read_text(encoding="utf-8"))

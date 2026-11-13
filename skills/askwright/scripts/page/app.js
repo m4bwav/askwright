@@ -3,6 +3,7 @@
 "use strict";
 (() => {
   const TOKEN = document.querySelector('meta[name="ask-token"]').content;
+  const BASE = (location.pathname.match(/^[/]s[/][0-9a-f]+/) || [""])[0];  // "/s/<key>" on the shared server
   const $ = (sel, el = document) => el.querySelector(sel);
   const main = $("#main");
   const STATE_TEXT = { unanswered: "Not answered", answered: "Answered", unsure: "Not sure", note_only: "Note only, needs a choice" };
@@ -41,7 +42,7 @@
     const headers = Object.assign({ "X-Ask-Token": TOKEN }, opts.headers || {});
     let r;
     try {
-      r = await fetch(path, Object.assign({}, opts, { headers }));
+      r = await fetch(BASE + path, Object.assign({}, opts, { headers }));
     } catch (e) {
       throw new Error("the askwright server is not answering");
     }
@@ -264,7 +265,7 @@
   }
   window.addEventListener("pagehide", () => {
     for (const qid of S.dirty) {
-      fetch("/api/answer", { method: "POST", keepalive: true, body: JSON.stringify(body(qid)),
+      fetch(BASE + "/api/answer", { method: "POST", keepalive: true, body: JSON.stringify(body(qid)),
         headers: { "Content-Type": "application/json", "X-Ask-Token": TOKEN } });
     }
   });
@@ -755,7 +756,7 @@
       toast(ok ? "Copied " + where : "Could not copy; your browser blocked the clipboard.", !ok);
     } });
     const open = r.path && r.exists ? h("button", { type: "button", class: "btn small", text: "Open folder", onclick: async () => {
-      const res = await fetch("/api/open-ref", { method: "POST", headers: { "Content-Type": "application/json", "X-Ask-Token": TOKEN }, body: JSON.stringify({ path: r.path }) }).catch(() => null);
+      const res = await fetch(BASE + "/api/open-ref", { method: "POST", headers: { "Content-Type": "application/json", "X-Ask-Token": TOKEN }, body: JSON.stringify({ path: r.path }) }).catch(() => null);
       toast(res && res.ok ? "Opened the folder on this computer." : "Could not open the folder; copy the path instead.", !(res && res.ok));
     } }) : null;
     return h("li", null,
@@ -982,7 +983,7 @@
       h("button", { type: "button", class: "link", "aria-label": "Remove the time " + fmtT(tc.t), text: "×", disabled: !editing,
         onclick: () => { draft(q.id).timecodes.splice(i, 1); changed(q.id, true); drawChips(); } }))));
     const drawAtts = () => atts.replaceChildren(...(draft(q.id).attachments || []).map((p, i) => h("figure", null,
-      h("img", { src: "/m/0/" + p.split("/").map(encodeURIComponent).join("/"), alt: "Attached image " + (i + 1) }),
+      h("img", { src: BASE + "/m/0/" + p.split("/").map(encodeURIComponent).join("/"), alt: "Attached image " + (i + 1) }),
       h("button", { type: "button", class: "btn small", text: "Remove", "aria-label": "Remove attached image " + (i + 1), disabled: !editing,
         onclick: () => { draft(q.id).attachments.splice(i, 1); changed(q.id, true); drawAtts(); } }))));
     S.drawAtts = drawAtts;

@@ -106,7 +106,15 @@ lists every field.
 
     python skills/askwright/scripts/ask.py dashboard --detach --open
 
-Or run `ask.py shortcut` once for a desktop icon that starts and opens it. Opening a set from the dashboard restarts that set's page too.
+Or run `ask.py shortcut` once for a desktop icon that starts and opens it, and `ask.py shortcut --startup` (Windows)
+to start it at sign-in.
+
+One server, one port. Since 0.28.0 the inbox and every set run in a single process on `http://127.0.0.1:47631/`
+(`ASKWRIGHT_PORT` moves it); a set's page is `/s/<key>/` under it, so links and bookmarks survive restarts.
+`serve` starts the server when it is down and replaces one older than the script, on the same port. If another
+program holds the port, it falls back to the port it used last. `serve --own` (or `--port N`, or `--remote`)
+still gives a set a server of its own. The steerwright chip goes through `/go/steerwright`, which starts
+steerwright first when it is installed and stopped.
 
 A master page for every registered question set on this computer, with a bookmarkable URL. Sets register when
 agents create or serve them. Sessions are a table (filter by project or product, search, sort, snooze, archive,
@@ -136,7 +144,7 @@ copy the continue prompt); the Projects tab lists every project with its status.
 | `gh-pull <ref>` | Makes a local set from the newest payload comment on `O/R#N`, or from a comment URL (`--out DIR`, default `ask/gh-<repo>-<n>`). Web images are downloaded into the set. |
 | `gh-reply <set>` | Posts the answers back as a comment that links the question comment (a thread reply for a pull request review comment). The page's "Post answers to GitHub" button does the same. |
 | `gh-answers <ref>` | Reads the answers a `gh-reply` comment carries, as JSON. |
-| `dashboard` | Serves the shared session inbox (tabs: Sessions, Projects, Unconsumed). Supports `--detach`, `--open`, `--port N` and `--stop`. |
+| `dashboard` | The shared server: the inbox (Sessions, Projects, Unconsumed) and every set, on port 47631. Supports `--detach`, `--open`, `--port N` and `--stop`. |
 
 Every command prints one JSON object, except `--version` (plain text) and a usage mistake (argparse text on
 standard error, exit code 2).

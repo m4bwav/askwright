@@ -363,7 +363,7 @@ class DashboardPageTests(PageCase):
         p.wait_for_selector("#sessions .name:has-text('Updated title')", timeout=12000)
         p.get_by_role("button", name="Open questions: Film review", exact=True).click()
         p.wait_for_selector("[data-q]", timeout=60000)
-        self.assertTrue(ask.server_info(self.dir)["alive"])
+        self.assertIn("/s/%s/" % ask.set_key(self.dir.resolve()), p.url)  # 0.28.0: same server, same port
         self.assertEqual(self.errors, [])
         more_menu(p)
         p.get_by_role("link", name="All sessions", exact=True).click()

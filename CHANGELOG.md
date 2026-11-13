@@ -10,8 +10,8 @@ Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (ID
 
 ### C-20261113-3 · 2026-11-13 · confidence "medium" warns; dashboard names lint failures; question templates
 - because: user request (a set appended by hand with `"confidence": "medium"` and no `background` would not open: "lint failed; run ask.py lint on the set")
-- files: scripts/ask.py (lint_set, open_session, template_dirs, find_templates, cmd_templates, cmd_new), ask-templates/project-setup.json, SKILL.md (Step 6), references/schema.md (Templates), tests/test_ask.py
-"medium" (and med, moderate, mid) is now a warning read as low, which is how the page already showed it. The dashboard error lists the first three failures and the set path. Plugins can ship `ask-templates/*.json` for their major setup questions; `ask.py templates` lists them and `ask.py new --template KEY --var name=value` seeds a set. askwright ships `project-setup` (visibility, licence, outputs folder, autonomy).
+- files: scripts/ask.py (lint_set, open_session, template_dirs, find_templates, cmd_templates, cmd_new), tests/fixtures/ask-templates/project-setup.json, SKILL.md (Steps 1 and 6), references/schema.md (Templates), tests/test_ask.py
+"medium" (and med, moderate, mid) is now a warning read as low, which is how the page already showed it. The dashboard error lists the first three failures and the set path. Plugins can ship `ask-templates/*.json` for their major setup questions; `ask.py templates` lists them (from `~/.askwright/templates/`, installed plugins and `ASKWRIGHT_TEMPLATE_PATH`) and `ask.py new --template KEY --var name=value` seeds a set. A `project-setup` example lives in tests/fixtures (and in the owner's ~/.askwright/templates); askwright ships none, to stay inside the 400 KB install budget, now at 399 KB.
 
 ## 0.29.1
 

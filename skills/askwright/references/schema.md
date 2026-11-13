@@ -205,20 +205,9 @@ not-sure, note-only, stale and closed items are left as they were.
 
 ## Templates
 
-A plugin offers the major questions its setup always raises by shipping `ask-templates/<name>.json` at its root
-or in a skill folder (`skills/<skill>/ask-templates/`). askwright's own live in `skills/askwright/ask-templates/`;
-your own go in `~/.askwright/templates/`; `ASKWRIGHT_TEMPLATE_PATH` adds folders (`os.pathsep`-separated).
-Installed plugins are found through `installPath` in `~/.claude/plugins/installed_plugins.json`.
-
-```json
-{"askwright_template": 1, "title": "Setting up {{project}}", "when": "setup",
- "description": "One line for the list.", "context": "...", "questions": [ ...ordinary questions... ]}
-```
-
-Questions are ordinary questions (every rule above applies, guesses included, usually `"confidence": "low"`).
-`{{name}}` anywhere is filled from `--var name=value`; `{{project}}` defaults to `--project`. `ask.py new`
-reports any placeholder left unfilled. Keys are `<plugin>:<file stem>`; `ask.py templates --show <key>` prints one.
-Every template askwright ships is linted by the test suite; a plugin should lint its own the same way.
+Setup questions a plugin ships as `ask-templates/<name>.json` (plugin root or `skills/<skill>/`); personal ones live
+in `~/.askwright/templates/`, more folders in `ASKWRIGHT_TEMPLATE_PATH`. Shape: `{"title", "description",
+"questions": [...]}`, ordinary questions. `--var name=value` fills `{{name}}` (`{{project}}` defaults to `--project`).
 
 ## What comes back
 

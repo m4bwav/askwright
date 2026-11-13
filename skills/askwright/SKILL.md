@@ -33,14 +33,15 @@ When someone wants to practise or test what they know (a quiz on homework, a rev
 set: `"mode": "study"`, multiple-choice questions with one `correct` option and a `why` on every option (each wrong
 option stands for a real mistake), a `topic` on each, and optional written questions with a `rubric`. The page
 scores it on submit and shows a review per question and per topic; `ask.py grade` lists written answers for you to
-grade. No guesses, no "not sure". Read [the Study mode wiki page](https://github.com/m4bwav/askwright/wiki/Study-Mode#how-to-write-a-study-set) before writing one;
+grade. No guesses, no "not sure". Read [Study mode](https://github.com/m4bwav/askwright/wiki/Study-Mode#how-to-write-a-study-set) first;
 steps 1 and 2 below are for decision sets.
 
 ## Step 1: write the set
 
 One folder per set, `<project>/ask/<set-id>/` unless the project already keeps review files somewhere (then put
-it beside them). Start it with `ask.py new <folder> --title "<what this round decides>" --product "<your agent product>" --session "<session name or id>" --asked-by "<your role>"`, then add questions.
-Use the real product and session; omit what you do not know. Every set needs `--project NAME` (lint refuses without it; a new one also needs `--project-description TEXT`)
+it beside them). Start it with `ask.py new <folder> --title "<what this round decides>" --product "<your agent product>" --session "<session name or id>" --asked-by "<your role>"`, then add questions. Setup decisions: `new --template KEY`
+from `ask.py templates` (schema.md).
+Use the real product and session, or omit them. Every set needs `--project NAME` (lint refuses without it; a new one also needs `--project-description TEXT`)
 (and `--project-path DIR`), even a made-up one; related sets, above all one continue-prompt chain, share
 a name; a chain across projects gets an umbrella project (every page links its project page; `ask.py project`, `--back-link`, `--continue-prompt`: schema.md).
 Media stays where it is: list its folders in `media_roots` and refer to files by name. A graph, force diagram or
@@ -53,15 +54,15 @@ Every question has:
   ("The arrow from 6.0 s: does it stay in his neck?"). Times become "Play from 6.0 s" buttons.
 - `options` that name the action or the thing ("Re-render tonight (10 to 12 h)", "Take 5"), never "Left", "A",
   "Yes" or "No". The page adds "Not sure, ask me later" and "Something else" itself.
-- `guess`: your answer and why, with an honest `confidence`. `high` shows under the options; `low` hides behind
+- `guess`: your answer and why, with an honest `confidence` (`high` or `low` only). `high` shows under the options; `low` hides behind
   a "Show my guess" button, and the read-back tells you whether it was opened before the pick. The guess is
   never pre-selected. Vary which option it is; do not always list your pick first.
 
 Kinds: `choice`, `multi` (checkboxes: use it when several options can be true, never bundles like "A and B"), `compare` (takes side by side: `sides` says which take is on which side; the page shows
 "Left"/"Right" until the pick and stores the option id; `randomized: true` only if the sides were drawn at random,
-and a clip with a known fixed order gets `false`: keep the lint warning or remake the pair in random order), `rank`, `text`, `scale`, `confirm`. A question that only
+a known fixed order gets `false`), `rank`, `text`, `scale`, `confirm`. A question that only
 matters after another answer gets `show_if`. A major decision gets a `one_pager` (text, facts, a pros and cons
-table, images, a chart) above it; lots of it goes in `tabs`. When code or a build is involved, `refs` say where to test it and link the source. Keep a set to 12 open questions at most.
+table, images, a chart) above it; lots of it goes in `tabs`. Code or a build: `refs` say where to test it. Keep a set to 12 open questions at most.
 
 Long reviews: one comparison per independent frame, take or edit; each case states the requested result and has
 **Good / Keep / Reject** checks; offer "Both meet the request" and "Neither meets the request". Galleries,
@@ -134,12 +135,7 @@ Report in one or two lines before acting: "6 answered, 1 note only (g08-arrow), 
 
 - After acting on answers: `ask.py consume <set> --by <session> --note <use>` (the Unconsumed tab lists
   read sets without it), then `ask.py close <set> <qid>`.
-- Never edit `questions.json` by hand: `ask.py add` lints before it writes. If you must, run `ask.py lint <set>`
-  straight after; a set that fails lint will not open from the dashboard. Confidence is only `high` or `low`.
-- Setup questions: `ask.py templates` lists ready-made question sets that askwright, `~/.askwright/templates/`
-  and installed plugins ship (`ask-templates/*.json`); `ask.py new <dir> --template <key> --var project=X`
-  seeds a set from one. Set each guess for the project, then lint and serve.
-- A new round (rerolled takes, a follow-up): `ask.py add <set> <questions.json>`; give each new question
+- A new round (rerolled takes, a follow-up): `ask.py add <set> <questions.json>` (it lints; never hand-edit questions.json); give each new question
   `supersedes: "<old id>"` and the old one is marked superseded. Never leave a replaced question open.
 - `ask.py close <set> <qid> --withdrawn "<reason>"` for a question that no longer matters.
 - `ask.py stop <set>` when the set is finished. It stops the server by the PID in `server.json`, only after the

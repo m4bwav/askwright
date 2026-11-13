@@ -159,3 +159,6 @@ Mark's Atlas picks screen showed only the card id and a generic why. New require
 
 ## 2026-11-11 · PR #70 merged
 CI failed: install size 385 KB (cap 384 KB) and the answer box 4 px too low at 390 px. Fixed by pointing README sections that repeat SECURITY.md and the wiki there instead, and shortening the Background summary to "Background". Headroom is now under 1 KB; the next feature will need a real trim (README table or references).
+
+## 2026-11-12 · Open questions from a server that outlived its console (0.27.0)
+Mark's sessions list answered "Cannot open ...: session server returned no JSON:" with an empty tail. It came from one set server (started a day earlier with a shell `&` instead of `--detach`) whose console had died with its agent session: on Windows every console child of such a process exits 0xC0000142 before printing. Reproduced with CREATE_NEW_CONSOLE plus killing the conhost. Fix: `OWN_CONSOLE` (CREATE_NO_WINDOW) on the children a server starts (open_session, gh), and the error names the exit code. Lesson L-026 `server-outlives-console`. Servers already running keep their old code until restarted.

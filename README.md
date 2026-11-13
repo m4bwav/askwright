@@ -106,8 +106,7 @@ lists every field.
 
     python skills/askwright/scripts/ask.py dashboard --detach --open
 
-Or run `ask.py shortcut` once: it puts an Askwright icon on the desktop (`--dir` for another folder) that starts
-the dashboard if it is not running and opens it. Opening a set from the dashboard restarts that set's page too.
+Or run `ask.py shortcut` once for a desktop icon that starts and opens it. Opening a set from the dashboard restarts that set's page too.
 
 A master page for every registered question set on this computer, with a bookmarkable URL. Sets register when
 agents create or serve them. Sessions are a table (filter by project or product, search, sort, snooze, archive,
@@ -132,7 +131,7 @@ copy the continue prompt); the Projects tab lists every project with its status.
 | `register <set>` | Adds an existing set to the shared local dashboard, deduplicated by its resolved folder. |
 | `project [NAME]` | Creates or updates a project record (`--description`, `--repo`, `--dir`, `--goal`, `--status`, `--needs-direction Q`, `--note TEXT`, `--prompt-run FILE`); with no name, lists projects. |
 | `picks build <dir> --out D` | One image per item: candidate images to sets (`--group REGEX`, `--guesses`, `--existing`); `picks export <set>... --out picks.json` merges the picks. |
-| `shortcut` | Puts an icon on the desktop that starts the dashboard when it is stopped and opens it. `--dir` picks another folder. |
+| `shortcut` | A desktop icon that starts and opens the dashboard (`--dir` for another folder). |
 | `gh-post <set> --repo O/R --issue N` | Posts the questions as one comment on an issue or pull request: a readable list plus a hidden `askwright:payload` block. Web media show inline; local media are listed as not attached. Writes `github.json`. |
 | `gh-pull <ref>` | Makes a local set from the newest payload comment on `O/R#N`, or from a comment URL (`--out DIR`, default `ask/gh-<repo>-<n>`). Web images are downloaded into the set. |
 | `gh-reply <set>` | Posts the answers back as a comment that links the question comment (a thread reply for a pull request review comment). The page's "Post answers to GitHub" button does the same. |
@@ -164,13 +163,13 @@ folder on your machine.
 
 ## Testing
 
-    python tests/check_skills.py     # structure, links, line endings, no secrets or home paths
-    python tests/test_ask.py         # lint rules, server contract, Range, traversal, tokens, status and read
-    python scripts/budget.py         # install size and description budget
-    python tests/test_page.py        # the page in Chrome or Edge with Playwright and axe-core (development only)
+    python tests/check_skills.py     # structure, links, line endings, secrets
+    python tests/test_ask.py         # ask.py: lint rules and the server
+    python scripts/budget.py         # size budget
+    python tests/test_page.py        # the page in Chrome or Edge (development only)
 
 CI runs the first three on Windows, macOS and Linux with Python 3.9 and 3.14. The page tests need
-`pip install playwright` and an installed Chrome or Edge, because the bundled Chromium does not play H.264.
+`pip install playwright` and Chrome or Edge, because the bundled Chromium does not play H.264.
 `ASKW_SET=<set folder>` runs the generic page checks on a copy of a real set.
 
 ## Credits

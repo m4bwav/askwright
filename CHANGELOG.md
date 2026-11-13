@@ -6,6 +6,13 @@ Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (ID
 
 ## Unreleased
 
+## 0.27.0
+
+### C-20261112-1 · 2026-11-12 · "Open questions" works from a server that outlived its console
+- because: user request ("Cannot open ...: session server returned no JSON:" with nothing after the colon), L-026
+- files: scripts/ask.py (open_session, OWN_CONSOLE), scripts/gh.py (gh), tests/test_ask.py (DashboardTests: test_open_from_a_server_that_outlived_its_console, test_open_names_the_exit_code_when_the_child_prints_nothing)
+On Windows a set server started without `--detach` stays attached to its terminal's console. Once that terminal or agent session closed, every console program the server started died during start-up (exit code 0xC0000142) with no output, so the sessions list on that server's page could not open any set. Programs the server starts now get a hidden console of their own, and the error names the exit code when the child prints nothing.
+
 ### C-20261111-4 · 2026-11-11 · fit the background change in the size budget and on a phone screen
 - because: CI on PR #70 (install size 385 KB over the 384 KB cap; the answer box sat 4 px too low at 390 px wide)
 - files: README.md (Works with, Security, ask.py lint row, dashboard, Testing), page/app.js (onePager summary)

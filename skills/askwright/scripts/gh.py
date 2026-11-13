@@ -28,7 +28,8 @@ def gh(*args, body=None):
     try:
         r = subprocess.run(cmd + ["api", *args] + (["--input", "-"] if body is not None else []),
                            input=json.dumps(body) if body is not None else None,
-                           capture_output=True, text=True, encoding="utf-8", timeout=60)
+                           capture_output=True, text=True, encoding="utf-8", timeout=60,
+                           creationflags=0x08000000 if os.name == "nt" else 0)  # OWN_CONSOLE in ask.py
     except FileNotFoundError:
         raise GhError("the gh CLI is not installed (https://cli.github.com), or not on PATH")
     if r.returncode:

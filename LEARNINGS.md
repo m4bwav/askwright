@@ -242,3 +242,6 @@ On the Windows runners `tempfile.mkdtemp` returns an 8.3 short path (RUNNER~1) w
 
 ### L-030 · 2026-11-14 · `pending-before-file-search`: to see whether a set has answers, ask askwright, not the disk
 A musicwright continue-prompt session told the owner a blind A/B page was still unanswered. It had searched its own repo and the vault for answers.json, and a 300 s recursive search of D:/ timed out. The set lived beside a private dataset in another folder, and it had been answered an hour earlier. `ask.py pending` (or `ask.py read <set>`) lists every answered set with its path in one call. Run it first whenever a handoff says a page waits on answers.
+
+### L-031 · 2026-11-14 · `tool-applies-without-consume`: a tool that acts on answers must record the use itself
+The week warning named six steerwright weekly reviews. All six had been applied on 2026-11-09 (`applied.json` in each set), but `sw.py apply-review` never ran `ask.py consume`, so askwright saw unused answers. Any plugin that reads askwright answers and acts on them should run `consume` in the same step; steerwright 0.5.1 does. Check a set's folder for a tool's own marker before calling it unprocessed.

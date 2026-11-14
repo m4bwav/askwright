@@ -178,3 +178,6 @@ The dashboard refused "Roof snow: SAM masks" because a session hand-appended thr
 
 ## 2026-11-14 · answer sweep chain opened (prompt and findings only)
 Owner report: some answers are never processed, others are used and never marked. Counted the owner's registry (41 of 191 sets hold answers nothing records as used) and read ask.py and dashboard.js for the causes: never-read sets are missing from the Unconsumed tab, `pending` is narrow and silent after 30 days, `close` records no use, the generated continue prompt and chainwright's template never say consume, nothing shows age. Wrote [research/2026-11-14-unprocessed-answers.md](research/2026-11-14-unprocessed-answers.md) and the repeating prompt [plans/2026-11-14-answer-sweep-continue-prompt.md](plans/2026-11-14-answer-sweep-continue-prompt.md). No code change, no version bump.
+
+## 2026-11-14 · answer sweep 0.31.0 (session 1 of the chain)
+Built `ask.py sweep`, the week warning and the gap fixes (decision 2026-11-14-answer-sweep). README trimmed to the wiki (14.1 to 8.4 KB); install ceiling 400 to 412 KB. Ran it on the owner's inbox: 16 used sets marked with evidence, 3 trivial handled, 27 dead temp entries moved aside, prompts for 17 sets in 14 projects (vault sidecar). chainwright PR #19 fixes its template (pair). L-028 `close-without-consume`.

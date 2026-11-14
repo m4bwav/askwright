@@ -73,3 +73,19 @@ print(collections.Counter(r[0] for r in rows))
 for r in sorted((r for r in rows if r[0] in ("never-read", "read-not-consumed")), key=lambda r: -(r[2] or 0)):
     print(r)
 ```
+
+## Classified by hand, then by the routine (2026-11-14, askwright 0.31.0)
+
+Patterns only; names and per-set evidence are in the owner's private notes.
+
+- **Every answered question closed (11 sets):** each sampled one had been acted on (renders made, picks applied,
+  later rounds built on it). Closing is a reliable sign of use, so `close` now records the consume itself.
+- **Named in the project's HANDOFF after the answer (8 sets):** 5 recorded the pick and what was done with it (used);
+  1 still said "waiting on the owner" for a set that had been answered six days earlier (not used: the HANDOFF named
+  the set but no session read it); 2 were older status lines superseded by later rounds. A mention needs a reader.
+- **Only a newer set beside it (6 sets):** not enough on its own: newer sets in one folder are often unrelated
+  rounds of other cards or topics.
+- **No evidence (13 sets):** steerwright weekly reviews (answered, never acted on), music blind tests, a duel test,
+  card art. Two were trivial: a test fixture and a test that a HANDOFF records as passed under another name.
+- **Young sets (5, under a day):** sessions still running; the routine leaves them.
+- **Dead registry entries (27):** every one a set in a session's temp scratchpad; moved aside, and `new` now warns.

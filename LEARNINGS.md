@@ -239,3 +239,6 @@ Of 41 sets holding unused answers, 11 had every answered question closed: sessio
 
 ### L-029 · 2026-11-14 · `windows-short-temp-path`: compare temp paths by folder name in tests
 On the Windows runners `tempfile.mkdtemp` returns an 8.3 short path (RUNNER~1) while ask.py prints the resolved long path, so `assertIn(str(set.dir), text)` failed only in CI. Match the unique temp folder name instead.
+
+### L-030 · 2026-11-14 · `pending-before-file-search`: to see whether a set has answers, ask askwright, not the disk
+A musicwright continue-prompt session told the owner a blind A/B page was still unanswered. It had searched its own repo and the vault for answers.json, and a 300 s recursive search of D:/ timed out. The set lived beside a private dataset in another folder, and it had been answered an hour earlier. `ask.py pending` (or `ask.py read <set>`) lists every answered set with its path in one call. Run it first whenever a handoff says a page waits on answers.

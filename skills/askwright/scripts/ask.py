@@ -53,7 +53,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-VERSION = "0.31.0"
+VERSION = "0.31.1"
 DEFAULT_PORT = 47631  # the shared server's port; ASKWRIGHT_PORT moves it (0 picks a free one)
 PAGE = Path(__file__).resolve().parent / "page"
 BUNDLE = re.compile(r"^(those|these|both|all of)\b|\bplus\b", re.I)
@@ -509,14 +509,15 @@ OWN_CONSOLE = {"creationflags": 0x08000000} if os.name == "nt" else {}
 
 def open_session(sid, shared=False):
     d = registered_set(sid)
-    if shared:  # the shared server already serves every registered set, once it lints
-        d, data = load_set(d)
+    if shared:  # the shared server serves every registered set that loads
+        d, data = load_set(d)  # a set that cannot load still raises
+        # Lint is the author's gate (ask.py add, serve), not the reader's: a missing background or similar
+        # must never leave a dead Open button, so the set opens and the problems ride along as warnings.
         errs = lint_set(d, data, probe=False)[0]
-        if errs:  # name the failures
-            shown = "; ".join("%s: %s" % (e.get("q") or "set", e.get("msg")) for e in errs[:3])
-            more = " (+%d more)" % (len(errs) - 3) if len(errs) > 3 else ""
-            raise AskError("lint failed: %s%s. Run ask.py lint on %s" % (shown, more, d))
-        return {"ok": True, "url": "/s/%s/" % set_key(d)}
+        out = {"ok": True, "url": "/s/%s/" % set_key(d)}
+        if errs:
+            out["lint"] = ["%s: %s" % (e.get("q") or "set", e.get("msg")) for e in errs[:5]]
+        return out
     r = subprocess.run([sys.executable, str(Path(__file__).resolve()), "serve", str(d), "--detach"],
                        capture_output=True, text=True, encoding="utf-8", timeout=90, **OWN_CONSOLE)
     try:

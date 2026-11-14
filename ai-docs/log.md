@@ -185,3 +185,4 @@ Built `ask.py sweep`, the week warning and the gap fixes (decision 2026-11-14-an
 
 ## 2026-11-14 · answer sweep session 2 (step 7)
 The six steerwright weekly reviews in the todo pile were already applied 2026-11-09 (applied.json); consumed them citing that file. Source fix in steerwright 0.5.1 (PR m4bwav/steerwright#3 merged, released, installed): apply-review runs `ask.py consume`. L-031 `tool-applies-without-consume`. The Blackberry Blossom note asking for indefinite tabling is already served (table with no date). Left: 11 sets in check/todo (musicwright x2, sfxwright, Spear sranc, Erich Zann, SpaceDeckBuilder2 card art x3, Arvum x3), all covered by session 1's prompt file in the vault sidecar.
+- 2026-11-14: shared inbox Open no longer blocks on lint errors (0.31.1); a set that loads always opens.

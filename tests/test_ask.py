@@ -845,14 +845,24 @@ class DashboardTests(ServerCase):
         finally:
             run_cli("stop", self.s.dir)
 
-    def test_open_lint_failure_is_explicit(self):
+    def test_open_lint_failure_still_opens(self):
         sid = ask.register_set(self.s.dir)
         self.s.q("music").pop("why")
         self.s.write(self.s.data)
         status, result = self.api("/api/open", {"id": sid})
-        self.assertEqual(status, 400)
-        self.assertIn("lint", result["error"])
+        self.assertEqual(status, 200, result)  # opens anyway; lint problems ride along
+        self.assertTrue(result["lint"])
         self.assertFalse((self.s.dir / "server.json").exists())
+
+    def test_shared_open_survives_lint_failure(self):
+        """The inbox must not dead-end on an author's lint error (a missing background)."""
+        sid = ask.register_set(self.s.dir)
+        self.s.q("music").pop("why")
+        self.s.write(self.s.data)
+        result = ask.open_session(sid, shared=True)
+        self.assertTrue(result["ok"])
+        self.assertTrue(result["url"].startswith("/s/"))
+        self.assertTrue(result["lint"])
 
     def test_open_names_the_exit_code_when_the_child_prints_nothing(self):
         sid = ask.register_set(self.s.dir)

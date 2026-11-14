@@ -6,6 +6,13 @@ Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (ID
 
 ## Unreleased
 
+## 0.31.1
+
+### C-20261114-2 · 2026-11-14 · inbox opens a set even when it fails lint
+- because: user request ("Cannot open ...: lint failed: background is missing" left a dead Open button in the inbox)
+- files: skills/askwright/scripts/ask.py (open_session), tests/test_ask.py
+The shared server now opens any set that loads; lint errors come back as a `lint` list instead of refusing. Lint stays the author's gate in `add` and `serve`.
+
 ## 0.31.0
 
 ### C-20261114-1 · 2026-11-14 · answer sweep, week warning, close records use, Unprocessed tab

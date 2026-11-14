@@ -48,10 +48,9 @@ Media stays where it is: list its folders in `media_roots` and refer to files by
 drawing needs no file: a media item `{"figure": {...}, "alt": "..."}` is drawn by ask.py (schema.md, Media).
 
 Every question has:
-- `question`: one real question that ends in `?`. The short label goes in `title` ("The arrow shot").
-- `background`: what this is, where it is used and what led here, in up to six sentences. The lint refuses a decision
-  question without it.
-- `why`: what the answer changes, in one or two sentences ("the take you pick gets the 12-hour HD render").
+- `question`: one real question that ends in `?`. The short label goes in `title`.
+- `background`: what this is and what led here (lint requires it).
+- `why`: what the answer changes, in one or two sentences.
 - `look_for`: on any question with media or a comparison, the concrete things that decide it, with times
   ("The arrow from 6.0 s: does it stay in his neck?"). Times become "Play from 6.0 s" buttons.
 - `options` that name the action or the thing ("Re-render tonight (10 to 12 h)", "Take 5"), never "Left", "A",

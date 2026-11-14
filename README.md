@@ -152,7 +152,7 @@ standard error, exit code 2).
 
 ## Works with
 
-Other plugins ([grindwright](https://github.com/m4bwav/grindwright), [musicwright](https://github.com/m4bwav/musicwright), [sfxwright](https://github.com/m4bwav/sfxwright), [pixelwright](https://github.com/m4bwav/pixelwright), [voicewright](https://github.com/m4bwav/voicewright), [cinewright](https://github.com/m4bwav/cinewright)) put their open decisions and side-by-side takes on askwright pages. Details: [Works with](https://github.com/m4bwav/askwright/wiki/Works-With).
+Other plugins ([grindwright](https://github.com/m4bwav/grindwright), [musicwright](https://github.com/m4bwav/musicwright), [sfxwright](https://github.com/m4bwav/sfxwright), [pixelwright](https://github.com/m4bwav/pixelwright), [voicewright](https://github.com/m4bwav/voicewright), [cinewright](https://github.com/m4bwav/cinewright), [fractalwright](https://github.com/m4bwav/fractalwright)) put their open decisions and side-by-side takes on askwright pages. Details: [Works with](https://github.com/m4bwav/askwright/wiki/Works-With).
 
 ## Security
 

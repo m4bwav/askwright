@@ -2228,9 +2228,9 @@ class SweepTests(unittest.TestCase):
         self.assertIn("sweep: every answered question is closed", ask.use_state(used.dir)["consumed_note"])
         self.assertTrue((Path(self.home) / "sessions-gone").is_dir())
         text = prompts.read_text(encoding="utf-8")
-        self.assertIn(str(todo.dir), text)
-        self.assertNotIn(str(fresh.dir), text)
-        self.assertNotIn(str(used.dir), text)
+        self.assertIn(str(todo.tmp.name), text)
+        self.assertNotIn(str(fresh.tmp.name), text)
+        self.assertNotIn(str(used.tmp.name), text)
         again = self.sweep("--apply")
         self.assertEqual((again["marked"], again["moved_aside"]), (0, 0))
         self.assertEqual(again["counts"], {"used": 0, "check": 1, "todo": 1, "fresh": 1, "gone": 0})
@@ -2243,7 +2243,7 @@ class SweepTests(unittest.TestCase):
         s = self.make({"music": {"choice": "tone"}}, mutate=lambda d: d.pop("project", None))
         out = Path(self.home) / "p.md"
         self.sweep("--prompts", out)
-        self.assertIn(str(s.dir), out.read_text(encoding="utf-8"))
+        self.assertIn(str(s.tmp.name), out.read_text(encoding="utf-8"))
 
 
 class PicksTests(unittest.TestCase):

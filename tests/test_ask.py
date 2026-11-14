@@ -2163,6 +2163,89 @@ class WakeTests(unittest.TestCase):
         self.assertTrue(json.loads((target / "questions.json").read_text(encoding="utf-8"))["working_dir"])
 
 
+class SweepTests(unittest.TestCase):
+    """ask.py sweep and the gap fixes: unprocessed counts unread sets, close records use, the week warning."""
+
+    def setUp(self):
+        self.home = tempfile.mkdtemp(prefix="askw-home-")
+        self.addCleanup(shutil.rmtree, self.home, True)
+        patch = mock.patch.dict(os.environ, {"ASKWRIGHT_HOME": self.home})
+        patch.start()
+        self.addCleanup(patch.stop)
+
+    def make(self, answers, days=10, mutate=None):
+        s = TempSet(mutate)
+        self.addCleanup(s.cleanup)
+        t = time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime(time.time() - days * 86400))
+        (s.dir / "answers.json").write_text(json.dumps({"askwright": 1, "rev": 1, "answers": answers}),
+                                            encoding="utf-8")
+        with open(s.dir / "events.jsonl", "a", encoding="utf-8") as f:
+            f.write(json.dumps({"t": t, "type": "answer"}) + "\n")
+        ask.register_set(s.dir)
+        return s
+
+    def sweep(self, *extra):
+        code, out = run_cli("sweep", *extra)
+        self.assertEqual(code, 0, out)
+        return out
+
+    def test_unread_answers_count_as_unprocessed_with_age(self):
+        s = self.make({"redo-how": {"choice": "seed"}})
+        u = ask.use_state(s.dir)
+        self.assertTrue(u["unprocessed"])
+        self.assertFalse(u["unconsumed"])  # the old field still means read and not used
+        self.assertGreater(u["waiting_days"], 9)
+
+    def test_close_of_the_last_answered_question_records_use(self):
+        s = self.make({"redo-how": {"choice": "seed"}, "music": {"choice": "tone"}}, days=0)
+        self.assertNotIn("consumed", run_cli("close", s.dir, "redo-how")[1])
+        out = run_cli("close", s.dir, "music", "--by", "s1")[1]
+        self.assertEqual(out["consumed"]["by"], "s1")
+        self.assertFalse(ask.use_state(s.dir)["unprocessed"])
+
+    def test_piles_warning_apply_and_second_run(self):
+        def closed(d):
+            d["questions"][1]["status"] = "closed"
+        used = self.make({"redo-how": {"choice": "seed"}}, mutate=closed)
+        todo = self.make({"music": {"choice": "tone"}, "pace": {"choice": "unsure"}})
+        fresh = self.make({"music": {"choice": "tone"}}, days=0)
+        named = self.make({"music": {"choice": "tone"}}, days=3)
+        (named.tmp / "HANDOFF.md").write_text("Acted on good: kept the tone.", encoding="utf-8")
+        gone = TempSet()
+        ask.register_set(gone.dir)
+        gone.cleanup()
+        out = self.sweep()
+        self.assertEqual(out["counts"], {"used": 1, "check": 1, "todo": 1, "fresh": 1, "gone": 1})
+        self.assertIn("2 answer sets waited over 7 days", out["warning"])
+        self.assertEqual(out["todo"][0]["unsure"], ["pace"])  # "not sure" stays visible, never counted as used
+        self.assertEqual(out["check"][0]["evidence"][0]["kind"], "named")
+        self.assertFalse(ask.use_state(used.dir)["consumed_at"])  # a dry run changes nothing
+        hook = run_cli("pending", "--hook", "--cwd", str(Path(self.home) / "elsewhere"))[1]
+        self.assertIn("waited over 7 days", hook["hookSpecificOutput"]["additionalContext"])
+        prompts = Path(self.home) / "prompts.md"
+        out = self.sweep("--apply", "--prompts", prompts)
+        self.assertEqual((out["marked"], out["moved_aside"]), (1, 1))
+        self.assertIn("sweep: every answered question is closed", ask.use_state(used.dir)["consumed_note"])
+        self.assertTrue((Path(self.home) / "sessions-gone").is_dir())
+        text = prompts.read_text(encoding="utf-8")
+        self.assertIn(str(todo.dir), text)
+        self.assertNotIn(str(fresh.dir), text)
+        self.assertNotIn(str(used.dir), text)
+        again = self.sweep("--apply")
+        self.assertEqual((again["marked"], again["moved_aside"]), (0, 0))
+        self.assertEqual(again["counts"], {"used": 0, "check": 1, "todo": 1, "fresh": 1, "gone": 0})
+
+    def test_continue_prompt_says_consume(self):
+        s = self.make({}, days=0)
+        self.assertIn(" consume ", ask.continue_prompt(s.dir, ask.load_set(s.dir)[1]))
+
+    def test_set_with_no_project_groups_under_no_project(self):
+        s = self.make({"music": {"choice": "tone"}}, mutate=lambda d: d.pop("project", None))
+        out = Path(self.home) / "p.md"
+        self.sweep("--prompts", out)
+        self.assertIn(str(s.dir), out.read_text(encoding="utf-8"))
+
+
 class PicksTests(unittest.TestCase):
     """picks build turns a folder of candidates into one-item-per-screen sets; picks export writes picks.json."""
 

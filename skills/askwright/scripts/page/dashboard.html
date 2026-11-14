@@ -19,11 +19,12 @@
     <h1>Questions for you</h1>
     <p>Every registered session on this computer. Open a session to review its questions.</p>
     <p id="summary" role="status">Loading sessions...</p>
+    <p id="stale-warning" class="stale-warning" role="alert" hidden></p>
   </header>
   <div id="tabs" role="tablist" aria-label="Dashboard">
     <button type="button" role="tab" id="tab-sessions" data-tab="sessions" aria-controls="panel-sessions" aria-selected="true">Sessions</button>
     <button type="button" role="tab" id="tab-projects" data-tab="projects" aria-controls="panel-projects" aria-selected="false" tabindex="-1">Projects</button>
-    <button type="button" role="tab" id="tab-unconsumed" data-tab="unconsumed" aria-controls="panel-unconsumed" aria-selected="false" tabindex="-1">Unconsumed</button>
+    <button type="button" role="tab" id="tab-unconsumed" data-tab="unconsumed" aria-controls="panel-unconsumed" aria-selected="false" tabindex="-1">Unprocessed</button>
   </div>
   <div id="panel-sessions" role="tabpanel" aria-labelledby="tab-sessions">
   <nav id="views" aria-label="Session lists">
@@ -48,7 +49,7 @@
   </div>
   <div id="panel-unconsumed" role="tabpanel" aria-labelledby="tab-unconsumed" hidden>
     <p class="hint">Answer sets an agent has read but no agent has recorded using. An agent clears one with <code>ask.py consume &lt;set&gt; --by &lt;who&gt; --note &lt;what for&gt;</code>; answers given after that bring it back.</p>
-    <section id="unconsumed" class="projects" aria-label="Unconsumed answer sets"></section>
+    <section id="unconsumed" class="projects" aria-label="Unprocessed answer sets"></section>
   </div>
   <footer>Counts refresh every 5 seconds. Notes without a pick and "not sure" still need your attention.</footer>
 </main>

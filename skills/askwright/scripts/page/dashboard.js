@@ -306,34 +306,49 @@ function renderProjects() {
   panel.replaceChildren(table);
 }
 
-// The Unconsumed tab: sets whose answers were read but that no agent has recorded acting on (ask.py consume).
+// The Unprocessed tab: sets holding answers no agent has recorded acting on (ask.py consume), read or not,
+// oldest first, with a warning at the top of the page when one has waited more than a week (ask.py sweep).
+const STALE_DAYS = 7;
+const SWEEP_CALL = "Sweep my askwright answers: run ask.py sweep, then process what it finds (references/sweep.md).";
 function renderUnconsumed() {
   const panel = document.querySelector("#unconsumed");
-  const items = rows.filter(row => row.unconsumed && !row.error)
-    .sort((a, b) => (Date.parse(b.read_at) || 0) - (Date.parse(a.read_at) || 0));
-  document.querySelector("#tab-unconsumed").textContent = `Unconsumed (${items.length})`;
+  const items = rows.filter(row => row.unprocessed && !row.error)
+    .sort((a, b) => (b.waiting_days || 0) - (a.waiting_days || 0));
+  document.querySelector("#tab-unconsumed").textContent = `Unprocessed (${items.length})`;
+  const old = items.filter(row => row.waiting_days > STALE_DAYS);
+  const warn = document.querySelector("#stale-warning");
+  warn.hidden = !old.length;
+  if (old.length) {
+    warn.replaceChildren(`${old.length} answer ${old.length === 1 ? "set has" : "sets have"} waited over ${STALE_DAYS} days unprocessed (oldest ${old[0].waiting_days} days): `);
+    const link = node("a", "see the Unprocessed tab");
+    link.href = "#unconsumed";
+    warn.append(link, ".");
+  }
+  const copySweep = node("button", "Copy the sweep call");
+  copySweep.type = "button";
+  copySweep.addEventListener("click", async () => {
+    const ok = await copyText(SWEEP_CALL);
+    document.querySelector("#action-status").textContent = ok ? "Copied the sweep call; paste it into a session." :
+      "Could not copy; your browser blocked the clipboard.";
+  });
   if (!items.length) {
-    panel.replaceChildren(node("p", "Every answer set that was read has been used.", "empty"));
+    panel.replaceChildren(node("p", "Every answer has been used.", "empty"));
     return;
   }
   const table = node("table", "", "sessions project-list unconsumed-list");
   const head = node("tr", "");
-  for (const label of ["Set", "Project", "Answered", "Read", "Last used", "Action"]) head.append(node("th", label));
+  for (const label of ["Set", "Project", "Answered", "Waiting", "Read", "Action"]) head.append(node("th", label));
   const thead = node("thead", "");
   thead.append(head);
   const body = node("tbody", "");
   for (const row of items) {
-    const tr = node("tr", "", "row");
+    const tr = node("tr", "", row.waiting_days > STALE_DAYS ? "row stale" : "row");
     const title = node("td", "", "title");
     title.append(node("strong", row.title || row.id));
     if (row.path) title.append(node("p", row.path, "path"));
     const read = node("td", "", "updated");
     if (row.read_at) read.append(askTime.el(row.read_at, ""));
-    const used = node("td", "", "updated");
-    if (row.consumed_at) {
-      used.append(askTime.el(row.consumed_at, ""));
-      used.append(node("p", `by ${row.consumed_by || "agent"}; answered again since`, "meta"));
-    } else used.textContent = "never";
+    else read.textContent = "never";
     const action = node("td", "", "actions");
     const copy = node("button", "Copy consume command");
     copy.type = "button";
@@ -344,11 +359,11 @@ function renderUnconsumed() {
     });
     action.append(copy);
     tr.append(title, node("td", row.project ? row.project.name : "", ""), node("td", String(row.answered || 0), "num"),
-      read, used, action);
+      node("td", `${row.waiting_days} days`, "num"), read, action);
     body.append(tr);
   }
   table.append(thead, body);
-  panel.replaceChildren(table);
+  panel.replaceChildren(copySweep, table);
 }
 
 // Sessions, Projects and Unconsumed tabs; the choice is remembered per browser and #projects or #unconsumed opens one.

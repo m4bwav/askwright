@@ -170,6 +170,15 @@
       "baseline": "2026-10-24 T-20261024-2: passed 3/3 without the skill (asked visibility in chat, decided the rest); kept as a guard that the skill does not make the agent over-ask",
       "runs": 3,
       "holdout": true
+    },
+    {
+      "id": "trigger-sweep-answers",
+      "kind": "trigger",
+      "prompt": "sweep my askwright answers, some of them never got used",
+      "expectations": [
+        "the askwright skill is invoked"
+      ],
+      "runs": 3
     }
   ]
 }

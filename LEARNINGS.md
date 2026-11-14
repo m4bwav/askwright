@@ -233,3 +233,6 @@ Write an entry the moment a real signal happens: a user correction, the same err
 - 2026-11-12 `blind-set-guess-cannot-name-hidden-take`: on a blind listening question the options are "Take A/B/C", but the agent's real guess is about a source ("the sampled one"), and it either does not know the letter or, if it does, a guess naming the letter gives the answer away when opened. Arvum guitar-song r6 put the guess on "neither" (not the real guess); r7 named the letter at low confidence and said in the guess text that opening it reveals the source. Idea: a `guess.source` field resolved through the blind key at read time, shown to the person only after they pick.
 
 - 2026-11-13 `hand-edited-set-fails-on-open`: an agent appended questions to questions.json by hand (confidence "medium", no background); nothing linted it until the dashboard refused to open it. Use `ask.py add`, which lints first; "medium" now only warns.
+
+### L-028 · 2026-11-14 · `close-without-consume`: sessions close questions and never record the use
+Of 41 sets holding unused answers, 11 had every answered question closed: sessions acted, closed, and never ran consume, because the generated continue prompt and chainwright's template said read, act, close and nothing else. A step that only one document mentions gets skipped; `close` now records the use itself, and the prompts say consume.

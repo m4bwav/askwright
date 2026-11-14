@@ -187,12 +187,13 @@ class DashboardPageTests(PageCase):
         p = self.page
         p.goto(self.url + "sessions#unconsumed")
         p.wait_for_selector("#unconsumed tbody")
-        self.assertEqual(p.locator("#tab-unconsumed").inner_text(), "Unconsumed (1)")
+        self.assertEqual(p.locator("#tab-unconsumed").inner_text(), "Unprocessed (1)")
         self.assertEqual(p.locator("#unconsumed tbody strong").all_inner_texts(), ["Site review"])
+        self.assertTrue(p.locator("#stale-warning").is_hidden())  # answered just now: no week warning
         ask.log_use(self.other, "consumed", "s1", "used")
         p.reload()
         p.wait_for_selector("#unconsumed .empty")
-        self.assertEqual(p.locator("#tab-unconsumed").inner_text(), "Unconsumed (0)")
+        self.assertEqual(p.locator("#tab-unconsumed").inner_text(), "Unprocessed (0)")
 
     def expand(self, title):
         toggle = self.page.get_by_role("button", name=title, exact=True)

@@ -1,6 +1,6 @@
 ---
 name: askwright
-description: "Use whenever you need the user to decide things you cannot settle yourself and a chat question is not enough: several decisions at once, takes, clips or images to compare, video or audio to review, a major call that needs a one-pager, or answers that come in over hours ('ask me about these takes', 'make me a decision page', 'put these questions on a page'). Also quizzes that grade and explain ('quiz my kid on this homework', 'make a review quiz'). Writes questions as data, lints them, serves one per screen on 127.0.0.1, reads answers back from disk (ask.py). Not for one quick yes/no (ask in chat) or surveys of other people. Also 'refresh askwright'."
+description: "Use whenever you need the user to decide things you cannot settle yourself and a chat question is not enough: several decisions at once, takes, clips or images to compare, video or audio to review, a major call that needs a one-pager, or answers that come in over hours ('ask me about these takes', 'make me a decision page', 'put these questions on a page'). Also quizzes that grade and explain ('quiz my kid on this homework', 'make a review quiz'). Writes questions as data, lints them, serves one per screen on 127.0.0.1, reads answers back from disk (ask.py). Not for one quick yes/no (ask in chat) or surveys of other people. Also 'sweep my askwright answers' and 'refresh askwright'."
 ---
 
 # askwright
@@ -134,13 +134,12 @@ Report in one or two lines before acting: "6 answered, 1 note only (g08-arrow), 
 
 ## Step 6: keep the set honest
 
-- After acting on answers: `ask.py consume <set> --by <session> --note <use>` (the Unconsumed tab lists
-  read sets without it), then `ask.py close <set> <qid>`.
+- After acting on answers: `ask.py close <set> <qid>`, then `ask.py consume <set> --by <session> --note <use>`.
+  Sweep of unused answers: [references/sweep.md](references/sweep.md).
 - A new round (rerolled takes, a follow-up): `ask.py add <set> <questions.json>` (it lints; never hand-edit questions.json); give each new question
   `supersedes: "<old id>"` and the old one is marked superseded. Never leave a replaced question open.
 - `ask.py close <set> <qid> --withdrawn "<reason>"` for a question that no longer matters.
-- `ask.py stop <set>` when the set is finished. It stops the server by the PID in `server.json`, only after the
-  server answers a ping proving it owns that PID.
+- `ask.py stop <set>` when the set is finished (by the PID in `server.json`, after a ping proves the server owns it).
 
 ## Rules
 

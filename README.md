@@ -11,36 +11,15 @@ every question page is as good as the best one, instead of whatever the agent im
 
 ## What you get on the page
 
-- One question per screen, read top to bottom: the project and set it belongs to, the question as the heading,
-  why it matters, and what to look or listen for. Times in "what to look for" turn into "Play from 6.0 s" buttons.
-- The project's name in the top bar and a "Copy continue prompt" button: it copies a prompt that tells an agent to
-  read the answers (with absolute paths), check them against its guesses and act on them, plus the counts so far.
-- Click to pick: click a picture to choose the option it shows, or the Pick button under a clip or sound (their
-  own click still plays and seeks). A side-by-side clip gets "Pick the left take" and "Pick the right take".
-- A page per project: its description, when it was created and last worked on, its repositories and folders, and
-  its question sets (`ask.py project NAME --description TEXT --repo URL --dir DIR`). Every time on the pages reads
-  "3 hours ago", with the exact time on hover.
-- A listen bench for voices and sounds: one row per clip with a big play button, the line spoken, a seek bar and
-  the time; one clip plays at a time, `b` switches to the next clip at the same point, Shift+1 to Shift+9 play
-  clip N. Blind voice picks show "Left"/"Right" until you pick. A sample on an option plays from a small button.
-- Video, audio and images in the question. Takes compared side by side show "Left" and "Right" until you pick,
-  then reveal which take was where.
-- Image-heavy questions show one case at a time, with Previous/Next, a case selector and a full-size image link.
-  Three or more images use this automatically; `media_layout` can request a gallery or a simultaneous stack.
-- `refs` list the folder to test in, source files and git or other links, with Open folder and Copy. `tabs` hold long background and images beside the question.
-- Background starts collapsed, with an expand/collapse control. Independent decisions still get separate
-  questions. Batch evaluations collect frame-by-frame picks first, with specific Good / Keep / Reject checks;
-  the agent recommends an overall model or workflow afterward.
-- The agent's guess under the options. A confident guess is shown; an unsure one waits behind "Show my guess",
-  and the agent learns whether you opened it before you picked. Nothing is ever pre-selected.
-- "Not sure, ask me later" and "Something else" on every question.
-- A note box that takes pasted or dropped screenshots. Typing while a clip plays pauses it and offers to tie the
-  note to that moment.
-- Answered questions leave the line. The page reopens on the first unanswered one with a "welcome back" line
-  naming what is left, and ends on a check-your-answers screen with Change links.
-- Keys for everything: `1`-`9` pick, `n`/`p` move, `u` for not sure, `/` for the note, Space, `j`/`l` and `[`/`]`
-  for the clip, `?` for the list.
-- Every change saves at once to the set folder. Light and dark themes, WCAG 2.2 AA, no network access.
+- One question per screen: the project, the question, why it matters and what to look or listen for, with
+  "Play from 6.0 s" buttons for times. Answered questions leave the line; it ends on a check-your-answers screen.
+- Video, audio and images, side-by-side takes shown as "Left" and "Right" until you pick, galleries for image-heavy
+  questions, a listen bench for voices and sounds. Click a picture or a Pick button to choose.
+- The agent's guess under the options (an unsure one waits behind "Show my guess"); nothing is pre-selected.
+  "Not sure, ask me later" and "Something else" on every question, and a note box that takes screenshots.
+- Keys for everything, light and dark themes, WCAG 2.2 AA, no network access. Every change saves at once.
+
+Every feature with screenshots: [the wiki](https://github.com/m4bwav/askwright/wiki).
 
 ## Study mode: quizzes that teach
 
@@ -104,48 +83,20 @@ lists every field.
 
 ## One inbox for all sessions, one page per project
 
-    python skills/askwright/scripts/ask.py dashboard --detach --open
+python skills/askwright/scripts/ask.py dashboard --detach --open
 
-Or run `ask.py shortcut` once for a desktop icon that starts and opens it, and `ask.py shortcut --startup` (Windows)
-to start it at sign-in.
-
-One server, one port. Since 0.28.0 the inbox and every set run in a single process on `http://127.0.0.1:47631/`
-(`ASKWRIGHT_PORT` moves it); a set's page is `/s/<key>/` under it, so links and bookmarks survive restarts.
-`serve` starts the server when it is down and replaces one older than the script, on the same port. If another
-program holds the port, it falls back to the port it used last. `serve --own` (or `--port N`, or `--remote`)
-still gives a set a server of its own. When steerwright 0.5.0 or later is installed, the same server carries its
-pages at `/steer/` (read-only, sandboxed so their scripts cannot reach the answer token); with an older
-steerwright, `/go/steerwright` starts steerwright's own server first.
-
-A master page for every registered question set on this computer, with a bookmarkable URL. Sets register when
-agents create or serve them. Sessions are a table (filter by project or product, search, sort, snooze, archive,
-copy the continue prompt); the Projects tab lists every project with its status. A project page shows its goals, status, newest continue prompt, HANDOFF.md, question sets and history. Details: [Dashboard and projects](https://github.com/m4bwav/askwright/wiki/Dashboard-and-Projects).
+One server on `http://127.0.0.1:47631/` carries the inbox and every set (`/s/<key>/`), so links survive restarts;
+`ask.py shortcut` makes a desktop icon for it. The inbox has Sessions, Projects and Unprocessed tabs: Unprocessed
+lists answers no agent has recorded using, oldest first, with a warning at the top once one has waited over a week.
+Details: [Dashboard and projects](https://github.com/m4bwav/askwright/wiki/Dashboard-and-Projects).
 
 ## ask.py
 
-| Command | What it does |
-|---|---|
-| `new <dir> --title T` | Writes an empty set. `--project NAME`, `--project-path DIR`, `--continue-prompt TEXT` (or `--continue-prompt-file FILE`), `--back-link URL LABEL`, `--product`, `--session`, `--asked-by`. |
-| `lint <set>` | Checks the set: questions end in `?`, say why and what to look for, options name actions, every question carries a guess, media exists inside the allowed folders. Every rule: [the wiki](https://github.com/m4bwav/askwright/wiki). |
-| `serve <set>` | Lints, then serves the page on 127.0.0.1 after fetching the page, the API and a clip with a Range request itself. `--detach` returns at once; `--open` opens your browser. |
-| `status <set>` | Counts and lists; `--wait-done --timeout S` waits for "All done". |
-| `read <set>` | Every answer; `--since REV` only newer ones. Logs the read (`--by WHO`) in the set's `uses.jsonl`. |
-| `consume <set> --by WHO --note TEXT` | Records that the answers were acted on. The dashboard's Unconsumed tab lists sets that were read but have answers newer than their last consume. |
-| `close <set> <qid>...` | Closes questions, or marks them `--superseded-by X` or `--withdrawn "reason"`. |
-| `add <set> <file>` | Adds questions (a new round); a question with `supersedes` retires the old one. Refuses anything that fails the lint. |
-| `inline <set>` | A chat version of a small set (4 or fewer plain questions), plus an AskUserQuestion mapping. |
-| `grade <set>` | Study sets: lists written answers with their rubric; `--apply <file>` writes grades back. |
-| `figure <spec> <out.svg>` | Draws a figure spec (graph, forces, shapes) to an SVG file to look at. |
-| `stop <set>` | Stops the set's server by its PID, after the server answers a ping proving it owns that PID. |
-| `register <set>` | Adds an existing set to the shared local dashboard, deduplicated by its resolved folder. |
-| `project [NAME]` | Creates or updates a project record (`--description`, `--repo`, `--dir`, `--goal`, `--status`, `--needs-direction Q`, `--note TEXT`, `--prompt-run FILE`); with no name, lists projects. |
-| `picks build <dir> --out D` | One image per item: candidate images to sets (`--group REGEX`, `--guesses`, `--existing`); `picks export <set>... --out picks.json` merges the picks. |
-| `shortcut` | A desktop icon that starts and opens the dashboard (`--dir` for another folder). |
-| `gh-post <set> --repo O/R --issue N` | Posts the questions as one comment on an issue or pull request: a readable list plus a hidden `askwright:payload` block. Web media show inline; local media are listed as not attached. Writes `github.json`. |
-| `gh-pull <ref>` | Makes a local set from the newest payload comment on `O/R#N`, or from a comment URL (`--out DIR`, default `ask/gh-<repo>-<n>`). Web images are downloaded into the set. |
-| `gh-reply <set>` | Posts the answers back as a comment that links the question comment (a thread reply for a pull request review comment). The page's "Post answers to GitHub" button does the same. |
-| `gh-answers <ref>` | Reads the answers a `gh-reply` comment carries, as JSON. |
-| `dashboard` | The shared server: the inbox (Sessions, Projects, Unconsumed) and every set, on port 47631. Supports `--detach`, `--open`, `--port N` and `--stop`. |
+`new`, `lint`, `serve`, `status`, `read`, `consume`, `close`, `add`, `inline`, `grade`, `figure`, `stop`,
+`register`, `project`, `picks`, `shortcut`, `dashboard`, `sweep`, `templates` and the `gh-*` commands. Run
+`ask.py --help`; every command with its real output is on [the wiki](https://github.com/m4bwav/askwright/wiki).
+`ask.py sweep` lists every answer set nothing records as used, sorts it into used-but-not-marked, needs a look and
+not yet processed, and with `--apply` marks the used ones and writes one prompt per project for the rest.
 
 Every command prints one JSON object, except `--version` (plain text) and a usage mistake (argparse text on
 standard error, exit code 2).

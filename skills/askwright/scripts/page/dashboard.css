@@ -192,3 +192,11 @@ section h2 { font-size: 1.15rem; margin: 28px 0 12px; }
   .timeline { border-color: #3a4a60; }
   .event.kind-prompt::before { background: #a6caff; }
 }
+
+.stale-warning { margin: .5rem 0; padding: .5rem .75rem; border-left: 4px solid #b45309; background: color-mix(in srgb, #b45309 12%, transparent); }
+.unconsumed-list tr.stale td.num { color: #b45309; font-weight: 600; }
+#unconsumed > button { margin-bottom: .75rem; }
+@media (prefers-color-scheme: dark) {
+  .stale-warning { border-left-color: #fbbf24; background: color-mix(in srgb, #fbbf24 12%, transparent); }
+  .unconsumed-list tr.stale td.num { color: #fbbf24; }
+}

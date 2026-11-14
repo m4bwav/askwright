@@ -6,6 +6,13 @@ Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (ID
 
 ## Unreleased
 
+## 0.31.0
+
+### C-20261114-1 · 2026-11-14 · answer sweep, week warning, close records use, Unprocessed tab
+- because: user request (answers never processed, or used and never marked; 41 of 191 sets), L-028 `close-without-consume`
+- files: skills/askwright/scripts/ask.py (sweep, use_state, cmd_close, continue_prompt, cmd_pending, cmd_new), page/dashboard.*, references/sweep.md, SKILL.md (Step 6, description), README.md (trimmed to the wiki), scripts/budget.py (412 KB), evals (trigger-sweep-answers), ai-docs/decisions/2026-11-14-answer-sweep.md
+`ask.py sweep` sorts every set holding unused answers into used, check, todo, fresh and gone; `--apply` marks the used pile with its evidence and moves dead registry entries aside; `--prompts` writes one prompt per project. Answers waiting over 7 days warn in sweep, the session-start hook and the inbox. `close` records a consume when nothing answered is left open, the continue prompt says consume, the Unconsumed tab became Unprocessed (never-read sets included, waiting days), and `new` warns on a temp folder. Pair: chainwright's continue-prompt template gains the consume step in the same change.
+
 ## 0.30.0
 
 ### C-20261113-3 · 2026-11-13 · confidence "medium" warns; dashboard names lint failures; question templates

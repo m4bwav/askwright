@@ -6,6 +6,13 @@ Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (ID
 
 ## Unreleased
 
+## 0.32.1
+
+### C-20261115-2 · 2026-11-15 · ask.py VERSION matches the manifest, with a test
+- because: bug (0.32.0 reported 0.31.1, so the shared server would not upgrade itself)
+- files: skills/askwright/scripts/ask.py (VERSION), tests/test_ask.py (VersionTests)
+`VERSION` was bumped by hand and missed; a test now fails when it differs from plugin.json.
+
 ## 0.32.0
 
 ### C-20261115-1 · 2026-11-15 · dismiss a set for good; the week warning says how it clears

@@ -157,6 +157,14 @@ class EvalCheckTests(unittest.TestCase):
             fixture.cleanup()
 
 
+class VersionTests(unittest.TestCase):
+    def test_ask_version_matches_the_manifest(self):
+        # 0.32.0 shipped with VERSION still 0.31.1, so the shared server never saw it needed an upgrade.
+        manifest = json.loads((Path(__file__).resolve().parents[1] / ".claude-plugin" / "plugin.json")
+                              .read_text(encoding="utf-8"))
+        self.assertEqual(ask.VERSION, manifest["version"])
+
+
 class LintTests(unittest.TestCase):
     def test_good_set_is_clean(self):
         errs, warns = lint(None)

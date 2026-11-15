@@ -13,14 +13,7 @@ Write an entry the moment a real signal happens: a user correction, the same err
 - Evidence: user request, C-20261025-2; page and lint regression tests cover gallery navigation and background disclosure.
 - Scope: skill
 - Status: active · helpful 1 · harmful 0 · last_confirmed 2026-10-25
-
-### L-014 · 2026-10-25 · Collect frame judgments before asking for a model-policy decision `evidence-before-policy`
-- Trigger: after a long image review became a gallery, the owner still lacked per-frame success/failure explanations and asked why the page requested one model decision instead of individual frame picks.
-- Hypothesis: the layout was improved without changing the premature decision granularity; general business context displaced concrete visual inspection instructions.
-- Rule: review one frame/pair per question with the requested change, source references, and Good / Keep / Reject checks tied to visible objects and locations. Offer both-usable and neither-usable outcomes. Summarize the resulting picks and failure patterns before recommending a model role or asking for policy approval.
-- Evidence: user correction, C-20261025-3; frame-review outcome checker and the corrected individual-review rounds.
-- Scope: skill
-- Status: active · helpful 1 · harmful 0 · last_confirmed 2026-10-25
+- Merged 2026-11-15 from L-014 · 2026-10-25 · Collect frame judgments before asking for a model-policy decision `evidence-before-policy`; see LEARNINGS-ARCHIVE.md for its full text.
 
 ### L-013 · 2026-10-25 · A refused eval sandbox is a harness block, not a skill verdict `eval-sandbox-required`
 - Trigger: the compact-review eval initially lacked tool grants; granting its declared shell tool caused the Windows runner to refuse all three runs because its sandbox backend was unavailable.
@@ -52,14 +45,6 @@ Write an entry the moment a real signal happens: a user correction, the same err
 - Rule: after a page change, screenshot one real set (ASKW_SET copy) at desktop and phone widths before calling it done.
 - Evidence: ai-docs/decisions/2026-10-24-session2-build-calls.md B9, confirmed 2026-10-24
 - Scope: skill
-- Status: active · helpful 1 · harmful 0 · last_confirmed 2026-10-24
-
-### L-004 · 2026-10-24 · `chrome.exe --version` on Windows opens the running Chrome `chrome-version-windows`
-- Trigger: asking for Chrome's version from the command line printed "Opening in existing browser session" and talked to the owner's open browser.
-- Hypothesis: on Windows chrome.exe hands any command line to the running instance.
-- Rule: read browser versions through Playwright (`browser.version`) or the file's version info, never by running chrome.exe.
-- Evidence: session 2 transcript, confirmed 2026-10-24
-- Scope: env:windows
 - Status: active · helpful 1 · harmful 0 · last_confirmed 2026-10-24
 
 ### L-005 · 2026-10-24 · `randomized` states a fact about the clip; never set it to quiet the lint `randomized-is-a-fact`
@@ -94,14 +79,6 @@ Write an entry the moment a real signal happens: a user correction, the same err
 - Scope: skill
 - Status: active · helpful 0 · harmful 0 · last_confirmed 2026-10-24
 
-### L-009 · 2026-10-24 · `checks-watch-too-early`: `gh pr checks --watch` right after `gh pr create` returns before CI exists
-- Trigger: the 0.1.1 pull request (#10) was created, watched and merged in one command; the watch printed "no checks reported" at once and the merge went through before CI started. CI passed afterwards (7/7 on main, and the release workflow runs the same checks before it publishes), so nothing broke
-- Hypothesis: GitHub registers the workflow runs a few seconds after the push; `--watch` with no runs yet exits instead of waiting
-- Rule: after creating a pull request, wait until `gh pr checks` lists the jobs (poll for a non-empty list) before `--watch`, and never chain the merge after a watch that printed "no checks reported"
-- Evidence: PR #10, runs on 2026-10-25T03:03Z (UTC)
-- Scope: repo:askwright
-- Status: active · helpful 0 · harmful 0 · last_confirmed 2026-10-24
-
 ### L-010 · 2026-10-25 · `double-ask-or-is-either-or`: the double-ask lint flags a one-choice "keep A, or cut B?" question
 - Trigger: a film review set (6 questions, a 2G shot's end point). "Should 2G keep the whole fall and him lying on the floor, or cut as he lands?" got the `double-ask` warning. It is one decision between two exclusive end points, and its two options were exactly those two. It was reworded to "Where should 2G end?", which passed
 - Hypothesis: `DOUBLE_ASK` matches "or" before a verb ("or cut"), as it does "and" before a verb. "And" joins two asks; "or" usually offers the alternatives of one ask, which the options then list
@@ -109,14 +86,7 @@ Write an entry the moment a real signal happens: a user correction, the same err
 - Evidence: the set's questions.json before and after the rewording, lint output (1 warning, then 0), kept with the film's files
 - Scope: skill
 - Status: active · helpful 1 · harmful 0 · last_confirmed 2026-10-25
-
-### L-011 · 2026-10-25 · `add-takes-questions-wrapper`: `ask.py add` read a `{"questions": [...]}` file as one blank question
-- Trigger: a film review round (one new question with two clips). The file was written in the shape of questions.json, `{"questions": [ {...} ]}`, as SKILL.md's `ask.py add <set> <questions.json>` suggests; add linted the wrapper itself as a question and failed with seven errors (id None, no kind, no title ...), none of which named the cause
-- Hypothesis: cmd_add accepted a list or a single question object only
-- Rule: add now also takes an object whose `questions` is a list; when an error lists every field as missing at once, suspect the file's shape before the question
-- Evidence: test_ask.py add test (wrapped file adds `music4`); the round was added as a bare list before the fix
-- Scope: skill
-- Status: active · helpful 1 · harmful 0 · last_confirmed 2026-10-25
+- Merged 2026-11-15: 2026-11-12 `per-item-series-duplicate-lint`: a series of same-shaped A/B questions (one per piece) fails lint as duplicate-question; name the item in each question text instead of passing --force.
 
 ### L-015 · 2026-10-25 · `quiz-ids-leak-the-key`: option ids in a quiz page give the answer away
 - Trigger: the first real quiz (22 questions) went to a fresh agent for a cold take with the key stripped. It flagged that ids such as `right`, `no-comma` and `double-neg` would sit in the page as radio values, readable in devtools or by anyone who reads the HTML
@@ -141,6 +111,7 @@ Write an entry the moment a real signal happens: a user correction, the same err
 - Evidence: test_bars_whole_at_laptop_and_phone_width fails at 14 px with the old rule and passes with `.meter`
 - Scope: skill
 - Status: active · helpful 1 · harmful 0 · last_confirmed 2026-10-25
+- Merged 2026-11-15 from L-022 · 2026-10-30 · `media-query-change-is-async`: a test read the top bar before the menu move ran; see LEARNINGS-ARCHIVE.md for its full text.
 
 ### L-018 · 2026-10-29 · `skill-body-budget`: a two-line SKILL.md addition failed CI on every OS
 - Trigger: PR #20 failed the size budget on all six jobs; two lines on `--back-link` put the SKILL.md body at 10279 bytes (red). Python 3.9 on ubuntu-latest also failed: the image is Ubuntu 26.04 and has no 3.9 build
@@ -165,22 +136,6 @@ Write an entry the moment a real signal happens: a user correction, the same err
 - Evidence: 42 guesses from three montages; two re-roll rounds found against the owner's notes
 - Scope: skill
 - Status: active · helpful 1 · harmful 0 · last_confirmed 2026-10-29
-
-### L-021 · 2026-10-29 · `contact-label-overlap`: fixed-size labels collided over narrow, tall candidates
-- Trigger: 26 px labels ("1 (s11)") ran into each other over 80 px wide tower sprites; pixel art at 1x was also too small to judge
-- Hypothesis: none needed; the label width did not depend on the cell
-- Rule: size labels from the cell width and scale pixel art up (3x, nearest) in the contact image; contact.py does both
-- Evidence: test_contact_sheet
-- Scope: skill
-- Status: active · helpful 1 · harmful 0 · last_confirmed 2026-10-29
-
-### L-022 · 2026-10-30 · `media-query-change-is-async`: a test read the top bar before the menu move ran
-- Trigger: test_bars_whole_at_laptop_and_phone_width resized 1100 to 390 px and measured at once; the secondary chips were still in the row (off screen), so it failed although the page was right
-- Hypothesis: a matchMedia `change` event fires at the next rendering step, after Playwright's set_viewport_size returns
-- Rule: after resizing, wait for the state the media-query handler sets (here `#more` hidden or not) before measuring; layout that JS moves on resize is not there yet
-- Evidence: the same test passed with the wait, and tests/test_visual.py (fresh contexts at each width) passed first time
-- Scope: repo tests
-- Status: active · helpful 1 · harmful 0 · last_confirmed 2026-10-30
 
 ### L-023 · 2026-10-31 · `verify-scripts-leak-registry`: wiki-verify scripts registered temp sets on the real dashboard
 - Trigger: 8 of 27 entries in ~/.askwright/sessions pointed at deleted AppData Temp folders (`ask/takes`, `set`), dated 10-26 to 10-31.
@@ -228,14 +183,12 @@ Write an entry the moment a real signal happens: a user correction, the same err
 - Status: active · helpful 1 · harmful 0 · last_confirmed 2026-10-24
 -->
 
-- 2026-11-12 `per-item-series-duplicate-lint`: a series of same-shaped A/B questions (one per piece) fails lint as duplicate-question; name the item in each question text instead of passing --force.
-
 - 2026-11-12 `blind-set-guess-cannot-name-hidden-take`: on a blind listening question the options are "Take A/B/C", but the agent's real guess is about a source ("the sampled one"), and it either does not know the letter or, if it does, a guess naming the letter gives the answer away when opened. Arvum guitar-song r6 put the guess on "neither" (not the real guess); r7 named the letter at low confidence and said in the guess text that opening it reveals the source. Idea: a `guess.source` field resolved through the blind key at read time, shown to the person only after they pick.
-
-- 2026-11-13 `hand-edited-set-fails-on-open`: an agent appended questions to questions.json by hand (confidence "medium", no background); nothing linted it until the dashboard refused to open it. Use `ask.py add`, which lints first; "medium" now only warns.
 
 ### L-028 · 2026-11-14 · `close-without-consume`: sessions close questions and never record the use
 Of 41 sets holding unused answers, 11 had every answered question closed: sessions acted, closed, and never ran consume, because the generated continue prompt and chainwright's template said read, act, close and nothing else. A step that only one document mentions gets skipped; `close` now records the use itself, and the prompts say consume.
+- Merged 2026-11-15 from L-031 · 2026-11-14 · `tool-applies-without-consume`: a tool that acts on answers must record the use itself; see LEARNINGS-ARCHIVE.md for its full text.
+- Merged 2026-11-15 from L-032 · 2026-11-15 · `read-is-not-consume`: a warning must say what clears it; see LEARNINGS-ARCHIVE.md for its full text.
 
 ### L-029 · 2026-11-14 · `windows-short-temp-path`: compare temp paths by folder name in tests
 On the Windows runners `tempfile.mkdtemp` returns an 8.3 short path (RUNNER~1) while ask.py prints the resolved long path, so `assertIn(str(set.dir), text)` failed only in CI. Match the unique temp folder name instead.
@@ -243,8 +196,3 @@ On the Windows runners `tempfile.mkdtemp` returns an 8.3 short path (RUNNER~1) w
 ### L-030 · 2026-11-14 · `pending-before-file-search`: to see whether a set has answers, ask askwright, not the disk
 A musicwright continue-prompt session told the owner a blind A/B page was still unanswered. It had searched its own repo and the vault for answers.json, and a 300 s recursive search of D:/ timed out. The set lived beside a private dataset in another folder, and it had been answered an hour earlier. `ask.py pending` (or `ask.py read <set>`) lists every answered set with its path in one call. Run it first whenever a handoff says a page waits on answers.
 
-### L-031 · 2026-11-14 · `tool-applies-without-consume`: a tool that acts on answers must record the use itself
-The week warning named six steerwright weekly reviews. All six had been applied on 2026-11-09 (`applied.json` in each set), but `sw.py apply-review` never ran `ask.py consume`, so askwright saw unused answers. Any plugin that reads askwright answers and acts on them should run `consume` in the same step; steerwright 0.5.1 does. Check a set's folder for a tool's own marker before calling it unprocessed.
-
-### L-032 · 2026-11-15 · `read-is-not-consume`: a warning must say what clears it
-The session-start week warning named the same three sets for days although sessions were asked to clean them up. Each session ran sweep and `ask.py read` on them (09:12 reads in their uses.jsonl), and reading never clears a set; the only exit was `consume`, which claims the answers were used. Two sets also held a backfilled consume stamped minutes before their answers. A nag must name the command that ends it, and the owner needs a way to drop an item without lying about it: `ask.py dismiss` (0.32.0).

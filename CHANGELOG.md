@@ -8,6 +8,11 @@ Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (ID
 
 ## 0.32.1
 
+### C-20261115-9 · 2026-11-15 · Consolidated LEARNINGS (32 active over cap 25)
+- because: consolidate_every exceeded
+- merged: L-014 into L-012, L-022 into L-017, L-031 and L-032 into L-028
+- archived: L-004, L-009, L-011, L-021, bullet hand-edited-set-fails-on-open; bullet per-item-series-duplicate-lint folded into L-010 (reasons in LEARNINGS-ARCHIVE.md)
+
 ### C-20261115-2 · 2026-11-15 · ask.py VERSION matches the manifest, with a test
 - because: bug (0.32.0 reported 0.31.1, so the shared server would not upgrade itself)
 - files: skills/askwright/scripts/ask.py (VERSION), tests/test_ask.py (VersionTests)

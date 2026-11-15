@@ -6,6 +6,13 @@ Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (ID
 
 ## Unreleased
 
+## 0.32.0
+
+### C-20261115-1 · 2026-11-15 · dismiss a set for good; the week warning says how it clears
+- because: user request (the session-start warning named the same three sets every session after many clean-ups), L-032 `read-is-not-consume`
+- files: skills/askwright/scripts/ask.py (use_state, stale_warning, cmd_dismiss, /api/dismiss), page/dashboard.js (Unprocessed tab), references/sweep.md, tests/test_ask.py
+Cause: sessions ran sweep and read the sets, but reading never clears one, and nothing but `consume` (a claim the answers were used) could; two sets also carried a backfilled consume stamped before their answers. New `ask.py dismiss` and a Dismiss button record a `dismissed` use that keeps a set out of Unprocessed and the warning for good. The warning now names consume and dismiss.
+
 ## 0.31.1
 
 ### C-20261114-2 · 2026-11-14 · inbox opens a set even when it fails lint

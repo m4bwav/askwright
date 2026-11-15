@@ -245,3 +245,6 @@ A musicwright continue-prompt session told the owner a blind A/B page was still 
 
 ### L-031 · 2026-11-14 · `tool-applies-without-consume`: a tool that acts on answers must record the use itself
 The week warning named six steerwright weekly reviews. All six had been applied on 2026-11-09 (`applied.json` in each set), but `sw.py apply-review` never ran `ask.py consume`, so askwright saw unused answers. Any plugin that reads askwright answers and acts on them should run `consume` in the same step; steerwright 0.5.1 does. Check a set's folder for a tool's own marker before calling it unprocessed.
+
+### L-032 · 2026-11-15 · `read-is-not-consume`: a warning must say what clears it
+The session-start week warning named the same three sets for days although sessions were asked to clean them up. Each session ran sweep and `ask.py read` on them (09:12 reads in their uses.jsonl), and reading never clears a set; the only exit was `consume`, which claims the answers were used. Two sets also held a backfilled consume stamped minutes before their answers. A nag must name the command that ends it, and the owner needs a way to drop an item without lying about it: `ask.py dismiss` (0.32.0).

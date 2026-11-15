@@ -375,6 +375,10 @@ class ServerTests(ServerCase):
         self.assertEqual(self.api("/api/session-state", {"id": sid, "action": "archive"})[0], 200)
         self.assertEqual(ask.session_state(sid)["state"], "archived")
         self.assertEqual(self.api("/api/session-state", {"id": sid, "action": "restore"})[0], 200)
+        self.assertEqual(self.api("/api/dismiss", {"id": "../x"})[0], 400)
+        self.assertEqual(self.api("/api/dismiss", {"id": sid}, token=False)[0], 403)
+        self.assertEqual(self.api("/api/dismiss", {"id": sid})[0], 200)
+        self.assertTrue(ask.use_state(self.s.dir)["dismissed_at"])
 
     def test_binds_loopback_only(self):
         self.assertEqual(self.srv.server_address[0], "127.0.0.1")
@@ -2244,6 +2248,32 @@ class SweepTests(unittest.TestCase):
         again = self.sweep("--apply")
         self.assertEqual((again["marked"], again["moved_aside"]), (0, 0))
         self.assertEqual(again["counts"], {"used": 0, "check": 1, "todo": 1, "fresh": 1, "gone": 0})
+
+    def test_read_alone_keeps_warning_and_dismiss_ends_it_for_good(self):
+        # The owner's report: sessions read old sets after the hook and the warning came back every session.
+        s = self.make({"music": {"choice": "tone"}})
+        run_cli("read", s.dir, "--by", "s1")
+        hook = run_cli("pending", "--hook", "--cwd", str(Path(self.home) / "elsewhere"))[1]
+        text = hook["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("waited over 7 days", text)
+        self.assertIn("ask.py dismiss", text)  # the warning says how to make it stop
+        code, out = run_cli("dismiss", s.dir, "--note", "superseded by a newer set")
+        self.assertEqual(code, 0, out)
+        self.assertFalse(out["state"]["unprocessed"])
+        self.assertEqual(self.sweep()["warning"], "")
+        self.assertEqual(run_cli("pending", "--hook", "--cwd", str(Path(self.home) / "elsewhere"))[1], {})
+        time.sleep(1.1)
+        with open(s.dir / "events.jsonl", "a", encoding="utf-8") as f:
+            f.write(json.dumps({"t": time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime()), "type": "answer"}) + "\n")
+        self.assertFalse(ask.use_state(s.dir)["unprocessed"])  # dismissed means for good, later answers too
+
+    def test_consume_timed_before_the_answers_does_not_count(self):
+        # Two real sets carried a backfilled consume stamped minutes before their answers; they rightly stay open.
+        s = self.make({"music": {"choice": "tone"}}, days=8)
+        t = time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime(time.time() - 9 * 86400))
+        (s.dir / "uses.jsonl").write_text(json.dumps({"t": t, "kind": "consumed", "by": "backfill"}) + "\n",
+                                          encoding="utf-8")
+        self.assertTrue(ask.use_state(s.dir)["unprocessed"])
 
     def test_continue_prompt_says_consume(self):
         s = self.make({}, days=0)

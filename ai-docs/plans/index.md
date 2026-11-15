@@ -4,3 +4,4 @@
 - [2026-10-30-visual-and-projects-continue-prompt.md](2026-10-30-visual-and-projects-continue-prompt.md): repeating prompt for the top-bar polish and project pages work (state in HANDOFF.md)
 - [2026-11-07-remote-answers-continue-prompt.md](2026-11-07-remote-answers-continue-prompt.md): repeating prompt for answering from other devices, a second reviewer, answer safety and waking the waiting session (state in HANDOFF.md)
 - [2026-11-14-answer-sweep-continue-prompt.md](2026-11-14-answer-sweep-continue-prompt.md): repeating prompt for the answer sweep routine (mark used sets, process trivial ones, write prompts for the rest), the week-old warning and the fixes that stop answers slipping (state in HANDOFF.md)
+- [2026-11-15-bug-review-prompt.md](2026-11-15-bug-review-prompt.md): repeating prompt for the bug review of ask.py, the page and the hook (state in HANDOFF.md)

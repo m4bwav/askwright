@@ -357,7 +357,20 @@ function renderUnconsumed() {
       document.querySelector("#action-status").textContent = ok ? `Copied the consume command for ${row.title}.` :
         "Could not copy; your browser blocked the clipboard.";
     });
-    action.append(copy);
+    const dismiss = node("button", "Dismiss");
+    dismiss.type = "button";
+    dismiss.title = "Drop this set from Unprocessed and the week warning for good";
+    dismiss.addEventListener("click", async () => {
+      try {
+        await api("/api/dismiss", {id: row.id});
+        row.unprocessed = false;
+        document.querySelector("#action-status").textContent = `Dismissed ${row.title || row.id}.`;
+        renderUnconsumed();
+      } catch (error) {
+        document.querySelector("#action-status").textContent = `Could not dismiss: ${error.message}`;
+      }
+    });
+    action.append(copy, dismiss);
     tr.append(title, node("td", row.project ? row.project.name : "", ""), node("td", String(row.answered || 0), "num"),
       node("td", `${row.waiting_days} days`, "num"), read, action);
     body.append(tr);

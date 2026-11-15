@@ -18,6 +18,9 @@ end of a chain. It is a dry run unless `--apply`.
 
 - **Evidence before marking.** Cite something a later reader can check in the consume note. No evidence, no mark.
   Never consume a set to shorten the list.
+- **Reading does not clear a set.** Only `consume` (answers used) or `dismiss` clears it. `ask.py dismiss <set>`
+  (or Dismiss on the inbox's Unprocessed tab) is the owner's call to drop a set for good, later answers included;
+  an agent dismisses only when the owner says so.
 - **Trivial has a hard edge.** Trivial means recording the decision where the project keeps decisions (HANDOFF.md,
   decisions folder, plan), flipping a setting the answer names, or closing a question the answer makes moot. A render,
   build, new code, release, a judgement the owning chain's context would change, or anything needing the user's

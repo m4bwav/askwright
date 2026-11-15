@@ -11,6 +11,7 @@ foreground prints one JSON line when it is ready and then keeps serving until st
   ask.py claim <set>                    take this All done for one continuation
   ask.py pending [--cwd DIR] [--hook]   answered sets no session has picked up
   ask.py consume <set> [--by W] [--note N]  record that the answers were acted on (Unprocessed tab)
+  ask.py dismiss <set> [--by W] [--note N]  drop a set from Unprocessed and the week warning for good
   ask.py sweep [--apply] [--prompts F]     answers nothing records as used, in piles; warns past 7 days
   ask.py read <set> [--since REV]       every answer, with notes, attachments and the guess comparison
   ask.py close <set> <qid>...           mark questions closed, superseded or withdrawn
@@ -2304,8 +2305,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.fail(403, "not available remotely")
             if not self.rate_ok():
                 return self.fail(429, "too many requests; wait a minute")
-        allowed = ("/api/open", "/api/session-state") if getattr(self.ctx, "dashboard", False) else (
-            "/api/open", "/api/session-state", "/api/answer", "/api/event", "/api/attachment",
+        allowed = ("/api/open", "/api/session-state", "/api/dismiss") if getattr(self.ctx, "dashboard", False) else (
+            "/api/open", "/api/session-state", "/api/dismiss", "/api/answer", "/api/event", "/api/attachment",
             "/api/submit", "/api/retake", "/api/open-ref", "/api/gh-reply")
         try:
             n = int(self.headers.get("Content-Length", ""))
@@ -2341,6 +2342,16 @@ class Handler(BaseHTTPRequestHandler):
                 return self.fail(400, str(e))
             except OSError as e:
                 return self.fail(500, f"cannot save session state: {e}")
+        if path == "/api/dismiss":
+            try:
+                d, _ = load_set(registered_set(payload.get("id")))
+                with self.ctx.lock:
+                    rec = log_use(d, "dismissed", "inbox", payload.get("note") or "dismissed on the inbox")
+                return self.send_json(200, {"ok": True, **rec})
+            except (AskError, ValueError) as e:
+                return self.fail(400, str(e))
+            except OSError as e:
+                return self.fail(500, f"cannot record the dismissal: {e}")
         if path == "/api/open":
             try:
                 with self.ctx.lock:
@@ -3016,8 +3027,12 @@ def use_state(d):
     used = [u for u in uses if u.get("kind") == "consumed"]
     c = max(used, key=lambda u: parse_time(u["t"])) if used else None
     consumed = bool(c and parse_time(c["t"]) >= parse_time(last_answer))
+    gone = [u for u in uses if u.get("kind") == "dismissed"]  # the owner dropped the set: never unprocessed again
+    dismissed = max(gone, key=lambda u: parse_time(u["t"])) if gone else None
+    consumed = consumed or bool(dismissed)
     return {"read_at": last, "last_answer_at": last_answer, "consumed_at": c["t"] if c else None,
             "consumed_by": c.get("by") if c else None, "consumed_note": c.get("note", "") if c else "",
+            "dismissed_at": dismissed["t"] if dismissed else None,
             "unconsumed": bool(last and last_answer and not consumed),
             "unprocessed": bool(last_answer and not consumed),
             "waiting_days": round((time.time() - parse_time(last_answer)) / 86400, 1)
@@ -3053,7 +3068,9 @@ def stale_warning(rows):
         return ""
     names = ", ".join(f'"{r["title"]}"' for r in old[:5]) + (f" and {len(old) - 5} more" if len(old) > 5 else "")
     return (f"askwright: {len(old)} answer set{'s' if len(old) != 1 else ''} waited over {STALE_DAYS} days "
-            f"unprocessed (oldest {old[0]['waiting_days']} days): {names}. Run ask.py sweep.")
+            f"unprocessed (oldest {old[0]['waiting_days']} days): {names}. ask.py sweep lists their folders. "
+            f"For each: ask.py consume <set> if its answers were used, else ask.py dismiss <set> (or Dismiss on the "
+            f"inbox's Unprocessed tab) to drop it for good; reading a set does not clear it.")
 
 
 def sweep_evidence(d, data, last_answer):
@@ -3239,6 +3256,13 @@ def cmd_consume(a):
     """Records that an agent acted on the answers, so the dashboard's Unconsumed tab stops listing the set."""
     d, _ = load_set(a.set)
     rec = log_use(d, "consumed", a.by, a.note)
+    return emit(dict({"ok": True, "set": str(d)}, **rec, state=use_state(d)))
+
+
+def cmd_dismiss(a):
+    """Drops a set from the unprocessed count for good, without claiming its answers were used."""
+    d, _ = load_set(a.set)
+    rec = log_use(d, "dismissed", a.by, a.note)
     return emit(dict({"ok": True, "set": str(d)}, **rec, state=use_state(d)))
 
 
@@ -3650,6 +3674,10 @@ def main(argv=None):
     s.add_argument("set")
     s.add_argument("--by", default="agent", help="the session or agent that used them")
     s.add_argument("--note", default="", help="what the answers were used for")
+    s = sub.add_parser("dismiss", help="drop a set from Unprocessed and the week warning for good")
+    s.add_argument("set")
+    s.add_argument("--by", default="owner", help="who dismissed it")
+    s.add_argument("--note", default="", help="why")
     s = sub.add_parser("figure")
     s.add_argument("spec")
     s.add_argument("out")

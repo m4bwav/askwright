@@ -198,10 +198,73 @@ function render(p) {
   renderTimeline(p);
 }
 
+const AGO = m => m == null ? "" : m < 60 ? `${m} min ago` : `${Math.floor(m / 60)} h ${m % 60} min ago`;
+
+function agentRow(r) {
+  const box = node("article", "", "agent " + r.status.replace(/[^a-z]+/g, "-"));
+  const head = node("p", "", "agent-head");
+  head.append(node("strong", r.status), node("span", " " + (r.kind || (r.claims.length && !r.cwd ? "grindwright claim" : "session")), "meta"));
+  if (r.claims.some(c => c.quiet || (c.session_info || {}).quiet)) head.append(node("span", " quiet mode (no new work)", "tag"));
+  if (r.claims.some(c => c.handed_to || c.handed_off || c.handoff)) head.append(node("span", " handed off", "tag"));
+  if (r.claims.some(c => c.taken_over_from || c.took_over || c.takeover)) head.append(node("span", " taken over", "tag"));
+  box.append(head);
+  const what = r.claims.map(c => `${c.id} ${c.title}`).join("; ") || r.title || r.name || "No claimed task";
+  box.append(node("p", what, "agent-what"));
+  const facts = node("dl", "", "facts small");
+  const add = (k, v) => { if (v) fact(facts, k, v); };
+  add("Branch", r.branch);
+  add("Folder", r.worktree || r.cwd);
+  add("Machine", r.machine);
+  add("Started", r.started ? when(r.started) : "");
+  add("Last activity", r.last_activity ? `${when(r.last_activity)} (${AGO(r.minutes_quiet)})` : "none seen");
+  add("Session", r.session);
+  if (r.stale_reason) add("Why stale", r.stale_reason);
+  add("How it is known", r.evidence.join("; "));
+  box.append(facts);
+  if (r.subagents.length) {
+    const ul = node("ul", "", "subagents");
+    r.subagents.forEach(a => ul.append(node("li", `${a.description || a.id} · ${a.status} · ${AGO(a.minutes_quiet)}`)));
+    box.append(node("p", "Subagents running", "meta"), ul);
+  }
+  return box;
+}
+
+function when(iso) {
+  const d = new Date(iso);
+  return isNaN(d) ? iso : d.toLocaleString();
+}
+
+async function loadAgents() {
+  const meta = document.querySelector("#running-meta");
+  try {
+    const d = await api("/api/agents?slug=" + encodeURIComponent(slug));
+    const live = d.rows.filter(r => r.status === "live").length;
+    meta.textContent = (d.rows.length ? `${d.rows.length} seen, ${live} live.` : "No agent session seen in this project's folders.")
+      + ` Checked ${when(d.built)}; refreshes every 15 s. ${d.note || ""}`;
+    const rows = document.querySelector("#running-rows");
+    rows.replaceChildren(...d.rows.map(agentRow), ...d.problems.map(p => node("p", "Could not read: " + p, "problem")));
+    const idle = d.worktrees_idle || [];
+    document.querySelector("#idle-trees").hidden = !idle.length;
+    document.querySelector("#idle-list").replaceChildren(...idle.map(t =>
+      node("li", `${t.path} (${t.branch || "no branch"}) · last git write ${t.minutes_since_git == null ? "unknown" : AGO(t.minutes_since_git)}`)));
+  } catch (e) {
+    meta.textContent = "Could not check who is running: " + e.message + ". Do not assume nobody is.";
+    meta.className = "problem";
+  }
+}
+
+function renderLinks(p) {
+  const box = document.querySelector("#plugin-links");
+  const links = p.links || {};
+  box.replaceChildren(...Object.entries(links).filter(([k]) => k !== "steerwright" || !document.querySelector('a[href="/go/steerwright"]'))
+    .map(([k, href]) => { const a = node("a", k, "chip secondary"); a.href = href; a.title = `${k} page for this project`; return a; }));
+}
+
 async function load() {
   try {
     project = (await api("/api/project?slug=" + encodeURIComponent(slug))).project;
     render(project);
+    renderLinks(project);
     report("");
   } catch (e) {
     document.querySelector("#name").textContent = "Project not found";
@@ -216,4 +279,5 @@ document.querySelector("#copy-start").addEventListener("click", async () => {
 document.querySelector("#show-log").addEventListener("change", () => project && renderTimeline(project));
 document.querySelector("#more-history").addEventListener("click", () => { showAll = !showAll; if (project) renderTimeline(project); });
 load();
-setInterval(load, 15000);
+loadAgents();
+setInterval(() => { load(); loadAgents(); }, 15000);

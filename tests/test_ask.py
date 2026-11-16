@@ -2419,6 +2419,133 @@ class SteerwrightLink(unittest.TestCase):
                 self.assertIn("<!--STEERWRIGHT-->", (ask.PAGE / name).read_text(encoding="utf-8"))
 
 
+class AgentsTests(unittest.TestCase):
+    """0.33.0: agents.py lists who is running in a project, with evidence; never says nobody when somebody is."""
+
+    def setUp(self):
+        import agents
+        self.agents = agents
+        self.tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.tmp, True)
+        self.home = self.tmp / "claude"
+        self.proj = self.tmp / "game"
+        (self.proj / "ai-docs" / "grind").mkdir(parents=True)
+        (self.home / "sessions").mkdir(parents=True)
+        self.tdir = self.home / "projects" / agents.encode(self.proj)
+        self.tdir.mkdir(parents=True)
+        self.now = time.time()
+
+    def transcript(self, sid, minutes_ago, cwd=None, branch="main", folder=None):
+        stamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(self.now - minutes_ago * 60))
+        line = {"type": "user", "cwd": str(cwd or self.proj), "gitBranch": branch, "timestamp": stamp,
+                "sessionId": sid, "message": {"content": "SECRET MESSAGE TEXT"}}
+        f = (folder or self.tdir) / f"{sid}.jsonl"
+        f.write_text(json.dumps(line) + "\n", encoding="utf-8")
+        os.utime(f, (self.now - minutes_ago * 60,) * 2)
+        return f
+
+    def subagent(self, sid, aid, desc, minutes_ago, finished=False):
+        d = self.tdir / sid / "subagents"
+        d.mkdir(parents=True, exist_ok=True)
+        meta = {"description": desc, "agentType": "general-purpose"}
+        if finished:
+            meta["finished"] = True
+        (d / f"agent-{aid}.meta.json").write_text(json.dumps(meta), encoding="utf-8")
+        log = d / f"agent-{aid}.jsonl"
+        log.write_text("{}\n", encoding="utf-8")
+        os.utime(log, (self.now - minutes_ago * 60,) * 2)
+
+    def ledger(self, items):
+        (self.proj / "ai-docs" / "grind" / "ledger.jsonl").write_text(
+            "".join(json.dumps(i) + "\n" for i in items), encoding="utf-8")
+
+    def collect(self):
+        return self.agents.collect([str(self.proj)], home=self.home, now=self.now)
+
+    def test_unclaimed_interactive_session_and_subagent_show(self):
+        self.transcript("s-one", 2)
+        self.subagent("s-one", "a1", "write tests", 1)
+        self.subagent("s-one", "a2", "old helper", 1, finished=True)
+        out = self.collect()
+        self.assertEqual([r["session"] for r in out["rows"]], ["s-one"])
+        row = out["rows"][0]
+        self.assertEqual(row["status"], "recent")  # no live process registered: shown, but not as live
+        self.assertEqual([a["description"] for a in row["subagents"]], ["write tests"])
+        self.assertEqual(row["subagents"][0]["status"], "recent")  # not live once its session's process is gone
+        self.assertIn("transcript written 2 min ago", row["evidence"])
+        self.assertNotIn("SECRET", json.dumps(out))
+
+    def test_live_process_from_registry(self):
+        (self.home / "sessions" / "1.json").write_text(json.dumps(
+            {"pid": os.getpid(), "sessionId": "s-live", "cwd": str(self.proj), "kind": "interactive",
+             "startedAt": int(self.now * 1000)}), encoding="utf-8")
+        (self.home / "sessions" / "2.json").write_text(json.dumps(
+            {"pid": 999999, "sessionId": "s-dead", "cwd": str(self.proj)}), encoding="utf-8")
+        rows = {r["session"]: r for r in self.collect()["rows"]}
+        self.assertTrue(rows["s-live"]["process_alive"])
+        self.assertEqual(rows["s-live"]["status"], "live")
+        self.assertNotIn("s-dead", rows)
+
+    def test_stale_claim_reads_stale_with_age(self):
+        past = time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime(self.now - 3 * 3600))
+        self.ledger([{"id": "T-1", "title": "Fix the jump", "state": "running", "session": "crew-a",
+                      "branch": "fix/jump", "lease_until": past}])
+        row = self.collect()["rows"][0]
+        self.assertEqual(row["status"], "possibly stale")
+        self.assertIn("lease ran out 3.0 h ago", row["stale_reason"])
+        self.assertEqual(row["claims"][0]["title"], "Fix the jump")
+
+    def test_fresh_claim_joins_its_session_by_branch(self):
+        future = time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime(self.now + 3600))
+        self.ledger([{"id": "T-2", "title": "Art pass", "state": "running", "session": "crew-b",
+                      "branch": "art/pass", "lease_until": future, "quiet": True},
+                     {"id": "T-3", "title": "done one", "state": "done"}])
+        self.transcript("s-two", 1, branch="art/pass")
+        rows = self.collect()["rows"]
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["claims"][0]["id"], "T-2")
+        self.assertTrue(rows[0]["claims"][0]["quiet"])
+
+    def test_old_finished_session_is_not_running_and_missing_folder_is_named(self):
+        self.transcript("s-old", 600)
+        out = self.agents.collect([str(self.proj), str(self.tmp / "gone")], home=self.home, now=self.now)
+        self.assertEqual(out["rows"], [])
+        self.assertTrue(any("gone" in p for p in out["problems"]))
+
+    def test_project_links_and_grind_page(self):
+        fake = self.tmp / "grw_status.py"
+        page = ("<html><head></head><body><main><div class=\"grid\"></div>"
+                "<script>async function t(){d=await (await fetch('api',{cache:'no-store'})).json()}</script></body></html>")
+        fake.write_text("PAGE = " + repr(page) + "\n"
+                        "def collect(state):\n    return {'project': 'game', 'state': str(state)}\n", encoding="utf-8")
+        rec = {"slug": "game", "dirs": [str(self.proj)]}
+        with mock.patch.dict(os.environ, {"GRINDWRIGHT_STATUS_SCRIPT": str(fake)}), \
+                mock.patch.object(ask, "project_record", return_value=rec), \
+                mock.patch.object(ask, "steerwright_script", return_value=None), \
+                mock.patch.object(ask, "steerwright_url", return_value=None):
+            self.assertEqual(ask.project_links(rec), {})  # no grind state yet: no link
+            (self.proj / "ai-docs" / "grind" / "profile.json").write_text("{}", encoding="utf-8")
+            self.assertEqual(ask.project_links(rec), {"grindwright": "/grind/game/"})
+            code, body, _ = ask.grind_page("game", "")
+        self.assertEqual(code, 200)
+        self.assertIn("/projects/game", body)
+        self.assertIn("Who is running", body)
+        self.assertIn("grind-data", body)
+        self.assertNotIn("fetch('api'", body)
+
+    def test_session_in_parent_folder_naming_project(self):
+        parent = self.home / "projects" / self.agents.encode(self.tmp)
+        parent.mkdir()
+        f = self.transcript("s-parent", 3, cwd=self.tmp, folder=parent)
+        with open(f, "a", encoding="utf-8") as h:
+            h.write(json.dumps({"type": "assistant", "input": str(self.proj / "x.py")}) + "\n")
+        os.utime(f, (self.now - 180,) * 2)
+        self.transcript("s-elsewhere", 3, cwd=self.tmp, folder=parent)
+        rows = {r["session"]: r for r in self.collect()["rows"]}
+        self.assertIn("s-parent", rows)
+        self.assertNotIn("s-elsewhere", rows)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=1)
 

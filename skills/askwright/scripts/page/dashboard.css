@@ -200,3 +200,15 @@ section h2 { font-size: 1.15rem; margin: 28px 0 12px; }
   .stale-warning { border-left-color: #fbbf24; background: color-mix(in srgb, #fbbf24 12%, transparent); }
   .unconsumed-list tr.stale td.num { color: #fbbf24; }
 }
+.running { margin: 1rem 0; }
+.agent { border: 1px solid color-mix(in srgb, currentColor 20%, transparent); border-radius: 8px; padding: .6rem .8rem; margin: .5rem 0; }
+.agent.live { border-left: 4px solid #15803d; }
+.agent.recent { border-left: 4px solid #2563eb; }
+.agent.possibly-stale, .agent.claimed-no-session-seen { border-left: 4px solid #b45309; }
+.agent-head { margin: 0; }
+.agent-what { margin: .2rem 0 .4rem; overflow-wrap: anywhere; }
+.agent .facts.small { font-size: .85em; }
+.agent .tag { font-size: .8em; padding: 0 .4em; border-radius: 4px; background: color-mix(in srgb, currentColor 12%, transparent); margin-left: .3em; }
+.subagents { margin: 0; padding-left: 1.2rem; font-size: .9em; }
+.problem { color: #b91c1c; }
+@media (prefers-color-scheme: dark) { .problem { color: #f87171; } }

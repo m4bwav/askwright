@@ -54,7 +54,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-VERSION = "0.32.1"
+VERSION = "0.33.0"
 DEFAULT_PORT = 47631  # the shared server's port; ASKWRIGHT_PORT moves it (0 picks a free one)
 PAGE = Path(__file__).resolve().parent / "page"
 BUNDLE = re.compile(r"^(those|these|both|all of)\b|\bplus\b", re.I)
@@ -408,6 +408,7 @@ def project_page(slug):
                           "source": "sets"} for r in rec["sets"] if r.get("created")]
             timeline.sort(key=lambda h: parse_time(h["at"]), reverse=True)
             return {"ok": True, "project": dict(rec, handoffs=handoffs, prompt_files=prompts, timeline=timeline[:80],
+                                                links=project_links(rec),
                                                 answered=sum(r.get("answered") or 0 for r in rec["sets"]))}
     raise AskError("unknown project")
 
@@ -1707,6 +1708,111 @@ def steerwright_link(page):  # steerwright hub link, '' when not installed; /go/
     return '<a class="chip secondary" href="/go/steerwright" title="all projects">steerwright</a>'
 
 
+
+# ---- who is running, and grindwright's page for a project (local hub only; never in remote mode)
+
+def iso_now():
+    return datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")
+
+
+def project_record(slug):
+    for rec in list_projects()["projects"]:
+        if rec["slug"] == slug:
+            return rec
+    raise AskError("unknown project")
+
+
+def project_agents(slug):
+    """Every agent session seen in the project's folders (agents.py beside this script), with its evidence."""
+    rec = project_record(slug)
+    if not rec["dirs"]:
+        return {"ok": True, "rows": [], "worktrees_idle": [], "built": iso_now(),
+                "problems": ["this project names no folders, so its sessions cannot be found"]}
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import agents
+    return agents.collect(rec["dirs"])
+
+
+def grind_states(rec):
+    return [Path(d) / "ai-docs" / "grind" for d in rec["dirs"] if (Path(d) / "ai-docs" / "grind" / "profile.json").is_file()]
+
+
+def grindwright_status_script():
+    """grindwright's grw_status.py: GRINDWRIGHT_STATUS_SCRIPT, the installed plugin, or a clone beside this one."""
+    cands = [os.environ.get("GRINDWRIGHT_STATUS_SCRIPT")]
+    try:
+        inst = json.loads((Path.home() / ".claude" / "plugins" / "installed_plugins.json").read_text("utf-8"))
+        cands += [str(Path(r["installPath"], "skills", "grindwright", "scripts", "grw_status.py"))
+                  for k, recs in inst["plugins"].items() if k.startswith("grindwright@") for r in recs]
+    except Exception:
+        pass
+    cands.append(str(Path(__file__).resolve().parents[4] / "grindwright" / "skills" / "grindwright" / "scripts" / "grw_status.py"))
+    return next((Path(c) for c in cands if c and Path(c).is_file()), None)
+
+
+def project_links(rec):
+    """Pages of other plugins for this project; a link is only given when its page exists."""
+    links = {}
+    if grind_states(rec) and grindwright_status_script():
+        links["grindwright"] = f"/grind/{rec['slug']}/"
+    if steerwright_script() or steerwright_url():
+        links["steerwright"] = "/go/steerwright"
+    return links
+
+
+def agents_html(data, esc):
+    """The who-is-running card as plain HTML, for pages that are not askwright's own."""
+    rows = []
+    for r in data.get("rows", []):
+        what = "; ".join(f"{c.get('id')} {c.get('title')}" for c in r.get("claims", [])) or r.get("title") or r.get("name") or ""
+        subs = ", ".join(a["description"] for a in r.get("subagents", []))
+        rows.append("<tr><td><b>{}</b></td><td>{}<div class='mute'>{}</div></td><td><code>{}</code><div class='mute'>{}</div></td>"
+                    "<td class='mute'>{}</td></tr>".format(
+                        esc(r.get("status")), esc(what or "(no claimed task)"), esc(("subagents: " + subs) if subs else ""),
+                        esc(r.get("branch") or ""), esc(r.get("worktree") or r.get("cwd") or ""), esc("; ".join(r.get("evidence", [])))))
+    body = ("<table><tr><th>status</th><th>working on</th><th>where</th><th>how it is known</th></tr>" + "".join(rows) + "</table>"
+            if rows else "<p class='mute'>No agent session seen in this project's folders on this machine.</p>")
+    probs = "".join(f"<p class='mute'>Could not read: {esc(p)}</p>" for p in data.get("problems", []))
+    return (f"<section class='card wide'><h2>Who is running (built {esc(data.get('built'))}, {esc(data.get('note', ''))})</h2>"
+            f"{body}{probs}</section>")
+
+
+def grind_page(slug, sub):
+    """grindwright's status page for the project's grind state, with the data inlined (the sandbox has no origin
+    to fetch from), a back link and the who-is-running card. (code, body, content type)."""
+    import html as _html
+    rec = project_record(slug)
+    states, script = grind_states(rec), grindwright_status_script()
+    if not states or not script:
+        raise AskError("no grindwright page for this project")
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("grindwright_status_mounted", script)
+    mod = importlib.util.module_from_spec(spec)
+    sys.path.insert(0, str(script.parent))
+    spec.loader.exec_module(mod)
+    data = mod.collect(states[0])
+    try:
+        who = project_agents(slug)
+    except Exception as e:  # never show an empty list for a failed read
+        who = {"rows": [], "problems": [f"who-is-running failed: {e}"], "built": iso_now()}
+    data = json.loads(json.dumps(data, default=str))
+    inline = json.dumps(data).replace("</", "<\\/")
+    page = mod.PAGE
+    fetch = "await (await fetch('api',{cache:'no-store'})).json()"
+    back = (f"<nav style='margin-bottom:10px'><a href='/projects/{_html.escape(slug)}'>&larr; askwright project page</a>"
+            f" &middot; <a href='/sessions#projects'>all projects</a></nav>")
+    card = agents_html(who, lambda s: _html.escape(str(s if s is not None else "")))
+    if fetch in page:
+        page = page.replace(fetch, "JSON.parse(document.getElementById('grind-data').textContent)")
+        page = page.replace("<main>", "<main>" + back, 1).replace('<div class="grid">', '<div class="grid">' + card, 1)
+        page = page.replace("</body>", f"<script type='application/json' id='grind-data'>{inline}</script></body>", 1)
+        page = page.replace("<head>", "<head><meta http-equiv='refresh' content='20'>", 1)
+    else:  # a grindwright whose page changed shape: still show the facts that matter here
+        page = ("<!doctype html><meta charset='utf-8'><meta http-equiv='refresh' content='20'><title>grind</title><main>"
+                + back + card + "<pre>" + _html.escape(json.dumps(data, indent=1)[:20000]) + "</pre></main>")
+    return 200, page, "text/html; charset=utf-8"
+
+
 # ---- remote mode (off unless a person turned it on)
 
 REMOTE_GET = ("/", "/index.html", "/favicon.ico", "/api/set")
@@ -2181,6 +2287,14 @@ class Handler(BaseHTTPRequestHandler):
         if (path == "/steer" or path.startswith("/steer/")) and not self.by and self.ctx is self.server \
                 and getattr(self.server, "dashboard", False):
             return self.steer(path)
+        m = re.fullmatch(r"/grind/([a-z0-9-]+)/?", path)
+        if m and not self.by and self.ctx is self.server and self.headers.get("Sec-Fetch-Site") != "cross-site":
+            try:
+                code, body, ctype = grind_page(m.group(1), "")
+            except AskError as e:
+                return self.fail(404, str(e))
+            return self.send_bytes(code, body.encode("utf-8"), ctype,
+                                   {"Content-Security-Policy": STEER_CSP, "Referrer-Policy": "no-referrer"})
         if self.by and not (path in REMOTE_GET or path in PAGE_FILES or path.startswith("/m/")):
             return self.fail(403, "not available remotely")
         if path in ("/", "/index.html", "/sessions") or re.fullmatch(r"/projects/[a-z0-9-]+", path):
@@ -2210,6 +2324,12 @@ class Handler(BaseHTTPRequestHandler):
                 slug = urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query).get("slug", [""])[0]
                 try:
                     return self.send_json(200, project_page(slug))
+                except AskError as e:
+                    return self.fail(404, str(e))
+            if path == "/api/agents":
+                slug = urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query).get("slug", [""])[0]
+                try:
+                    return self.send_json(200, project_agents(slug))
                 except AskError as e:
                     return self.fail(404, str(e))
             if path == "/api/set" and not getattr(self.ctx, "dashboard", False):

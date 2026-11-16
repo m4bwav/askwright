@@ -15,7 +15,7 @@
 <a class="skip" href="#sets">Skip to question sets</a>
 <main class="project-page">
   <header>
-    <nav class="crumbs" aria-label="Breadcrumb"><a href="/sessions">All sessions</a> <span aria-hidden="true">/</span> <a href="/sessions#projects">Projects</a> <!--STEERWRIGHT--></nav>
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="/sessions">All sessions</a> <span aria-hidden="true">/</span> <a href="/sessions#projects">Projects</a> <!--STEERWRIGHT--> <span id="plugin-links"></span></nav>
     <p class="brand">Project</p>
     <h1><span id="name">Loading…</span> <span id="status" class="status" hidden></span></h1>
     <p id="description"></p>
@@ -24,6 +24,12 @@
   <section id="attention" class="attention" aria-labelledby="attention-h" hidden>
     <h2 id="attention-h">Needs you</h2>
     <ul id="attention-list"></ul>
+  </section>
+  <section id="running" class="running" aria-labelledby="running-h">
+    <h2 id="running-h">Who is running</h2>
+    <p class="meta" id="running-meta">Looking for agent sessions…</p>
+    <div id="running-rows"></div>
+    <details id="idle-trees" hidden><summary>Worktrees with no session seen</summary><ul class="places" id="idle-list"></ul></details>
   </section>
   <dl class="facts" id="facts"></dl>
   <div class="columns">

@@ -88,6 +88,13 @@ python skills/askwright/scripts/ask.py dashboard --detach --open
 One server on `http://127.0.0.1:47631/` carries the inbox and every set (`/s/<key>/`), so links survive restarts;
 `ask.py shortcut` makes a desktop icon for it. The inbox has Sessions, Projects and Unprocessed tabs: Unprocessed
 lists answers no agent has recorded using, oldest first, with a warning at the top once one has waited over a week.
+Each project page opens with **Who is running**: every Claude Code session seen in the project's folders and their
+git worktrees on this machine (live process, recent transcript, a session started in a parent folder that works
+here, or a grindwright claim), with its branch, folder, start, last activity, running subagents and how it is known.
+A claim with no activity reads as possibly stale with its age; a source that cannot be read is named, never shown
+as an empty list. Rows show titles, ids, branches and times, never message text, and are not served in remote mode.
+When the project has a grindwright state, a `grindwright` link opens its grind page inside the hub (`/grind/<slug>/`),
+with a link back. `python skills/askwright/scripts/agents.py --dir PATH` prints the same list as JSON.
 Details: [Dashboard and projects](https://github.com/m4bwav/askwright/wiki/Dashboard-and-Projects).
 
 ## ask.py

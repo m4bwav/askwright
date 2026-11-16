@@ -6,6 +6,13 @@ Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (ID
 
 ## Unreleased
 
+## 0.34.1
+
+### C-20261116-3 · 2026-11-16 · Who-is-running fixes seen in the browser
+- because: user request (running agents on project pages; defects noted in the session 3 browser check)
+- files: skills/askwright/scripts/agents.py (iso, parent-folder rows, worktree), skills/askwright/scripts/ask.py (grind_page), tests/test_ask.py (AgentsTests)
+Times are written in local time with their offset instead of UTC, a session started in a parent folder shows the project folder it works in (and says where it started), and the mounted grindwright page no longer shows two back links when grindwright already links to the project page.
+
 ## 0.34.0
 
 ### C-20261116-2 · 2026-11-16 · Mounted grindwright page uses its inline hook; real handoff and takeover keys

@@ -56,7 +56,7 @@ def encode(path):
 
 
 def iso(ts):
-    return dt.datetime.fromtimestamp(ts, dt.timezone.utc).isoformat(timespec="seconds") if ts else None
+    return dt.datetime.fromtimestamp(ts).astimezone().isoformat(timespec="seconds") if ts else None  # local, like the page's clock
 
 
 def parse_iso(s):
@@ -351,8 +351,10 @@ def collect(dirs, home=None, now=None, window_hours=WINDOW_HOURS):
                                 "machine": this_host(), "branch": "", "title": facts["title"] or "",
                                 "started": iso(facts["started"]), "last_activity": iso(mtime), "minutes_quiet": minutes,
                                 "subagents": here, "from_parent_folder": True,
-                                "evidence": [f"started in a parent folder; recent tool calls name this project "
-                                             f"(transcript written {minutes} min ago)"]}
+                                # show the project folder it works in, not the parent it was started from
+                                "worktree": "" if moved_in else Path(sorted(raw)[0]).as_posix(),
+                                "evidence": [f"started in {Path(facts['start_cwd'] or facts['cwd']).as_posix()}; recent tool "
+                                             f"calls name this project (transcript written {minutes} min ago)"]}
     else:
         problems.append(f"no Claude Code transcripts folder at {pdir.as_posix()}")
 
@@ -403,7 +405,7 @@ def collect(dirs, home=None, now=None, window_hours=WINDOW_HOURS):
             r["stale_reason"] = "claimed, but no transcript or process seen" + (
                 f"; lease ran out {c_age(r['claims'][0], now)}" if r["claims"][0].get("lease_expired") else "")
         tree = next((trees[k] for k in trees if r.get("cwd") and inside(r["cwd"], {k})), None)
-        r["worktree"] = tree["path"] if tree else ""
+        r["worktree"] = tree["path"] if tree else r.get("worktree") or ""
         if r["status"] == "possibly stale" and not r["claims"] and minutes is not None and minutes > RECENT_MINUTES:
             continue  # finished sessions in the window are history, not running
         out.append(r)

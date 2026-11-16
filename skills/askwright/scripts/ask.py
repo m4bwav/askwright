@@ -54,7 +54,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-VERSION = "0.34.0"
+VERSION = "0.34.1"
 DEFAULT_PORT = 47631  # the shared server's port; ASKWRIGHT_PORT moves it (0 picks a free one)
 PAGE = Path(__file__).resolve().parent / "page"
 BUNDLE = re.compile(r"^(those|these|both|all of)\b|\bplus\b", re.I)
@@ -1803,7 +1803,9 @@ def grind_page(slug, sub):
             f" &middot; <a href='/sessions#projects'>all projects</a></nav>")
     card = agents_html(who, lambda s: _html.escape(str(s if s is not None else "")))
     if hasattr(mod, "page") and "who" in data:  # grindwright 0.17+: inline hook and its own who-is-running card
-        page = mod.page(data).replace("<main>", "<main>" + back, 1)
+        page = mod.page(data)
+        if f"/projects/{slug}" not in page:  # grindwright already links back when it found the hub
+            page = page.replace("<main>", "<main>" + back, 1)
         page = page.replace("<head>", "<head><meta http-equiv='refresh' content='20'>", 1)
     elif fetch in page:
         page = page.replace(fetch, "JSON.parse(document.getElementById('grind-data').textContent)")

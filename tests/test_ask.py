@@ -2560,6 +2560,9 @@ class AgentsTests(unittest.TestCase):
         rows = {r["session"]: r for r in self.collect()["rows"]}
         self.assertIn("s-parent", rows)
         self.assertNotIn("s-elsewhere", rows)
+        # where: the project folder it works in, not the parent it started from; times in local offset
+        self.assertEqual(rows["s-parent"]["worktree"].lower(), Path(self.proj).as_posix().lower())
+        self.assertEqual(rows["s-parent"]["last_activity"][-6:], time.strftime("%z")[:3] + ":" + time.strftime("%z")[3:])
 
 
 if __name__ == "__main__":

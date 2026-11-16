@@ -2533,6 +2533,22 @@ class AgentsTests(unittest.TestCase):
         self.assertIn("grind-data", body)
         self.assertNotIn("fetch('api'", body)
 
+    def test_grind_page_uses_grindwright_inline_hook(self):
+        fake = self.tmp / "grw_status.py"
+        fake.write_text("def collect(state):\n    return {'project': 'game', 'who': {'rows': []}}\n"
+                        "def page(inline=None):\n    return '<html><head></head><body><main>HOOK ' + inline['project'] + '</main></body></html>'\n",
+                        encoding="utf-8")
+        (self.proj / "ai-docs" / "grind").mkdir(parents=True, exist_ok=True)
+        (self.proj / "ai-docs" / "grind" / "profile.json").write_text("{}", encoding="utf-8")
+        rec = {"slug": "game", "dirs": [str(self.proj)]}
+        with mock.patch.dict(os.environ, {"GRINDWRIGHT_STATUS_SCRIPT": str(fake)}), \
+                mock.patch.object(ask, "project_record", return_value=rec):
+            code, body, _ = ask.grind_page("game", "")
+        self.assertEqual(code, 200)
+        self.assertIn("HOOK game", body)
+        self.assertIn("/projects/game", body)
+        self.assertIn("http-equiv='refresh'", body)
+
     def test_session_in_parent_folder_naming_project(self):
         parent = self.home / "projects" / self.agents.encode(self.tmp)
         parent.mkdir()

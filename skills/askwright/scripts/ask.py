@@ -1797,12 +1797,15 @@ def grind_page(slug, sub):
         who = {"rows": [], "problems": [f"who-is-running failed: {e}"], "built": iso_now()}
     data = json.loads(json.dumps(data, default=str))
     inline = json.dumps(data).replace("</", "<\\/")
-    page = mod.PAGE
+    page = getattr(mod, "PAGE", "")
     fetch = "await (await fetch('api',{cache:'no-store'})).json()"
     back = (f"<nav style='margin-bottom:10px'><a href='/projects/{_html.escape(slug)}'>&larr; askwright project page</a>"
             f" &middot; <a href='/sessions#projects'>all projects</a></nav>")
     card = agents_html(who, lambda s: _html.escape(str(s if s is not None else "")))
-    if fetch in page:
+    if hasattr(mod, "page") and "who" in data:  # grindwright 0.17+: inline hook and its own who-is-running card
+        page = mod.page(data).replace("<main>", "<main>" + back, 1)
+        page = page.replace("<head>", "<head><meta http-equiv='refresh' content='20'>", 1)
+    elif fetch in page:
         page = page.replace(fetch, "JSON.parse(document.getElementById('grind-data').textContent)")
         page = page.replace("<main>", "<main>" + back, 1).replace('<div class="grid">', '<div class="grid">' + card, 1)
         page = page.replace("</body>", f"<script type='application/json' id='grind-data'>{inline}</script></body>", 1)

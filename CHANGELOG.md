@@ -6,6 +6,13 @@ Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (ID
 
 ## Unreleased
 
+## 0.34.0
+
+### C-20261116-2 · 2026-11-16 · Mounted grindwright page uses its inline hook; real handoff and takeover keys
+- because: user request (running agents on project pages, grindwright 0.17.0 side)
+- files: skills/askwright/scripts/ask.py (`grind_page`), agents.py (`PASS_ITEM_KEYS`), tests/test_ask.py
+With grindwright 0.17.0 or later, `/grind/<slug>/` builds the page with `grw_status.page(inline)` and grindwright's own who-is-running card instead of patching its HTML; older grindwright keeps the patched route. Claims now carry grindwright's real `handed_off`, `taken_over` and `paused_by` fields.
+
 ## 0.33.0
 
 ### C-20261116-1 · 2026-11-16 · Who is running on project pages; grindwright link both ways

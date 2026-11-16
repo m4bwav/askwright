@@ -29,7 +29,7 @@ RECENT_MINUTES = 120     # after this, activity alone no longer counts as runnin
 WINDOW_HOURS = 24        # transcripts older than this are not read at all
 SUBAGENT_MINUTES = 30    # an unfinished subagent quiet longer than this is shown as possibly stale
 HEAD_BYTES = 65536
-PASS_ITEM_KEYS = ("handed_to", "handed_off", "handoff", "taken_over_from", "took_over", "takeover", "quiet")
+PASS_ITEM_KEYS = ("handed_off", "taken_over", "paused_by", "handed_to", "handoff", "taken_over_from", "quiet")
 PASS_SESSION_KEYS = ("quiet", "mode", "handed_to", "handoff")
 
 

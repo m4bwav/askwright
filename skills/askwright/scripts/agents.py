@@ -321,7 +321,8 @@ def collect(dirs, home=None, now=None, window_hours=WINDOW_HOURS):
                 row["subagents"] = subagents(folder / sid, now)
         # sessions started in a parent folder (one level up, a workspace of many repos) that work here:
         # their recent tool calls name one of the project's folders. Read only to match; nothing is shown.
-        needles = {r for r in roots} | {r.replace("/", "\\\\") for r in roots} | {r.replace("/", "\\") for r in roots}
+        spellings = roots | {x.replace("\\", "/").rstrip("/").lower() for x in raw}  # as typed and resolved
+        needles = spellings | {r.replace("/", "\\\\") for r in spellings} | {r.replace("/", "\\") for r in spellings}
         for folder in pdir.iterdir():
             name = folder.name.lower()
             if not folder.is_dir() or not any(p.startswith(name) and p != name for p in prefixes):

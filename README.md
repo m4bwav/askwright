@@ -95,6 +95,10 @@ A claim with no activity reads as possibly stale with its age; a source that can
 as an empty list. Rows show titles, ids, branches and times, never message text, and are not served in remote mode.
 When the project has a grindwright state, a `grindwright` link opens its grind page inside the hub (`/grind/<slug>/`),
 with a link back. `python skills/askwright/scripts/agents.py --dir PATH` prints the same list as JSON.
+Other computers: when the project's grind profile shares claims through its repository (`work.remote`), the list
+also shows the other machines' shared grindwright claims and the rows each machine published to a
+`grind-presence/<machine>` ref (`agents.py --dir PATH --publish`, or every three minutes from the hub started with
+`ASKWRIGHT_PRESENCE=1`), each with the machine name and the age of its evidence.
 Details: [Dashboard and projects](https://github.com/m4bwav/askwright/wiki/Dashboard-and-Projects).
 
 ## ask.py

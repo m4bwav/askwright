@@ -249,14 +249,16 @@ def collect(dirs, home=None, now=None, window_hours=WINDOW_HOURS):
     """{built, rows, worktrees_idle, problems} for the folders of one project."""
     now = now or time.time()
     home = Path(home) if home else claude_home()
-    problems, roots, trees = [], set(), {}
+    problems, roots, trees, raw = [], set(), {}, set()
     for d in dirs:
         if not Path(d).exists():
             problems.append(f"folder not found: {d}")
             continue
         roots.add(norm(d))
+        raw.add(str(Path(d)))
         for path, branch in worktrees(d):
             roots.add(norm(path))
+            raw.add(str(Path(path)))
             trees[norm(path)] = {"path": Path(path).as_posix(), "branch": branch}
     rows = {}
 
@@ -290,7 +292,8 @@ def collect(dirs, home=None, now=None, window_hours=WINDOW_HOURS):
     # 2. transcripts
     pdir = home / "projects"
     if pdir.is_dir():
-        prefixes = {encode(r).lower() for r in roots}
+        # Claude Code names the folder after the cwd as typed, so try both the given and the resolved spelling
+        prefixes = {encode(r).lower() for r in roots | raw}
         for folder in pdir.iterdir():
             name = folder.name.lower()
             if not folder.is_dir() or not any(name.startswith(p) for p in prefixes):

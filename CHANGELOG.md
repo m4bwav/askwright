@@ -11,7 +11,7 @@ Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (ID
 ### C-20261116-1 · 2026-11-16 · Who is running on project pages; grindwright link both ways
 - because: user request (see every agent running in a project before starting work; askwright to grindwright was hard to reach)
 - files: skills/askwright/scripts/agents.py (new), ask.py (`/api/agents`, `/grind/<slug>/`, project `links`), page/project.html, project.js, dashboard.css, README.md (One inbox), tests/test_ask.py (AgentsTests)
-agents.py combines Claude Code's live session registry, transcripts and subagent metadata, git worktrees and grindwright claims into rows with evidence and freshness. The project page shows them and refreshes every 15 s; a grindwright chip opens grindwright's status page mounted in the hub with the data inlined and a link back. Local only: neither route is in REMOTE_GET.
+agents.py combines Claude Code's live session registry, transcripts and subagent metadata, git worktrees and grindwright claims into rows with evidence and freshness. The project page shows them and refreshes every 15 s; a grindwright chip opens grindwright's status page mounted in the hub with the data inlined and a link back. Local only: neither route is in REMOTE_GET. The install-size budget's yellow cap moves from 412 KB to 448 KB for agents.py (about 19 KB) and the page code; main already sat at 411 KB.
 
 ## 0.32.1
 

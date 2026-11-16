@@ -2564,6 +2564,18 @@ class AgentsTests(unittest.TestCase):
         self.assertEqual(rows["s-parent"]["worktree"].lower(), Path(self.proj).as_posix().lower())
         self.assertEqual(rows["s-parent"]["last_activity"][-6:], time.strftime("%z")[:3] + ":" + time.strftime("%z")[3:])
 
+    def test_hub_presence_pass_publishes_shared_projects(self):
+        import ask
+        projects = {"ok": True, "projects": [{"slug": "g", "dirs": [str(self.proj)]}, {"slug": "n", "dirs": []}]}
+        with mock.patch.object(ask, "list_projects", return_value=projects), \
+                mock.patch.object(self.agents, "remote_repos", return_value=["o/r"]), \
+                mock.patch.object(self.agents, "publish", return_value={"ok": True, "published": ["o/r"]}) as pub:
+            ask.PRESENCE_LAST.clear()
+            last = ask.presence_once()
+        pub.assert_called_once_with([str(self.proj)])
+        self.assertTrue(last["g"]["ok"])
+        self.assertNotIn("_error", last)
+
     def test_other_machines_through_the_host(self):
         """0.35.0: rows another machine published, and its shared claims, show here with their evidence."""
         (self.proj / "ai-docs" / "grind" / "profile.json").write_text(

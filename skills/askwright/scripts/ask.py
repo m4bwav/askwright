@@ -54,7 +54,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-VERSION = "0.35.0"
+VERSION = "0.35.1"
 DEFAULT_PORT = 47631  # the shared server's port; ASKWRIGHT_PORT moves it (0 picks a free one)
 PAGE = Path(__file__).resolve().parent / "page"
 BUNDLE = re.compile(r"^(those|these|both|all of)\b|\bplus\b", re.I)
@@ -1747,17 +1747,22 @@ def presence_loop():
     """Every few minutes, publish this machine's session rows for each project whose grind profile shares claims
     through the repository host ("work.remote"), so the other computer's pages show them. Titles, ids, branches,
     folders and times only. Off unless ASKWRIGHT_PRESENCE=1 (it writes to a shared repository)."""
+    while True:
+        presence_once()
+        time.sleep(PRESENCE_SECONDS)
+
+
+def presence_once():
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     import agents
-    while True:
-        try:
-            for slug, rec in list_projects().items():
-                dirs = [d for d in rec.get("dirs") or [] if Path(d).exists()]
-                if dirs and agents.remote_repos(dirs):
-                    PRESENCE_LAST[slug] = dict(agents.publish(dirs), at=iso_now())
-        except Exception as e:  # never take the hub down
-            PRESENCE_LAST["_error"] = {"error": str(e)[:300], "at": iso_now()}
-        time.sleep(PRESENCE_SECONDS)
+    try:
+        for rec in list_projects()["projects"]:
+            dirs = [d for d in rec.get("dirs") or [] if Path(d).exists()]
+            if rec.get("slug") and dirs and agents.remote_repos(dirs):
+                PRESENCE_LAST[rec["slug"]] = dict(agents.publish(dirs), at=iso_now())
+    except Exception as e:  # never take the hub down
+        PRESENCE_LAST["_error"] = {"error": str(e)[:300], "at": iso_now()}
+    return PRESENCE_LAST
 
 
 def grind_states(rec):

@@ -6,6 +6,13 @@ Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (ID
 
 ## Unreleased
 
+## 0.35.1
+
+### C-20261116-5 · 2026-11-16 · The hub's presence pass reads the project list it is given
+- because: user request (running agents on project pages); found checking 0.35.0 against the installed copy
+- files: skills/askwright/scripts/ask.py (presence_loop, presence_once), tests/test_ask.py (AgentsTests)
+The opt-in presence loop treated list_projects() as a map of slugs and failed on every pass; it now walks its `projects` list, one pass is presence_once(), and a test covers it.
+
 ## 0.35.0
 
 ### C-20261116-4 · 2026-11-16 · Who is running spans machines through the shared claim repository

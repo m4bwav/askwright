@@ -2564,6 +2564,39 @@ class AgentsTests(unittest.TestCase):
         self.assertEqual(rows["s-parent"]["worktree"].lower(), Path(self.proj).as_posix().lower())
         self.assertEqual(rows["s-parent"]["last_activity"][-6:], time.strftime("%z")[:3] + ":" + time.strftime("%z")[3:])
 
+    def test_other_machines_through_the_host(self):
+        """0.35.0: rows another machine published, and its shared claims, show here with their evidence."""
+        (self.proj / "ai-docs" / "grind" / "profile.json").write_text(
+            json.dumps({"work": {"remote": {"repo": "o/r"}}}), encoding="utf-8")
+        state = self.tmp / "refs.json"
+        env = {"ASKWRIGHT_GH": json.dumps([sys.executable, str(FIX / "fake_gh_refs.py")]),
+               "FAKE_REFS_STATE": str(state), "ASKWRIGHT_HOME": str(self.tmp / "aw")}
+        with mock.patch.dict(os.environ, env):
+            self.transcript("s-there", 2)
+            # the other machine publishes: its rows carry no message text
+            out = self.agents.publish([str(self.proj)], self.home, self.now, me="jenny-desktop")
+            self.assertTrue(out["ok"], out)
+            self.assertNotIn("SECRET", state.read_text(encoding="utf-8"))
+            again = self.agents.publish([str(self.proj)], self.home, self.now, me="jenny-desktop")
+            self.assertTrue(again["ok"], again)  # replaced in place
+            # and a shared claim of a session it did not publish, lease long gone
+            st = json.loads(state.read_text(encoding="utf-8"))
+            claim = {"machine": "jenny-desktop", "session": "g-old", "item": "g1", "title": "Fix the well",
+                     "at": "2020-01-01T00:00:00+00:00", "until": "2020-01-01T06:00:00+00:00"}
+            st["commits"]["cl"] = {"message": "grindwright claim t-x\n\n" + json.dumps(claim),
+                                   "tree": {"sha": "t0"}, "parents": []}
+            st["refs"]["heads/grind-claim/t-x"] = "cl"
+            state.write_text(json.dumps(st), encoding="utf-8")
+            (self.home / "projects").rename(self.tmp / "gone")  # this machine now sees nothing locally
+            rows = self.agents.collect([str(self.proj)], self.home, self.now, remote=True)["rows"]
+        mine = [r for r in rows if r.get("session") == "s-there"]
+        self.assertEqual(len(mine), 1)
+        self.assertEqual(mine[0]["machine"], "jenny-desktop")
+        self.assertIn("published by jenny-desktop 0 min ago", mine[0]["evidence"][0])
+        old = next(r for r in rows if r.get("session") == "g-old")
+        self.assertEqual(old["status"], "possibly stale")
+        self.assertIn("lease ran out", old["stale_reason"])
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=1)

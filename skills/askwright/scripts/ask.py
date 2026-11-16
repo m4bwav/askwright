@@ -54,7 +54,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-VERSION = "0.34.1"
+VERSION = "0.35.0"
 DEFAULT_PORT = 47631  # the shared server's port; ASKWRIGHT_PORT moves it (0 picks a free one)
 PAGE = Path(__file__).resolve().parent / "page"
 BUNDLE = re.compile(r"^(those|these|both|all of)\b|\bplus\b", re.I)
@@ -1730,7 +1730,34 @@ def project_agents(slug):
                 "problems": ["this project names no folders, so its sessions cannot be found"]}
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     import agents
-    return agents.collect(rec["dirs"])
+    out = agents.collect(rec["dirs"])
+    shared = PRESENCE_LAST.get(slug)
+    if shared:
+        out["shared"] = shared
+        out["problems"] += [f"could not share this machine's sessions with the other computers: {p}"
+                            for p in shared.get("problems", [])]
+    return out
+
+
+PRESENCE_SECONDS = 180
+PRESENCE_LAST = {}
+
+
+def presence_loop():
+    """Every few minutes, publish this machine's session rows for each project whose grind profile shares claims
+    through the repository host ("work.remote"), so the other computer's pages show them. Titles, ids, branches,
+    folders and times only. Off unless ASKWRIGHT_PRESENCE=1 (it writes to a shared repository)."""
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import agents
+    while True:
+        try:
+            for slug, rec in list_projects().items():
+                dirs = [d for d in rec.get("dirs") or [] if Path(d).exists()]
+                if dirs and agents.remote_repos(dirs):
+                    PRESENCE_LAST[slug] = dict(agents.publish(dirs), at=iso_now())
+        except Exception as e:  # never take the hub down
+            PRESENCE_LAST["_error"] = {"error": str(e)[:300], "at": iso_now()}
+        time.sleep(PRESENCE_SECONDS)
 
 
 def grind_states(rec):
@@ -2002,6 +2029,8 @@ def make_dashboard_server(port=0):
     srv.sets = {}
     if port or os.environ.get("ASKWRIGHT_WARM_STEER"):  # warm steerwright's project scan before the first click
         threading.Thread(target=steer_module, daemon=True).start()
+    if port and os.environ.get("ASKWRIGHT_PRESENCE") == "1":  # opt-in: tell other machines who runs here
+        threading.Thread(target=presence_loop, daemon=True).start()
     p = srv.server_address[1]
     srv.allowed_hosts = {f"127.0.0.1:{p}", f"localhost:{p}"}
     srv.allowed_origins = {f"http://127.0.0.1:{p}", f"http://localhost:{p}"}

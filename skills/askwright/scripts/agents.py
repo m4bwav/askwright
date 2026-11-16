@@ -10,6 +10,9 @@ Sources (each optional; one that cannot be read is named in "problems", never si
   - Claude Code transcripts      <claude home>/projects/<cwd>/<id>.jsonl and <id>/subagents/agent-*.meta.json
   - git worktrees of each folder (a session in a worktree belongs to the project)
   - grindwright claims           <folder>/ai-docs/grind/ledger.jsonl items in state running, sessions/*.json
+  - other machines               when the grind profile has "work.remote", the repository host's grind-claim/* refs
+                                 (grindwright's shared claims) and grind-presence/* refs, where each machine publishes
+                                 its own rows (publish(); titles, ids, branches, folders, times; never message text)
 
 Standard library only. Other plugins import collect(); `python agents.py --dir PATH` prints one JSON object.
 """
@@ -245,7 +248,7 @@ def status_of(minutes, alive):
     return "possibly stale"
 
 
-def collect(dirs, home=None, now=None, window_hours=WINDOW_HOURS):
+def collect(dirs, home=None, now=None, window_hours=WINDOW_HOURS, remote=True):
     """{built, rows, worktrees_idle, problems} for the folders of one project."""
     now = now or time.time()
     home = Path(home) if home else claude_home()
@@ -417,9 +420,184 @@ def collect(dirs, home=None, now=None, window_hours=WINDOW_HOURS):
         t["last_git_activity"] = iso(last)
         t["minutes_since_git"] = round((now - last) / 60) if last else None
     idle.sort(key=lambda t: t["minutes_since_git"] if t["minutes_since_git"] is not None else 10**9)
-    return {"ok": True, "built": iso(now), "machine": this_host(), "rows": out, "worktrees_idle": idle,
-            "problems": problems, "dirs": [Path(d).as_posix() for d in dirs],
-            "note": "this machine only; sessions on other computers show only through their grindwright claims"}
+    result = {"ok": True, "built": iso(now), "machine": this_host(), "rows": out, "worktrees_idle": idle,
+              "problems": problems, "dirs": [Path(d).as_posix() for d in dirs],
+              "note": "this machine only; sessions on other computers show only through their grindwright claims"}
+    repos = remote_repos(dirs) if remote else []
+    for repo in repos:
+        try:
+            others = remote_rows(repo, now)
+        except Exception as e:  # never an empty list for a failed read
+            problems.append(f"could not read other machines' sessions from {repo}: {str(e)[:200]}")
+            continue
+        out.extend(others)
+        result["note"] = f"this machine, and other machines through {repo}"
+    if repos:
+        out.sort(key=lambda r: ({"live": 0, "recent": 1}.get(r["status"], 2), r.get("minutes_quiet") or 0))
+    return result
+
+
+# ---- other machines: shared through the repository host (grindwright's "work.remote" channel)
+
+CLAIM_PREFIX, PRESENCE_PREFIX = "grind-claim/", "grind-presence/"
+PRESENCE_HEAD = "grindwright presence"
+REMOTE_CACHE_SECONDS = 60
+PUBLISH_KEYS = ("session", "status", "machine", "branch", "title", "name", "kind", "started", "last_activity",
+                "minutes_quiet", "worktree", "cwd", "evidence", "from_parent_folder", "process_alive")
+
+
+def remote_repos(dirs):
+    repos = []
+    for d in dirs:
+        prof = read_json(Path(d) / "ai-docs" / "grind" / "profile.json")
+        work = prof.get("work") if isinstance(prof, dict) else None
+        block = work.get("remote") if isinstance(work, dict) else None
+        repo = isinstance(block, dict) and (block.get("repo") or (work.get("issues") or {}).get("repo"))
+        if repo and repo not in repos:
+            repos.append(repo)
+    return repos
+
+
+def gh_api(*args, body=None):
+    cmd = os.environ.get("ASKWRIGHT_GH")
+    argv = (json.loads(cmd) if cmd else ["gh"]) + ["api", *args] + (["--input", "-"] if body is not None else [])
+    r = subprocess.run(argv, input=json.dumps(body) if body is not None else None, capture_output=True, text=True,
+                       encoding="utf-8", timeout=30)
+    if r.returncode:
+        raise RuntimeError(((r.stderr or r.stdout or "gh failed").strip().splitlines() or ["gh failed"])[-1])
+    return json.loads(r.stdout) if r.stdout.strip() else {}
+
+
+def last_json(message):
+    for line in reversed((message or "").strip().splitlines()):
+        if line.startswith("{"):
+            try:
+                return json.loads(line)
+            except ValueError:
+                return {}
+    return {}
+
+
+def _missing(e):
+    return "404" in str(e) or "Not Found" in str(e)
+
+
+def remote_refs(repo):
+    """{"claims": [...], "presence": [...]} from the host, cached for a minute so page refreshes stay cheap."""
+    cache = Path(os.environ.get("ASKWRIGHT_HOME") or Path.home() / ".askwright").expanduser() / "remote-agents" / (re.sub(r"[^A-Za-z0-9]+", "-", repo) + ".json")
+    old = read_json(cache)
+    if isinstance(old, dict) and time.time() - old.get("at", 0) < REMOTE_CACHE_SECONDS:
+        return old
+    out = {"at": time.time()}
+    for kind, prefix in (("claims", CLAIM_PREFIX), ("presence", PRESENCE_PREFIX)):
+        try:
+            refs = gh_api(f"repos/{repo}/git/matching-refs/heads/{prefix}")
+        except RuntimeError as e:
+            if not _missing(e):
+                raise
+            refs = []
+        out[kind] = []
+        for ref in refs if isinstance(refs, list) else []:
+            commit = gh_api(f"repos/{repo}/git/commits/{ref['object']['sha']}")
+            out[kind].append(dict(last_json(commit.get("message")), key=ref["ref"].split(prefix, 1)[-1]))
+    try:
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        cache.write_text(json.dumps(out), encoding="utf-8")
+    except OSError:
+        pass
+    return out
+
+
+def remote_rows(repo, now, me=None):
+    """Rows for sessions on other machines: what each published, plus their shared grindwright claims."""
+    me = (me or this_host()).lower()
+    data, rows = remote_refs(repo), []
+    for p in data.get("presence", []):
+        machine = str(p.get("machine") or p.get("key") or "").lower()
+        if not machine or machine == me:
+            continue
+        at = parse_iso(p.get("at"))
+        age = round((now - at) / 60) if at else None
+        for src in p.get("rows", []):
+            r = {k: src[k] for k in PUBLISH_KEYS if k in src}
+            r.update(machine=machine, remote=True, subagents=src.get("subagents") or [], claims=src.get("claims") or [])
+            if age is None or age > RECENT_MINUTES:
+                r["status"] = "possibly stale"
+                r["stale_reason"] = f"{machine} last published {age if age is not None else '?'} min ago"
+            elif age > 2 * LIVE_MINUTES and r.get("status") == "live":
+                r["status"] = "recent"  # the other machine stopped publishing: it may be off or asleep
+            r["minutes_quiet"] = (r.get("minutes_quiet") or 0) + (age or 0)
+            r["evidence"] = [f"published by {machine} {age if age is not None else '?'} min ago through {repo}"] + [
+                f"{machine}: {e}" for e in (src.get("evidence") or [])[:3]]
+            rows.append(r)
+    for c in data.get("claims", []):
+        machine = str(c.get("machine") or "").lower()
+        if not machine or machine == me:
+            continue
+        until = parse_iso(c.get("until"))
+        expired = bool(until and until < now)
+        claim = {"id": c.get("item") or c.get("key"), "title": c.get("title") or "", "issue": c.get("issue"),
+                 "lease_until": c.get("until"), "lease_expired": expired}
+        match = next((r for r in rows if r.get("machine") == machine and str(r.get("session")) == str(c.get("session"))), None)
+        if match:
+            if not any(str(x.get("id")) == str(claim["id"]) for x in match["claims"]):
+                match["claims"].append(claim)
+            continue
+        at = parse_iso(c.get("at"))
+        rows.append({"session": c.get("session") or "", "machine": machine, "remote": True, "branch": "",
+                     "title": c.get("title") or "", "claims": [claim], "subagents": [], "process_alive": False,
+                     "started": c.get("at"), "minutes_quiet": round((now - at) / 60) if at else None,
+                     "status": "possibly stale" if expired else "claimed, no session seen",
+                     "stale_reason": f"lease ran out {round((now - until) / 3600, 1)} h ago" if expired else "",
+                     "evidence": [f"shared grindwright claim by {machine} through {repo}"
+                                  + (" (lease expired)" if expired else f", lease until {c.get('until')}")]})
+    return rows
+
+
+def publish(dirs, home=None, now=None, me=None):
+    """Write this machine's rows for the project to grind-presence/<machine> on each remote repository.
+    Only PUBLISH_KEYS travel, with claim ids and titles and subagent descriptions: never message text."""
+    now = now or time.time()
+    me = (me or this_host()).lower()
+    repos = remote_repos(dirs)
+    if not repos:
+        return {"ok": True, "published": [], "note": "no grind profile with work.remote"}
+    data = collect(dirs, home, now, remote=False)
+    rows = []
+    for r in data["rows"]:
+        row = {k: r[k] for k in PUBLISH_KEYS if k in r}
+        row["claims"] = [{k: c.get(k) for k in ("id", "title", "lease_until")} for c in r.get("claims", [])]
+        row["subagents"] = [{k: a.get(k) for k in ("description", "type", "status", "minutes_quiet")}
+                            for a in r.get("subagents", [])]
+        rows.append(row)
+    body = {"machine": me, "at": iso(now), "rows": rows}
+    slug = re.sub(r"[^a-z0-9-]+", "-", me).strip("-") or "machine"
+    nl = chr(10)
+    msg = (f"{PRESENCE_HEAD} {slug}{nl}{nl}Which agent sessions run on {slug} now; replaced every few minutes. "
+           f"Do not merge.{nl}{nl}{json.dumps(body, sort_keys=True)}{nl}")
+    done, problems = [], []
+    for repo in repos:
+        try:
+            try:
+                ref = gh_api(f"repos/{repo}/git/ref/heads/{PRESENCE_PREFIX}{slug}")
+                commit = gh_api(f"repos/{repo}/git/commits/{ref['object']['sha']}")
+                parent, tree, exists = (commit.get("parents") or [{"sha": ref["object"]["sha"]}])[0]["sha"], commit["tree"]["sha"], True
+            except RuntimeError as e:
+                if not _missing(e):
+                    raise
+                default = gh_api(f"repos/{repo}")["default_branch"]
+                head = gh_api(f"repos/{repo}/commits/{default}")
+                parent, tree, exists = head["sha"], head["commit"]["tree"]["sha"], False
+            sha = gh_api(f"repos/{repo}/git/commits", "-X", "POST",
+                         body={"message": msg, "tree": tree, "parents": [parent]})["sha"]
+            if exists:  # its own ref, replaced each time on the same parent: no history grows
+                gh_api(f"repos/{repo}/git/refs/heads/{PRESENCE_PREFIX}{slug}", "-X", "PATCH", body={"sha": sha, "force": True})
+            else:
+                gh_api(f"repos/{repo}/git/refs", "-X", "POST", body={"ref": f"refs/heads/{PRESENCE_PREFIX}{slug}", "sha": sha})
+            done.append(repo)
+        except Exception as e:
+            problems.append(f"{repo}: {str(e)[:200]}")
+    return {"ok": not problems, "published": done, "rows": len(rows), "problems": problems, "machine": me}
 
 
 def c_age(claim, now):
@@ -432,8 +610,14 @@ def main(argv=None):
     ap.add_argument("--dir", action="append", required=True, help="a project folder (repeatable)")
     ap.add_argument("--home", help="Claude Code config folder (default ~/.claude or CLAUDE_CONFIG_DIR)")
     ap.add_argument("--window-hours", type=float, default=WINDOW_HOURS)
+    ap.add_argument("--publish", action="store_true",
+                    help="write this machine's rows to the project's grind-presence ref (needs work.remote and gh)")
+    ap.add_argument("--local", action="store_true", help="this machine only; do not read other machines")
     a = ap.parse_args(argv)
-    print(json.dumps(collect(a.dir, a.home, window_hours=a.window_hours), indent=1))
+    if a.publish:
+        print(json.dumps(publish(a.dir, a.home), indent=1))
+        return 0
+    print(json.dumps(collect(a.dir, a.home, window_hours=a.window_hours, remote=not a.local), indent=1))
     return 0
 
 

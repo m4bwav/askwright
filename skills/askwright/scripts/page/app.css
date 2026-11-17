@@ -270,6 +270,10 @@ fieldset:disabled .opt { cursor: default; opacity: .8; }
 .guess p { margin: 0; }
 
 .note { margin-top: 1.25rem; }
+.note summary { cursor: pointer; font-weight: 700; margin-bottom: .35rem; }
+.note summary .hint { font-weight: 400; }
+.extra-row { margin-top: .75rem; }
+.extra-menu { font: inherit; padding: .45rem .6rem; color: var(--fg); background: var(--bg); border: 2px solid var(--border); border-radius: 8px; }
 .note label.lbl, .answer-text label { font-weight: 700; display: block; margin-bottom: .35rem; }
 textarea {
   width: 100%; min-height: 5.5rem; font: inherit; padding: .6rem .75rem; color: var(--fg); background: var(--bg);

@@ -194,3 +194,4 @@ Known bug from the bug-review prompt. Reproduced read-only on the owner's inbox:
 - 2026-11-16: 0.38.0: new question kind `pixels` (one image as a zoomable canvas, named brushes, optional regions per sprite). Answers store pixels per brush plus region-local copies; `ask.py read` gives count and bbox, `--json` every point, `ask.py pixels SET QID --out DIR` writes stdlib PNG masks. Install budget raised 464 to 488 KB. Chrome now honours `image-rendering: crisp-edges`, so pixelated must come last in the CSS.
 - 2026-11-16: 0.40.0: pixels `layers` {base, top} with brush `effect` reveal/fill/tint; the page composites per pixel through ImageData (corner dot per mark, Show marks, Hold to compare). Answer format unchanged.
 - 2026-11-17: built-in choices obsolete/decline added (0.41.0); they count as answered, unlike unsure.
+- 2026-11-17: 0.42.0 extras in one 'Other answers' select (#extra); note is <details class=note>, tests open it via '.note summary'.

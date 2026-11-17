@@ -6,6 +6,13 @@ Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (ID
 
 ## Unreleased
 
+## 0.42.0
+
+### C-20261117-2 · 2026-11-17 · Extra answers move into one menu; the note pane collapses
+- because: user request (four extra rows crowded every question)
+- files: skills/askwright/scripts/page/app.js (extraMenu, openNote, noteArea, keys), app.css, references/schema.md, README.md, tests/test_page.py
+- "Not sure", "Something else", "Question irrelevant or obsolete" and "Won't answer" are one "Other answers" dropdown under the options. The note box is a collapsed "Add a note or image" pane that opens when it holds a note, images or times, on "Something else", on `/`, or when an image is pasted. `u` still toggles "Not sure". Stored answers are unchanged.
+
 ## 0.41.0
 
 ### C-20261117-1 · 2026-11-17 · "Question irrelevant or obsolete" and "Won't answer" on every question

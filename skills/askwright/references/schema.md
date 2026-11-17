@@ -139,8 +139,9 @@ or record choices. Left/Right arrows inside the gallery change cases, not questi
 
 Every kind except `text` gets "Not sure, ask me later" (`unsure`) and "Something else" (`other`, explained in the
 note); `text` gets "Not sure". Every kind also gets "Question irrelevant or obsolete" (`obsolete`) and "Won't answer"
-(`decline`): stored as `choice`, they count as answered without a pick or a note, while `unsure` stays open. These
-four ids are reserved. `picks export` skips items answered with either.
+(`decline`): stored as `choice`, they count as answered without a pick or a note, while `unsure` stays open. The page shows all four in one "Other answers" menu under
+the options, and the note sits in a collapsed "Add a note or image" pane that opens when it has content or on
+"Something else". These four ids are reserved. `picks export` skips items answered with either.
 
 ### Guesses
 

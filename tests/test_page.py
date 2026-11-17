@@ -538,6 +538,7 @@ class FixturePageTests(PageCase):
     def test_note_without_choice_is_note_only(self):
         p = self.open()
         self.go("music")
+        p.click(".note summary")
         p.fill("#note", "the tone clips at the end")
         self.wait_saved()
         p.click("#btn-next")
@@ -568,6 +569,7 @@ class FixturePageTests(PageCase):
         p.wait_for_function("document.querySelector('.media video').readyState >= 2")
         p.evaluate("() => { const v = document.querySelector('.media video'); v.muted = true; return v.play(); }")
         p.wait_for_function("document.querySelector('.media video').currentTime > 0.7")
+        p.click(".note summary")
         p.click("#note")
         p.keyboard.type("x")
         self.assertTrue(p.evaluate("document.querySelector('.media video').paused"))
@@ -823,6 +825,7 @@ class RefsAndTabsTests(PageCase):
 
     def test_tab_switch_keeps_draft_and_blocks_digit_keys(self):
         p = self.open()
+        p.click(".note summary")
         p.fill("#note", "half a thought")
         p.click("role=tab[name='Balance data']")
         self.assertTrue(p.locator("text=Numbers here").is_visible())
@@ -859,8 +862,11 @@ class SkipOptionTests(PageCase):
     def test_skip_options_answer_without_a_note(self):
         # "Question irrelevant or obsolete" and "Won't answer" close a question; "Not sure" leaves it open.
         p = self.open()
-        self.assertEqual(p.locator("#ans input[value=obsolete]").count(), 1)
-        p.locator("#ans input[value=decline]").check()
+        self.assertEqual(p.locator("#ans input[value=unsure]").count(), 0)  # one menu, not a row each
+        self.assertFalse(p.locator("details.note").get_attribute("open") is not None)
+        p.select_option("#extra", "other")
+        self.assertTrue(p.locator("#note").is_visible())  # Something else opens the note pane
+        p.select_option("#extra", "decline")
         for _ in range(50):
             ans = ask.read_answers(self.dir)["answers"]
             if any(r["choice"] == "decline" and r["state"] == "answered" for r in ans):
@@ -1116,7 +1122,7 @@ class StudyPageTests(PageCase):
         html = p.content()
         for secret in ("Half of 8 is 8 divided by 2", "The sun heats sea water", "Splitting into fewer pieces"):
             self.assertNotIn(secret, html)
-        self.assertEqual(p.locator("input[value=unsure], input[value=other], .guess, #note").count(), 0)
+        self.assertEqual(p.locator("#extra, .guess, #note").count(), 0)
         values = p.eval_on_selector_all("input[type=radio]", "els => els.map(e => e.value)")
         self.assertEqual(sorted(values), ["o1", "o2", "o3", "o4"])  # real ids ("four") would hint at the answer
         self.assertIn("Fractions", p.locator(".caption").inner_text())

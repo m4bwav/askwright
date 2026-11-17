@@ -86,17 +86,25 @@
   const SKIPS = ["obsolete", "decline"];
   const SKIP_TEXT = { obsolete: "Question irrelevant or obsolete", decline: "Won't answer" };
   const EXTRA_IDS = ["unsure", "other", ...SKIPS];
-  // Checkboxes for kinds without radio rows (rank, text, pixels): "Not sure" plus the skips, one at a time.
-  function extraBoxes(q, a, ids, onSet) {
-    const boxes = ids.map((id) => h("input", { type: "checkbox", value: id, checked: a.choice === id }));
-    boxes.forEach((b) => b.addEventListener("change", () => {
-      boxes.forEach((o) => { if (o !== b) o.checked = false; });
-      const d = draft(q.id); d.choice = b.checked ? b.value : null;
-      onSet(d, b.checked ? b.value : null);
+  // One "Other answers" menu instead of a row each: Not sure, Something else and the two skips.
+  function extraMenu(q, a, ids, onSet) {
+    const sel = h("select", { id: "extra", class: "extra-menu", "aria-label": "Other answers" },
+      h("option", { value: "", text: "Other answers…" }), ...ids.map((id) => h("option", { value: id, text: optLabel(q, id) })));
+    sel.value = ids.includes(a.choice) ? a.choice : ((a.choices || []).includes("other") && ids.includes("other") ? "other" : "");
+    sel.addEventListener("change", () => {
+      const v = sel.value || null;
+      const d = draft(q.id); d.choice = v;
+      onSet(d, v);
       picked(q); changed(q.id, true);
-    }));
-    return { clear: () => boxes.forEach((b) => (b.checked = false)),
-      els: boxes.map((b) => h("label", { class: "opt extra" }, b, h("span", { class: "label", text: optLabel(q, b.value) }))) };
+      if (v === "other" && !(d.note || "").trim()) openNote(true);
+    });
+    return { el: h("div", { class: "extra-row" }, sel), clear: () => (sel.value = "") };
+  }
+  function openNote(focus) {
+    const d = $("details.note", main);
+    if (!d) return;
+    d.open = true;
+    if (focus) $("#note", main)?.focus();
   }
   function optLabel(q, oid) {
     if (oid === "unsure") return "Not sure, ask me later";
@@ -898,8 +906,8 @@
         const d = draft(q.id); d.order = order.slice(); d.choice = null;
         useBtn.textContent = "Order saved"; ex.clear(); picked(q); changed(q.id, true);
       } });
-      const ex = extraBoxes(q, a, ["unsure", ...SKIPS], (d, v) => { if (v) { d.order = []; useBtn.textContent = "Use this order"; } });
-      fs.append(ol, h("div", { class: "rank-actions" }, useBtn, ...ex.els));
+      const ex = extraMenu(q, a, ["unsure", ...SKIPS], (d, v) => { if (v) { d.order = []; useBtn.textContent = "Use this order"; } });
+      fs.append(ol, h("div", { class: "rank-actions" }, useBtn, ex.el));
       return fs;
     }
     if (q.kind === "pixels") return pixelsArea(q, a, fs);
@@ -907,9 +915,9 @@
       const ta = h("textarea", { id: "ans-text", rows: "4" });
       ta.value = a.text || "";
       ta.addEventListener("input", () => { const d = draft(q.id); d.text = ta.value; if (ta.value.trim() && d.choice) { d.choice = null; ex.clear(); } changed(q.id); });
-      const ex = extraBoxes(q, a, ["unsure", ...SKIPS], () => {});
+      const ex = extraMenu(q, a, ["unsure", ...SKIPS], () => {});
       fs.append(h("div", { class: "answer-text" }, h("label", { for: "ans-text", class: "visually-hidden", text: "Your answer" }), ta));
-      if (!S.study) fs.append(h("div", { class: "opts" }, ...ex.els));
+      if (!S.study) fs.append(ex.el);
       return fs;
     }
     const multi = q.kind === "multi";
@@ -921,26 +929,23 @@
       if ((o.media || []).length) row.querySelector(".txt").append(...o.media.map((m) => (m.type === "audio" ? optionSound(q, o, m) : mediaEl(m))));
       box.append(row);
     }
+    let menu = null;
     if (!S.study) {  // a quiz has no "not sure" or "something else": the review teaches what was missed
-      if (q.kind !== "scale") box.append(h("hr", { class: "sep" }));
-      box.append(optRow(multi ? "checkbox" : "radio", name, "unsure", "Not sure, ask me later", null, a.choice === "unsure", n++, true));
-      box.append(optRow(multi ? "checkbox" : "radio", name, "other", "Something else", "Say what in the note below", chosen.includes("other"), n++, true));
-      for (const sk of SKIPS) box.append(optRow(multi ? "checkbox" : "radio", name, sk, SKIP_TEXT[sk], null, a.choice === sk, n++, true));
+      menu = extraMenu(q, a, EXTRA_IDS, (d, v) => {
+        if (multi) { d.choices = v === "other" ? ["other"] : []; if (v === "other") d.choice = null; }
+        box.querySelectorAll("input").forEach((i) => (i.checked = false));
+      });
     }
     box.addEventListener("change", (e) => {
-      const v = e.target.value;
       const d = draft(q.id);
-      if (multi) {
-        const sole = (x) => x === "unsure" || SKIPS.includes(x);  // these stand alone: they clear the picks and each other
-        if (sole(v)) { d.choice = e.target.checked ? v : null; if (e.target.checked) d.choices = []; }
-        else { d.choices = [...box.querySelectorAll("input:checked")].map((i) => i.value).filter((x) => !sole(x)); if (d.choices.length) d.choice = null; }
-        box.querySelectorAll("input").forEach((i) => { i.checked = sole(i.value) ? i.value === d.choice : (d.choices || []).includes(i.value); });
-      } else d.choice = v;
+      if (multi) { d.choices = [...box.querySelectorAll("input:checked")].map((i) => i.value); d.choice = null; }
+      else d.choice = e.target.value;
+      menu?.clear();
       picked(q);
       changed(q.id, true);
-      if (v === "other" && e.target.checked && !(d.note || "").trim()) $("#note", main)?.focus();
     });
     fs.append(box);
+    if (menu) fs.append(menu.el);
     return fs;
   }
   // ------------------------------------------------------------ pixels: point at exact pixels of one image
@@ -1096,10 +1101,10 @@
       lay ? Object.assign(btn("Hold to compare", () => {}), { onpointerdown: () => { holding = true; draw(); },
         onpointerup: () => { holding = false; draw(); }, onpointerleave: () => { if (holding) { holding = false; draw(); } } }) : null,
       (q.regions || []).length ? btn("Regions", () => { regionsOn = !regionsOn; draw(); }, "Show or hide region outlines") : null);
-    const ex = extraBoxes(q, a, EXTRA_IDS, (d, v) => { if (v === "other" && !(d.note || "").trim()) $("#note", main)?.focus(); });
+    const ex = extraMenu(q, a, EXTRA_IDS, () => {});
     count.textContent = pxText(q, a.pixels) || "No pixels marked";
     fs.append(tools, bar, wrap, h("p", { class: "px-status" }, coord, " · ", count),
-      h("div", { class: "opts" }, ...ex.els));
+      ex.el);
     return fs;
   }
 
@@ -1154,7 +1159,8 @@
   }
 
   function noteArea(q, a, editing) {
-    const wrap = h("div", { class: "note" });
+    const has = !!((a.note || "").trim() || (a.attachments || []).length || (a.timecodes || []).length || a.choice === "other");
+    const wrap = h("details", { class: "note", open: has });
     const ta = h("textarea", { id: "note", rows: "3", disabled: !editing });
     ta.value = a.note || "";
     const offer = h("div", { class: "note-tools", hidden: true });
@@ -1197,7 +1203,8 @@
     });
     drawChips();
     drawAtts();
-    wrap.append(h("label", { for: "note", class: "lbl" }, "Note ", h("span", { class: "hint", text: "(optional; paste or drop images here)" })),
+    wrap.append(h("summary", null, "Add a note or image ", h("span", { class: "hint", text: "(optional; paste or drop images here)" })),
+      h("label", { for: "note", class: "visually-hidden", text: "Note" }),
       ta, offer, chips, h("div", { class: "note-tools" }, add, file), atts);
     return wrap;
   }
@@ -1222,6 +1229,7 @@
     const files = items.map((i) => i.getAsFile()).filter(Boolean);
     if (!files.length) return;
     e.preventDefault();
+    openNote(false);
     upload(byId(S.current), files);
   });
 
@@ -1460,9 +1468,11 @@
     } else if (k === "n" || (k === "ArrowRight" && !onControl)) { e.preventDefault(); $("#btn-next").click(); }
     else if (k === "p" || (k === "ArrowLeft" && !onControl)) { e.preventDefault(); $("#btn-back").click(); }
     else if (k === "u" && S.view === "question") {
-      const u = main.querySelector('input[value="unsure"]');
-      if (u && !u.disabled) { u.click(); e.preventDefault(); }
-    } else if (k === "/" && S.view === "question") { const n = $("#note", main); if (n && !n.disabled) { e.preventDefault(); n.focus(); } }
+      const m = $("#extra", main);
+      if (m && !m.matches(":disabled") && [...m.options].some((o) => o.value === "unsure")) {
+        m.value = m.value === "unsure" ? "" : "unsure"; m.dispatchEvent(new Event("change")); e.preventDefault();
+      }
+    } else if (k === "/" && S.view === "question") { const n = $("#note", main); if (n && !n.disabled) { e.preventDefault(); openNote(true); } }
     else if (k === " " && !onControl && S.view === "question") {
       const m = primary();
       if (m) { e.preventDefault(); m.paused ? m.play().catch(() => {}) : m.pause(); }

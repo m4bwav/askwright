@@ -196,6 +196,52 @@ function render(p) {
   const sets = document.querySelector("#sets");
   sets.replaceChildren(...(p.sets.length ? p.sets.map(setCard) : [node("p", "No question sets yet.")]));
   renderTimeline(p);
+  renderGrind(p.grind);
+  renderChains(p.chain_runs);
+}
+
+function list(items, empty) {
+  const ul = node("ul", "", "places");
+  if (!items.length) return node("p", empty, "meta");
+  items.forEach(t => ul.append(node("li", t)));
+  return ul;
+}
+
+function renderGrind(g) {
+  const sec = document.querySelector("#grind");
+  sec.hidden = !g;
+  if (!g) return;
+  const body = document.querySelector("#grind-body");
+  body.replaceChildren();
+  (g.problems || []).forEach(p => body.append(node("p", "Could not read: " + p, "meta")));
+  if (g.problems && g.problems.length && !g.waiting) return;
+  body.append(node("h3", "Waiting on a person"), list(g.waiting || [], "Nothing waits on a person."));
+  body.append(node("h3", "Being worked"),
+    list((g.working || []).map(w => `${w.id} ${w.title}` + (w.person ? ` (${w.person})` : "")), "No item claimed."));
+  if ((g.asks || []).length)
+    body.append(node("h3", "Open asks"), list(g.asks.map(a => `${a.title}: ${a.open} open`), ""));
+  const c = Object.entries(g.counts || {}).map(([k, v]) => `${k} ${v}`).join(" · ");
+  if (c) body.append(node("p", "Since " + (g.since || "today") + ": " + c, "meta"));
+}
+
+function renderChains(c) {
+  const sec = document.querySelector("#chains");
+  const runs = (c && c.runs) || [], probs = (c && c.problems) || [];
+  sec.hidden = !runs.length && !probs.length;
+  if (sec.hidden) return;
+  const body = document.querySelector("#chains-body");
+  body.replaceChildren(...probs.map(p => node("p", "Could not read: " + p, "meta")));
+  const ul = node("ul", "", "places");
+  runs.forEach(r => {
+    const li = node("li", "");
+    li.append(node("strong", r.name), node("span",
+      ` · ${r.sessions} sessions · ${DUR(Math.round(r.seconds / 60))} · ${(r.tokens / 1e6).toFixed(1)} M tokens` +
+      (r.usd ? ` · $${r.usd.toFixed(2)}` : "") + (r.open ? ` · ${r.open} open` : ""), "meta"));
+    if (r.last) li.append(" ", askTime.el(r.last, "last "));
+    ul.append(li);
+  });
+  body.append(ul);
+  if (c.total > runs.length) body.append(node("p", `${c.total - runs.length} older runs not shown.`, "meta"));
 }
 
 const AGO = m => m == null ? "" : m < 60 ? `${m} min ago` : `${Math.floor(m / 60)} h ${m % 60} min ago`;

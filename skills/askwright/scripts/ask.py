@@ -54,7 +54,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-VERSION = "0.36.0"
+VERSION = "0.37.0"
 DEFAULT_PORT = 47631  # the shared server's port; ASKWRIGHT_PORT moves it (0 picks a free one)
 PAGE = Path(__file__).resolve().parent / "page"
 BUNDLE = re.compile(r"^(those|these|both|all of)\b|\bplus\b", re.I)
@@ -408,7 +408,7 @@ def project_page(slug):
                           "source": "sets"} for r in rec["sets"] if r.get("created")]
             timeline.sort(key=lambda h: parse_time(h["at"]), reverse=True)
             return {"ok": True, "project": dict(rec, handoffs=handoffs, prompt_files=prompts, timeline=timeline[:80],
-                                                links=project_links(rec),
+                                                links=project_links(rec), **project_extras(rec),
                                                 answered=sum(r.get("answered") or 0 for r in rec["sets"]))}
     raise AskError("unknown project")
 
@@ -1790,6 +1790,72 @@ def project_links(rec):
     if steerwright_script() or steerwright_url():
         links["steerwright"] = "/go/steerwright"
     return links
+
+
+def chain_runs(rec, limit=12):
+    """chainwright runs (~/.chainwright/runs.json) whose file sits in one of the project's folders: sessions,
+    time, tokens and dollars per run, newest first. Problems in words, never an empty list for a failed read."""
+    out, problems = [], []
+    reg = Path(os.environ.get("CHAINWRIGHT_HOME") or (Path.home() / ".chainwright")) / "runs.json"
+    if not reg.is_file():
+        return {"runs": [], "problems": []}
+    try:
+        runs = json.loads(reg.read_text(encoding="utf-8")).get("runs") or {}
+    except (OSError, ValueError) as e:
+        return {"runs": [], "problems": [f"chainwright run list: {e}"]}
+    roots = [os.path.normcase(os.path.abspath(d)).rstrip("\\/") + os.sep for d in rec["dirs"]]
+    for path, meta in runs.items():
+        norm = os.path.normcase(os.path.abspath(path))
+        if not any(norm.startswith(r) for r in roots) or not Path(path).is_file():
+            continue
+        try:
+            doc = json.loads(Path(path).read_text(encoding="utf-8"))
+        except (OSError, ValueError) as e:
+            problems.append(f"{path}: {e}")
+            continue
+        hist = [h for c in doc.get("chains") or [] for h in c.get("history") or []]
+        hist += list(doc.get("managers") or [])
+        last = max([h.get("at") or "" for h in hist] + [(meta or {}).get("added") or ""])
+        out.append({"name": doc.get("name") or (Path(path).parent.name if Path(path).stem == "chains" else Path(path).stem), "path": path, "report": (meta or {}).get("report"),
+                    "chains": len(doc.get("chains") or []),
+                    "open": sum(1 for c in doc.get("chains") or [] if c.get("state") not in ("finished", "stopped", "done")),
+                    "sessions": sum(c.get("sessions") or 0 for c in doc.get("chains") or []),
+                    "seconds": sum(h.get("seconds") or 0 for h in hist),
+                    "tokens": sum(h.get("tokens") or 0 for h in hist),
+                    "usd": round(sum(h.get("usd") or 0 for h in hist), 2), "last": last})
+    out.sort(key=lambda r: r["last"], reverse=True)
+    return {"runs": out[:limit], "total": len(out), "problems": problems}
+
+
+def grind_board(rec):
+    """The grind board in short: what waits on a person, items being worked, open asks, today's counts."""
+    states, script = grind_states(rec), grindwright_status_script()
+    if not states or not script:
+        return None
+    try:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("grindwright_status_mounted", script)
+        mod = importlib.util.module_from_spec(spec)
+        sys.path.insert(0, str(script.parent))
+        spec.loader.exec_module(mod)
+        d = json.loads(json.dumps(mod.collect(states[0]), default=str))
+    except Exception as e:
+        return {"problems": [f"grindwright board could not be read: {e}"[:300]]}
+    asks = [{"title": a.get("title") or a.get("set"), "set": a.get("set"), "open": a.get("open_questions") or 0}
+            for a in d.get("asks") or [] if a.get("open_questions")]
+    working = [{"id": w.get("id"), "title": w.get("title"), "person": w.get("person") or w.get("session")}
+               for w in d.get("working") or [] if isinstance(w, dict)]
+    return {"waiting": [str(w)[:400] for w in d.get("waiting") or []][:20], "working": working, "asks": asks,
+            "counts": d.get("counts") or {}, "since": d.get("since"), "problems": []}
+
+
+def project_extras(rec):
+    """Other plugins' data for the same project; each part is optional and fails into words."""
+    extras = {"chain_runs": chain_runs(rec)}
+    board = grind_board(rec)
+    if board is not None:
+        extras["grind"] = board
+    return extras
 
 
 def agents_html(data, esc):

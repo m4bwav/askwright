@@ -6,6 +6,13 @@ Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (ID
 
 ## Unreleased
 
+## 0.37.0
+
+### C-20261116-7 · 2026-11-16 · Project page shows the grind board and chain runs
+- because: user request (richer project pages across askwright, grindwright and chainwright)
+- files: scripts/ask.py (chain_runs, grind_board, project_extras), scripts/page/project.html and project.js (Grind board, Chain runs), tests/test_ask.py (ChainRunsTests)
+- The project page now lists what waits on a person, claimed items, open asks and today's counts from grindwright's status collector, and the chainwright runs whose files sit in the project's folders with sessions, time, tokens and dollars. Each part is optional and a failed read shows in words.
+
 ## 0.36.0
 
 ### C-20261116-6 · 2026-11-16 · Who is running shows how long each session has run, and totals per day

@@ -2419,6 +2419,40 @@ class SteerwrightLink(unittest.TestCase):
                 self.assertIn("<!--STEERWRIGHT-->", (ask.PAGE / name).read_text(encoding="utf-8"))
 
 
+class ChainRunsTests(unittest.TestCase):
+    def test_runs_in_project_dirs_only_with_totals(self):
+        import tempfile, os
+        with tempfile.TemporaryDirectory() as home, tempfile.TemporaryDirectory() as proj, tempfile.TemporaryDirectory() as other:
+            run = Path(proj, "chain", "chains.json"); run.parent.mkdir()
+            run.write_text(json.dumps({"chains": [{"state": "running", "sessions": 2, "history": [
+                {"at": "2026-11-16T10:00:00", "seconds": 120, "tokens": 1000, "usd": 0.5},
+                {"at": "2026-11-16T11:00:00", "seconds": 60, "tokens": 500, "usd": 0.25}]}]}), encoding="utf-8")
+            far = Path(other, "x.chain.json"); far.write_text("{}", encoding="utf-8")
+            Path(home, "runs.json").write_text(json.dumps({"runs": {str(run): {"added": "2026-11-16T09:00:00"},
+                                                                     str(far): {}}}), encoding="utf-8")
+            os.environ["CHAINWRIGHT_HOME"] = home
+            try:
+                out = ask.chain_runs({"dirs": [proj]})
+            finally:
+                del os.environ["CHAINWRIGHT_HOME"]
+            self.assertEqual(len(out["runs"]), 1)
+            r = out["runs"][0]
+            self.assertEqual((r["name"], r["sessions"], r["seconds"], r["tokens"], r["usd"], r["open"]),
+                             ("chain", 2, 180, 1500, 0.75, 1))
+            self.assertEqual(r["last"], "2026-11-16T11:00:00")
+
+    def test_bad_registry_is_a_problem_not_empty(self):
+        import tempfile, os
+        with tempfile.TemporaryDirectory() as home:
+            Path(home, "runs.json").write_text("{bad", encoding="utf-8")
+            os.environ["CHAINWRIGHT_HOME"] = home
+            try:
+                out = ask.chain_runs({"dirs": [home]})
+            finally:
+                del os.environ["CHAINWRIGHT_HOME"]
+            self.assertTrue(out["problems"])
+
+
 class AgentsTests(unittest.TestCase):
     """0.33.0: agents.py lists who is running in a project, with evidence; never says nobody when somebody is."""
 

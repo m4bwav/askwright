@@ -2036,6 +2036,10 @@ class ProjectAndTimeTests(unittest.TestCase):
             self.assertEqual(rec["dirs"], [str(Path(self.home.name).resolve())])
             page = ask.project_page("reel")["project"]
             self.assertEqual(len(page["sets"]), 1)
+            self.assertNotIn("chain_runs", page)  # slow parts load through their own call
+            self.assertIn("chain_runs", ask.project_extras_page("reel"))
+            with self.assertRaises(ask.AskError):
+                ask.project_extras_page("nope")
             row = page["sets"][0]
             self.assertTrue(row["created"] and row["updated"] and page["last_worked"])  # mtime fallback
             with self.assertRaises(ask.AskError):

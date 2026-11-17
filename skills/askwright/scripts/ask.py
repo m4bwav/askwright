@@ -54,7 +54,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-VERSION = "0.37.0"
+VERSION = "0.37.1"
 DEFAULT_PORT = 47631  # the shared server's port; ASKWRIGHT_PORT moves it (0 picks a free one)
 PAGE = Path(__file__).resolve().parent / "page"
 BUNDLE = re.compile(r"^(those|these|both|all of)\b|\bplus\b", re.I)
@@ -408,7 +408,7 @@ def project_page(slug):
                           "source": "sets"} for r in rec["sets"] if r.get("created")]
             timeline.sort(key=lambda h: parse_time(h["at"]), reverse=True)
             return {"ok": True, "project": dict(rec, handoffs=handoffs, prompt_files=prompts, timeline=timeline[:80],
-                                                links=project_links(rec), **project_extras(rec),
+                                                links=project_links(rec),
                                                 answered=sum(r.get("answered") or 0 for r in rec["sets"]))}
     raise AskError("unknown project")
 
@@ -1849,6 +1849,15 @@ def grind_board(rec):
             "counts": d.get("counts") or {}, "since": d.get("since"), "problems": []}
 
 
+def project_extras_page(slug):
+    """The slow parts of a project page (grind board, chain runs), served on their own so the page renders first."""
+    project_file(slug)
+    for rec in list_projects()["projects"]:
+        if rec["slug"] == slug:
+            return {"ok": True, "slug": slug, **project_extras(rec)}
+    raise AskError("unknown project")
+
+
 def project_extras(rec):
     """Other plugins' data for the same project; each part is optional and fails into words."""
     extras = {"chain_runs": chain_runs(rec)}
@@ -2429,6 +2438,12 @@ class Handler(BaseHTTPRequestHandler):
                 slug = urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query).get("slug", [""])[0]
                 try:
                     return self.send_json(200, project_page(slug))
+                except AskError as e:
+                    return self.fail(404, str(e))
+            if path == "/api/project-extras":
+                slug = urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query).get("slug", [""])[0]
+                try:
+                    return self.send_json(200, project_extras_page(slug))
                 except AskError as e:
                     return self.fail(404, str(e))
             if path == "/api/agents":

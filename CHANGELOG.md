@@ -6,6 +6,13 @@ Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (ID
 
 ## Unreleased
 
+## 0.37.1
+
+### C-20261116-8 · 2026-11-16 · Project page renders before the grind board and chain runs load
+- because: running-agents session 6 defect: the project page sat on "Loading…" for seconds once `/api/project` ran grindwright's collector
+- files: skills/askwright/scripts/ask.py (project_page, project_extras_page, `/api/project-extras`), skills/askwright/scripts/page/project.js (loadExtras), tests/test_ask.py
+`/api/project` no longer carries the grind board and chain runs; the page fetches them from `/api/project-extras` after it renders and refreshes them every minute. Local only, like `/api/agents`.
+
 ## 0.37.0
 
 ### C-20261116-7 · 2026-11-16 · Project page shows the grind board and chain runs

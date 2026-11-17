@@ -196,8 +196,6 @@ function render(p) {
   const sets = document.querySelector("#sets");
   sets.replaceChildren(...(p.sets.length ? p.sets.map(setCard) : [node("p", "No question sets yet.")]));
   renderTimeline(p);
-  renderGrind(p.grind);
-  renderChains(p.chain_runs);
 }
 
 function list(items, empty) {
@@ -288,6 +286,16 @@ function totalsText(t) {
   return ` Agent time: ${DUR(t.running_minutes)} in total (${days}).`;
 }
 
+async function loadExtras() {
+  try {
+    const x = await api("/api/project-extras?slug=" + encodeURIComponent(slug));
+    renderGrind(x.grind);
+    renderChains(x.chain_runs);
+  } catch (e) {
+    renderChains({runs: [], problems: ["grind board and chain runs: " + e.message]});
+  }
+}
+
 async function loadAgents() {
   const meta = document.querySelector("#running-meta");
   try {
@@ -334,4 +342,6 @@ document.querySelector("#show-log").addEventListener("change", () => project && 
 document.querySelector("#more-history").addEventListener("click", () => { showAll = !showAll; if (project) renderTimeline(project); });
 load();
 loadAgents();
+loadExtras();
 setInterval(() => { load(); loadAgents(); }, 15000);
+setInterval(loadExtras, 60000);

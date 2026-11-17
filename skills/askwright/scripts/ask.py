@@ -42,6 +42,7 @@ import shutil
 import signal
 import socket
 import socketserver
+import struct
 import subprocess
 import tempfile
 import sys
@@ -50,15 +51,16 @@ import time
 import unicodedata
 import urllib.parse
 import urllib.request
+import zlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-VERSION = "0.37.1"
+VERSION = "0.38.0"
 DEFAULT_PORT = 47631  # the shared server's port; ASKWRIGHT_PORT moves it (0 picks a free one)
 PAGE = Path(__file__).resolve().parent / "page"
 BUNDLE = re.compile(r"^(those|these|both|all of)\b|\bplus\b", re.I)
-KINDS = ("choice", "multi", "compare", "rank", "text", "scale", "confirm")
+KINDS = ("choice", "multi", "compare", "rank", "text", "scale", "confirm", "pixels")
 MODES = ("decide", "study")
 STUDY_KINDS = ("choice", "text")  # a quiz asks multiple-choice or written questions
 KEY_FIELDS = ("correct", "why")  # option fields a study page only sees after submitting
@@ -635,6 +637,77 @@ def media_type(src, given=None):
     return given or KIND_OF_EXT.get(Path(str(src)).suffix.lower())
 
 
+def image_size(path):
+    """(width, height) of a PNG, GIF, JPEG or WebP file read from its header, or None."""
+    try:
+        with open(path, "rb") as f:
+            head = f.read(64)
+            if head[:8] == b"\x89PNG\r\n\x1a\n" and head[12:16] == b"IHDR":
+                return struct.unpack(">II", head[16:24])
+            if head[:6] in (b"GIF87a", b"GIF89a"):
+                return struct.unpack("<HH", head[6:10])
+            if head[:4] == b"RIFF" and head[8:12] == b"WEBP":
+                c = head[12:16]
+                if c == b"VP8X":
+                    return (int.from_bytes(head[24:27], "little") + 1, int.from_bytes(head[27:30], "little") + 1)
+                if c == b"VP8L":
+                    b = int.from_bytes(head[21:25], "little")
+                    return ((b & 0x3FFF) + 1, ((b >> 14) & 0x3FFF) + 1)
+                if c == b"VP8 ":
+                    w, h = struct.unpack("<HH", head[26:30])
+                    return (w & 0x3FFF, h & 0x3FFF)
+                return None
+            if head[:2] == b"\xff\xd8":
+                f.seek(2)
+                while True:
+                    m = f.read(4)
+                    if len(m) < 4 or m[0] != 0xFF:
+                        return None
+                    marker, ln = m[1], struct.unpack(">H", m[2:4])[0]
+                    if marker in (0xC0, 0xC1, 0xC2, 0xC3, 0xC5, 0xC6, 0xC7, 0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF):
+                        hgt, wid = struct.unpack(">HH", f.read(5)[1:5])
+                        return (wid, hgt)
+                    f.seek(ln - 2, 1)
+    except (OSError, struct.error):
+        return None
+    return None
+
+
+def pixels_canvas(d, data, q):
+    """(path, width, height) of a pixels question's one image, or raises AskError."""
+    m = (q.get("media") or [None])[0]
+    if not isinstance(m, dict) or not m.get("src"):
+        raise AskError("a pixels question needs one image in media")
+    path, _ = find_media(d, media_roots(d, data), m["src"])
+    size = image_size(path)
+    if not size:
+        raise AskError(f"{m['src']} is not a PNG, GIF, JPEG or WebP image")
+    return path, size[0], size[1]
+
+
+def pixel_regions(q, pixels):
+    """{region id: {brush id: [[lx, ly], ...]}} for the marks inside each region of a pixels question."""
+    out = {}
+    for r in q.get("regions") or []:
+        got = {}
+        for b, pts in pixels.items():
+            inside = [[x - r["x"], y - r["y"]] for x, y in pts
+                      if r["x"] <= x < r["x"] + r["w"] and r["y"] <= y < r["y"] + r["h"]]
+            if inside:
+                got[b] = inside
+        if got:
+            out[r["id"]] = got
+    return out
+
+
+def pixel_summary(pts, full=False):
+    xs, ys = [p[0] for p in pts], [p[1] for p in pts]
+    s = {"count": len(pts), "bbox": [min(xs), min(ys), max(xs), max(ys)] if pts else None}
+    if full:
+        s["points"] = pts
+    return s
+
+
 def probe_codecs(path):
     exe = shutil.which("ffprobe")
     if not exe:
@@ -1110,8 +1183,9 @@ def lint_set(d, data, probe=True):
         ids = option_ids(q)
         if kind != "text":
             opts = q.get("options")
-            if not isinstance(opts, list) or len(opts) < 2:
-                E("options", "a question needs at least 2 options (text questions need none)", qid)
+            if not isinstance(opts, list) or len(opts) < (1 if kind == "pixels" else 2):
+                E("options", "a question needs at least 2 options (text questions need none, pixels needs one brush)",
+                  qid)
                 opts = opts if isinstance(opts, list) else []
             seen_ids, seen_labels = set(), set()
             for o in opts:
@@ -1131,6 +1205,11 @@ def lint_set(d, data, probe=True):
                 if kind == "confirm" and re.match(r"(?i)(yes|no)\b", label):
                     E("confirm-yes-no", f"confirm option {label!r} starts with yes/no; name the action", qid)
                 check_media(o.get("media"), qid, f"option {oid} media")
+                if kind == "pixels" and "color" in o and not re.fullmatch(r"#[0-9A-Fa-f]{3}(?:[0-9A-Fa-f]{3})?",
+                                                                          str(o["color"])):
+                    E("pixels-color", f"brush {oid}: color must be #rgb or #rrggbb", qid)
+        if kind == "pixels":
+            lint_pixels(d, data, q, qid, E)
 
         g = q.get("guess")
         if study:
@@ -1140,6 +1219,12 @@ def lint_set(d, data, probe=True):
             W("study-fields", 'correct, model_answer and rubric only work in a set with "mode": "study"', qid)
         if study:
             pass  # a quiz carries an answer key, not the agent's guess
+        elif kind == "pixels":  # a guess is optional: the person points, the agent rarely knows where
+            gp = g.get("pixels") if isinstance(g, dict) else None
+            if g is not None and (not isinstance(gp, dict) or not set(gp) <= set(ids)
+                                  or not all(isinstance(v, list) for v in gp.values())):
+                E("guess-pixels", 'a pixels guess is {"pixels": {"<brush id>": [[x, y], ...]}, "why", "confidence"}',
+                  qid)
         elif not isinstance(g, dict):
             E("guess", "every question carries the agent's guess: {option, why, confidence}", qid)
         else:
@@ -1192,6 +1277,42 @@ def lint_set(d, data, probe=True):
     if len(guess_idx) >= 3 and all(i == 0 for i in guess_idx):
         W("guess-always-first", "the guess is always the first option; vary the option order")
     return errors, warnings
+
+
+def lint_pixels(d, data, q, qid, E):
+    media = q.get("media")
+    if not isinstance(media, list) or len(media) != 1 or not isinstance(media[0], dict) \
+            or media_type(media[0].get("src") or "", media[0].get("type")) != "image":
+        E("pixels-media", "a pixels question needs exactly one image in media: the canvas", qid)
+        return
+    sc = q.get("scale")
+    if sc is not None and (not isinstance(sc, int) or isinstance(sc, bool) or not 1 <= sc <= 64):
+        E("pixels-scale", "scale must be a whole zoom from 1 to 64", qid)
+    if "grid" in q and not isinstance(q["grid"], bool):
+        E("pixels-grid", "grid must be true or false", qid)
+    try:
+        _, w, h = pixels_canvas(d, data, q)
+    except AskError as e:
+        if "PNG" in str(e):
+            E("pixels-media", str(e), qid)
+        return  # missing or outside is reported by the media check
+    regions = q.get("regions")
+    if regions is None:
+        return
+    if not isinstance(regions, list):
+        E("pixels-regions", "regions must be a list of {id, label, x, y, w, h}", qid)
+        return
+    seen = set()
+    for r in regions:
+        rid = r.get("id") if isinstance(r, dict) else None
+        if not isinstance(rid, str) or not ID_RE.match(rid) or rid in seen or not str(r.get("label") or "").strip():
+            E("pixels-regions", f"region {rid!r} needs a unique id and a label", qid)
+            continue
+        seen.add(rid)
+        nums = [r.get(k) for k in ("x", "y", "w", "h")]
+        if not all(isinstance(n, int) and not isinstance(n, bool) for n in nums) or nums[0] < 0 or nums[1] < 0 \
+                or nums[2] < 1 or nums[3] < 1 or nums[0] + nums[2] > w or nums[1] + nums[3] > h:
+            E("pixels-regions", f"region {rid}: x, y, w, h must be whole numbers inside the {w}x{h} image", qid)
 
 
 def lint_study_question(q, qid, kind, E, W, longest_right):
@@ -1384,6 +1505,9 @@ def answer_state(q, a):
     elif kind == "rank":
         if a.get("order"):
             return "answered"
+    elif kind == "pixels":
+        if any(a.get("pixels") or {}) or a.get("choice") == "other":
+            return "answered"
     elif a.get("choice"):
         return "answered"
     if str(a.get("note") or "").strip() or a.get("attachments"):
@@ -1508,7 +1632,7 @@ def read_study(d, data, attempt=None):
     return out
 
 
-def read_answers(d, since=None, include_all=False, attempt=None):
+def read_answers(d, since=None, include_all=False, attempt=None, full=False):
     d, data = load_set(d)
     if is_study(data):
         return read_study(d, data, attempt)
@@ -1543,10 +1667,16 @@ def read_answers(d, since=None, include_all=False, attempt=None):
             matched = r["order"] == g.get("order")
         elif kind == "text":
             r["text"] = a.get("text", "")
+        elif kind == "pixels":
+            px = a.get("pixels") or {}
+            r["pixels"] = {b: pixel_summary(v, full) for b, v in px.items()}
+            r["regions"] = {rid: {b: pixel_summary(v, full) for b, v in rb.items()}
+                            for rid, rb in (a.get("regions") or {}).items()}
+            r["brushes"] = {b: label_of(q, b) for b in px}
         if a.get("choice"):
             r["choice"] = a["choice"]
             r["label"] = label_of(q, a["choice"])
-            if kind not in ("multi", "rank", "text"):
+            if kind not in ("multi", "rank", "text", "pixels"):
                 matched = a["choice"] == g.get("option")
             sides = q.get("sides") or {}
             side = [k for k, v in sides.items() if k != "randomized" and v == a["choice"]]
@@ -1583,6 +1713,8 @@ def clean_answer(q, body, d, study=False):
     choice = body.get("choice")
     if choice is not None:
         allowed = {"unsure"} if kind in ("multi", "rank", "text") else ids | set(EXTRAS)
+        if kind == "pixels":
+            allowed = set(EXTRAS)
         if study:  # a quiz answer is one of its options; there is no "not sure" or "something else"
             allowed = set() if kind == "text" else ids
         if choice not in allowed:
@@ -1598,6 +1730,32 @@ def clean_answer(q, body, d, study=False):
         if kind != "rank" or not isinstance(o, list) or sorted(map(str, o)) != sorted(map(str, ids)):
             raise ValueError("order must list every option of a rank question once")
         a["order"] = o
+    px = body.get("pixels")
+    if px is not None:
+        if kind != "pixels" or not isinstance(px, dict) or not set(px) <= ids:
+            raise ValueError("pixels must map brush ids of a pixels question to [[x, y], ...]")
+        try:
+            _, w, h = pixels_canvas(d, load_set(d)[1], q)
+        except AskError as e:
+            raise ValueError(str(e))
+        clean, total = {}, 0
+        for b, pts in px.items():
+            if not isinstance(pts, list):
+                raise ValueError("pixels must map brush ids of a pixels question to [[x, y], ...]")
+            got = {}
+            for pt in pts:
+                if not (isinstance(pt, list) and len(pt) == 2
+                        and all(isinstance(v, int) and not isinstance(v, bool) for v in pt)
+                        and 0 <= pt[0] < w and 0 <= pt[1] < h):
+                    raise ValueError(f"pixel {pt!r} is not inside the {w}x{h} image")
+                got[(pt[0], pt[1])] = None
+            total += len(got)
+            if got:
+                clean[b] = [list(k) for k in sorted(got, key=lambda k: (k[1], k[0]))]
+        if total > 200000:
+            raise ValueError("too many marked pixels")
+        a["pixels"] = clean
+        a["regions"] = pixel_regions(q, clean)
     for field, cap in (("text", 20000), ("note", 20000)):
         if body.get(field) is not None:
             if not isinstance(body[field], str) or len(body[field]) > cap:
@@ -3486,10 +3644,39 @@ def cmd_status(a):
 
 
 def cmd_read(a):
-    out = read_answers(a.set, since=a.since, include_all=a.all, attempt=a.attempt)
+    out = read_answers(a.set, since=a.since, include_all=a.all, attempt=a.attempt, full=a.json)
     claim_wake(a.set, "read")  # whoever read the answers has picked them up, so "pending" stops listing them
     log_use(load_set(a.set)[0], "read", a.by)
     return emit(out)
+
+
+def png_bytes(w, h, rows):
+    """An RGBA PNG from rows of bytes (4 per pixel), standard library only."""
+    def chunk(t, data):
+        return struct.pack(">I", len(data)) + t + data + struct.pack(">I", zlib.crc32(t + data) & 0xFFFFFFFF)
+    raw = b"".join(b"\x00" + bytes(r) for r in rows)
+    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 6, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(raw, 9)) + chunk(b"IEND", b""))
+
+
+def cmd_pixels(a):
+    d, data = load_set(a.set)
+    q = next((x for x in data.get("questions") or [] if isinstance(x, dict) and x.get("id") == a.qid), None)
+    if not q or q.get("kind") != "pixels":
+        raise AskError(f"{a.qid} is not a pixels question of this set")
+    _, w, h = pixels_canvas(d, data, q)
+    ans = (load_answers(d)["answers"].get(a.qid) or {}).get("pixels") or {}
+    out = Path(a.out).expanduser()
+    out.mkdir(parents=True, exist_ok=True)
+    files = {}
+    for b in option_ids(q):
+        rows = [bytearray(w * 4) for _ in range(h)]
+        for x, y in ans.get(b) or []:
+            rows[y][x * 4:x * 4 + 4] = b"\xff\xff\xff\xff"
+        f = out / f"{a.qid}_{b}.png"
+        f.write_bytes(png_bytes(w, h, rows))
+        files[b] = {"path": str(f.resolve()), "count": len(ans.get(b) or [])}
+    return emit({"ok": True, "qid": a.qid, "width": w, "height": h, "masks": files})
 
 
 def cmd_consume(a):
@@ -3904,6 +4091,7 @@ def main(argv=None):
     s.add_argument("--all", action="store_true", help="include unanswered questions")
     s.add_argument("--attempt", type=int, help="study sets: that attempt instead of the latest submitted one")
     s.add_argument("--by", default="agent", help="who read it (shown on the dashboard)")
+    s.add_argument("--json", action="store_true", help="pixels questions: every marked pixel, not only counts and boxes")
     s = sub.add_parser("sweep", help="answer sets nothing records as used, in piles (dry run)")
     s.add_argument("--apply", action="store_true", help="mark the used pile consumed, move dead registry entries aside")
     s.add_argument("--prompts", help="write one prompt per project for the sets left to this file")
@@ -3918,6 +4106,10 @@ def main(argv=None):
     s.add_argument("set")
     s.add_argument("--by", default="owner", help="who dismissed it")
     s.add_argument("--note", default="", help="why")
+    s = sub.add_parser("pixels", help="write one PNG mask per brush of a pixels answer (white on transparent)")
+    s.add_argument("set")
+    s.add_argument("qid")
+    s.add_argument("--out", required=True)
     s = sub.add_parser("figure")
     s.add_argument("spec")
     s.add_argument("out")

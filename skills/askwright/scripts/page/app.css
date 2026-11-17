@@ -395,3 +395,14 @@ dialog::backdrop { background: rgb(0 0 0 / .5); }
   border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 32px rgb(0 0 0 / .45); }
 #hover-zoom[hidden] { display: none; }
 @media (hover: none) { #hover-zoom { display: none; } }
+
+/* pixels: mark exact pixels of one image */
+.px-tools, .px-bar { display: flex; flex-wrap: wrap; gap: .5rem .75rem; align-items: center; margin: .5rem 0; }
+.px-tool { display: inline-flex; align-items: center; gap: .35rem; min-height: 32px; cursor: pointer; }
+.px-swatch { display: inline-block; width: 1rem; height: 1rem; border-radius: 3px; border: 1px solid var(--border); }
+.px-zoom { min-width: 2.5em; text-align: center; font-variant-numeric: tabular-nums; }
+.px-wrap { max-width: 100%; max-height: 75vh; overflow: auto; border: 1px solid var(--border); border-radius: 6px;
+  background: repeating-conic-gradient(#8884 0% 25%, transparent 0% 50%) 50% / 16px 16px; }
+.px-canvas { display: block; image-rendering: crisp-edges; image-rendering: pixelated; touch-action: none; cursor: crosshair; }
+fieldset:disabled .px-canvas { cursor: default; }
+.px-status { color: var(--muted); font-size: .875rem; font-variant-numeric: tabular-nums; }

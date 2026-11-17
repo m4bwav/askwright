@@ -1,0 +1,29 @@
+{
+  "askwright": 1,
+  "id": "roof-snow",
+  "title": "Mark the snow on the roofs",
+  "project": "askwright tests",
+  "media_roots": ["../media"],
+  "questions": [
+    {
+      "id": "snow",
+      "kind": "pixels",
+      "title": "Snow overlay",
+      "question": "Where is the roof snow wrong on this sprite sheet?",
+      "why": "The marked pixels go straight into the snow masks.",
+      "background": "A test swatch stands in for a sheet of two building sprites, each with a snow overlay.",
+      "look_for": ["Roof edges where the snow stops short of the eaves"],
+      "media": [{"src": "swatch.png", "type": "image", "alt": "Two buildings with snow on their roofs"}],
+      "options": [
+        {"id": "add", "label": "Snow should be here", "color": "#3af"},
+        {"id": "remove", "label": "No snow here", "color": "#f43"}
+      ],
+      "scale": 8,
+      "grid": true,
+      "regions": [
+        {"id": "mill", "label": "Mill", "x": 0, "y": 0, "w": 32, "h": 48},
+        {"id": "barn", "label": "Barn", "x": 32, "y": 0, "w": 32, "h": 48}
+      ]
+    }
+  ]
+}

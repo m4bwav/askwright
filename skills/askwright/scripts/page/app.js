@@ -59,10 +59,12 @@
     if (q.kind === "text") { if ((a.text || "").trim()) return "answered"; }
     else if (q.kind === "multi") { if ((a.choices || []).length) return "answered"; }
     else if (q.kind === "rank") { if ((a.order || []).length) return "answered"; }
+    else if (q.kind === "pixels") { if (pxCount(a.pixels) || a.choice === "other") return "answered"; }
     else if (a.choice) return "answered";
     if ((a.note || "").trim() || (a.attachments || []).length) return "note_only";
     return "unanswered";
   }
+  const pxCount = (px) => Object.values(px || {}).reduce((n, v) => n + v.length, 0);
   const st = (q) => stateOf(q, S.answers[q.id]);
   const done = (q) => ["answered", "unsure"].includes(st(q));
   function vis(q) {
@@ -105,6 +107,7 @@
       if (q.kind === "multi") t = a.choices.map((c) => shownLabel(q, c, true)).join(", ");
       else if (q.kind === "rank") t = a.order.map((c, i) => i + 1 + ". " + optLabel(q, c)).join("  ");
       else if (q.kind === "text") t = '"' + a.text.trim() + '"';
+      else if (q.kind === "pixels") t = pxText(q, a.pixels) || optLabel(q, a.choice);
       else t = shownLabel(q, a.choice, true);
     } else t = "Note only, needs a choice";
     if ((a.note || "").trim()) t += " · note: " + a.note.trim().slice(0, 120);
@@ -230,6 +233,7 @@
       choices: q.kind === "multi" ? a.choices || [] : null,
       order: q.kind === "rank" && (a.order || []).length ? a.order : null,
       text: q.kind === "text" ? a.text || "" : null,
+      pixels: q.kind === "pixels" ? a.pixels || {} : null,
       note: a.note || "", attachments: a.attachments || [], timecodes: a.timecodes || [],
       guess_revealed: !!a.guess_revealed, guess_revealed_before_pick: !!a.guess_revealed_before_pick,
     };
@@ -832,7 +836,7 @@
       art.append(h("section", { class: "look", "aria-labelledby": "look-h" }, h("h2", { id: "look-h", text: (q.media || []).length && q.media.every((m) => m.type === "audio") ? "What to listen for" : "What to look for" }), h("ul", null, items)));
       S.lookTimes.sort((x, y) => x - y);
     }
-    if ((q.media || []).length) art.append(questionMedia(q));
+    if ((q.media || []).length && q.kind !== "pixels") art.append(questionMedia(q));
     if (!editing) {
       art.append(h("div", { class: "readonly" }, h("span", { text: "You answered: " + answerText(q) }),
         h("button", { type: "button", class: "btn small", text: "Change", onclick: () => { S.editing[q.id] = true; render(false); $("#ans input, #ans textarea, #ans button", main)?.focus(); } })));
@@ -880,6 +884,7 @@
       fs.append(ol, h("div", { class: "rank-actions" }, useBtn, h("label", { class: "opt extra" }, unsure, h("span", { class: "label", text: "Not sure, ask me later" }))));
       return fs;
     }
+    if (q.kind === "pixels") return pixelsArea(q, a, fs);
     if (q.kind === "text") {
       const ta = h("textarea", { id: "ans-text", rows: "4" });
       ta.value = a.text || "";
@@ -919,6 +924,138 @@
     fs.append(box);
     return fs;
   }
+  // ------------------------------------------------------------ pixels: point at exact pixels of one image
+  const PX_COLORS = ["#33aaff", "#ff4433", "#33cc66", "#ffaa00", "#aa66ff", "#ff66cc"];
+  function pxText(q, px) {
+    const parts = Object.entries(px || {}).filter(([, v]) => v.length).map(([b, v]) => optLabel(q, b) + ": " + v.length);
+    return parts.length ? pxCount(px) + " pixels marked (" + parts.join(", ") + ")" : "";
+  }
+  function pixelsArea(q, a, fs) {
+    const m = (q.media || [])[0] || {};
+    const brushes = q.options || [];
+    const color = (b) => b.color || PX_COLORS[brushes.indexOf(b) % PX_COLORS.length];
+    const marks = new Map();  // "x,y" -> brush id; one brush per pixel
+    for (const [b, pts] of Object.entries(a.pixels || {})) for (const [x, y] of pts) marks.set(x + "," + y, b);
+    const undo = [];
+    let tool = brushes[0] ? brushes[0].id : null, size = 1, W = 0, H = 0, zoom = q.scale || 0, stroke = null, regionsOn = true;
+    const canvas = h("canvas", { class: "px-canvas", "aria-label": "Image to mark: " + (m.alt || m.src || "") });
+    const ctx = canvas.getContext("2d");
+    const img = new Image();
+    const coord = h("span", { class: "px-coord", "aria-live": "off", text: "Point at a pixel" });
+    const count = h("span", { class: "px-count" });
+    const zoomLabel = h("span", { class: "px-zoom" });
+    const wrap = h("div", { class: "px-wrap" }, canvas);
+    const sync = () => {
+      const px = {};
+      for (const [k, b] of marks) (px[b] = px[b] || []).push(k.split(",").map(Number));
+      const d = draft(q.id);
+      d.pixels = px;
+      if (marks.size && d.choice === "unsure") { d.choice = null; unsure.checked = false; }
+      count.textContent = pxText(q, px) || "No pixels marked";
+      picked(q);
+      changed(q.id);
+    };
+    function draw() {
+      if (!W) return;
+      const z = zoom;
+      canvas.width = W * z; canvas.height = H * z;
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(img, 0, 0, W * z, H * z);
+      ctx.globalAlpha = 0.6;
+      for (const [k, b] of marks) {
+        const [x, y] = k.split(",").map(Number);
+        const br = brushes.find((o) => o.id === b);
+        ctx.fillStyle = br ? color(br) : "#ff00ff";
+        ctx.fillRect(x * z, y * z, z, z);
+      }
+      ctx.globalAlpha = 1;
+      if (q.grid && z >= 6) {
+        ctx.strokeStyle = "rgba(128,128,128,.35)"; ctx.lineWidth = 1; ctx.beginPath();
+        for (let x = 0; x <= W; x++) { ctx.moveTo(x * z + 0.5, 0); ctx.lineTo(x * z + 0.5, H * z); }
+        for (let y = 0; y <= H; y++) { ctx.moveTo(0, y * z + 0.5); ctx.lineTo(W * z, y * z + 0.5); }
+        ctx.stroke();
+      }
+      if (regionsOn) for (const r of q.regions || []) {
+        ctx.strokeStyle = "rgba(255,255,255,.8)"; ctx.setLineDash([4, 3]); ctx.lineWidth = 1;
+        ctx.strokeRect(r.x * z + 0.5, r.y * z + 0.5, r.w * z - 1, r.h * z - 1); ctx.setLineDash([]);
+      }
+      canvas.style.width = W * z + "px"; canvas.style.height = H * z + "px";
+      zoomLabel.textContent = z + "x";
+    }
+    function at(e) {
+      const r = canvas.getBoundingClientRect();
+      const x = Math.floor((e.clientX - r.left) / r.width * W), y = Math.floor((e.clientY - r.top) / r.height * H);
+      return x >= 0 && y >= 0 && x < W && y < H ? [x, y] : null;
+    }
+    function regionAt(x, y) { return (q.regions || []).find((r) => x >= r.x && y >= r.y && x < r.x + r.w && y < r.y + r.h); }
+    function paint(p, erase) {
+      if (!p) return;
+      const off = Math.floor((size - 1) / 2);
+      for (let dy = 0; dy < size; dy++) for (let dx = 0; dx < size; dx++) {
+        const x = p[0] - off + dx, y = p[1] - off + dy;
+        if (x < 0 || y < 0 || x >= W || y >= H) continue;
+        if (erase || tool === "erase") marks.delete(x + "," + y); else marks.set(x + "," + y, tool);
+      }
+      draw();
+    }
+    canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+    canvas.addEventListener("pointerdown", (e) => {
+      if (fs.disabled || !W) return;
+      e.preventDefault();
+      canvas.setPointerCapture(e.pointerId);
+      stroke = { erase: e.button === 2, before: new Map(marks) };
+      paint(at(e), stroke.erase);
+    });
+    canvas.addEventListener("pointermove", (e) => {
+      const p = at(e);
+      if (p) {
+        const r = regionAt(p[0], p[1]);
+        coord.textContent = "x " + p[0] + ", y " + p[1] + (r ? " · " + r.label + " (" + (p[0] - r.x) + ", " + (p[1] - r.y) + ")" : "");
+      }
+      if (stroke) paint(p, stroke.erase);
+    });
+    const end = () => {
+      if (!stroke) return;
+      undo.push(stroke.before); if (undo.length > 100) undo.shift();
+      stroke = null; sync();
+    };
+    canvas.addEventListener("pointerup", end);
+    canvas.addEventListener("pointercancel", end);
+    img.addEventListener("load", () => {
+      W = img.naturalWidth; H = img.naturalHeight;
+      if (!zoom) zoom = Math.max(1, Math.min(32, Math.floor(Math.min(main.clientWidth || 640, 960) / W)));
+      draw();
+    });
+    img.addEventListener("error", () => { coord.textContent = "The image did not load."; });
+    if (m.url && !m.missing) img.src = m.url;
+    const tools = h("div", { class: "px-tools", role: "radiogroup", "aria-label": "Brush" });
+    const toolBtn = (id, label, col) => h("label", { class: "px-tool" },
+      h("input", { type: "radio", name: "px-tool-" + q.id, value: id, checked: id === tool, onchange: () => { tool = id; } }),
+      col ? swatch(col) : null, h("span", { text: label }));
+    function swatch(col) { const el = h("span", { class: "px-swatch" }); el.style.background = col; return el; }
+    for (const b of brushes) tools.append(toolBtn(b.id, b.label, color(b)));
+    tools.append(toolBtn("erase", "Eraser (or right-click)", null));
+    const sizeSel = h("select", { "aria-label": "Brush size", onchange: () => { size = +sizeSel.value; } },
+      [1, 2, 3].map((n) => h("option", { value: n, text: n + " px" })));
+    const btn = (text, fn, label) => h("button", { type: "button", class: "btn small", text, "aria-label": label || text, onclick: fn });
+    const bar = h("div", { class: "px-bar" },
+      h("label", null, "Size ", sizeSel),
+      btn("Undo", () => { if (undo.length) { const prev = undo.pop(); marks.clear(); for (const [k, v] of prev) marks.set(k, v); draw(); sync(); } }),
+      btn("Clear", () => { if (!marks.size) return; undo.push(new Map(marks)); marks.clear(); draw(); sync(); }),
+      btn("-", () => { zoom = Math.max(1, zoom - (zoom > 8 ? 2 : 1)); draw(); }, "Zoom out"), zoomLabel,
+      btn("+", () => { zoom = Math.min(64, zoom + (zoom >= 8 ? 2 : 1)); draw(); }, "Zoom in"),
+      (q.regions || []).length ? btn("Regions", () => { regionsOn = !regionsOn; draw(); }, "Show or hide region outlines") : null);
+    const unsure = h("input", { type: "checkbox", value: "unsure", checked: a.choice === "unsure" });
+    unsure.addEventListener("change", () => { const d = draft(q.id); d.choice = unsure.checked ? "unsure" : null; other.checked = false; picked(q); changed(q.id, true); });
+    const other = h("input", { type: "checkbox", value: "other", checked: a.choice === "other" });
+    other.addEventListener("change", () => { const d = draft(q.id); d.choice = other.checked ? "other" : null; unsure.checked = false; picked(q); changed(q.id, true); if (other.checked && !(d.note || "").trim()) $("#note", main)?.focus(); });
+    count.textContent = pxText(q, a.pixels) || "No pixels marked";
+    fs.append(tools, bar, wrap, h("p", { class: "px-status" }, coord, " · ", count),
+      h("div", { class: "opts" }, h("label", { class: "opt extra" }, unsure, h("span", { class: "label", text: "Not sure, ask me later" })),
+        h("label", { class: "opt extra" }, other, h("span", { class: "label", text: "Something else (say what in the note)" }))));
+    return fs;
+  }
+
   // After a pick: reveal compare sides and refresh the guess line, without re-rendering (a playing video keeps playing).
   function picked(q) {
     const reveal = done(q);
@@ -944,6 +1081,7 @@
     if (q.kind === "multi") return (g.options || []).map((o) => shownLabel(q, o, done(q))).join(", ");
     if (q.kind === "rank") return (g.order || []).map((o, i) => i + 1 + ". " + optLabel(q, o)).join("  ");
     if (q.kind === "text") return '"' + (g.text || "") + '"';
+    if (q.kind === "pixels") return pxText(q, g.pixels) || "no marks";
     return shownLabel(q, g.option, done(q));
   }
   function guessLine(q) {

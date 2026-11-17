@@ -109,6 +109,15 @@ handoff or a chat reply: the person has to find the files, guess what to look fo
 - `look_for` names what to listen for, with times: "The pause after 'dawn' at 2.0 s: natural or clipped?".
 - Several lines read by one voice per option: put each option's sample in its `media`; it plays from a button.
 
+## Pointing at pixels
+
+- Use `kind: "pixels"` when the answer is a place on an image, not a choice: "snow missing here", "remove this
+  outline", "the seam is at these pixels". Words like "the left edge of the roof" cost a round trip; marks do not.
+- One image per question (a contact sheet is fine: name each sprite with `regions` so the answer comes back per
+  sprite in its own coordinates). Name each brush by the fix it asks for ("Snow should be here", "No snow here").
+- No guess is needed. Read with `ask.py read --json` for every pixel, or `ask.py pixels SET QID --out DIR` for one
+  mask PNG per brush, and apply them to the masks yourself.
+
 ## Refs and tabs
 
 If answering means testing, playing or reading something, say where: `refs` with the folder to open, the important

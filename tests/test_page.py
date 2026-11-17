@@ -1181,5 +1181,36 @@ class StudyPageTests(PageCase):
         FixturePageTests.csp_clean(self)
 
 
+class PixelsPageTests(PageCase):
+    SET = FIX / "pixels"
+
+    def px(self, x, y):
+        box = self.page.locator(".px-canvas").bounding_box()
+        return box["x"] + x * 8 + 4, box["y"] + y * 8 + 4
+
+    def test_click_drag_erase_undo_and_save(self):
+        p = self.open()
+        p.wait_for_function("document.querySelector('.px-canvas').width === 64 * 8")
+        self.assertEqual(p.evaluate("getComputedStyle(document.querySelector('.px-canvas')).imageRendering"), "pixelated")
+        p.mouse.click(*self.px(1, 2))
+        p.mouse.move(*self.px(40, 5))
+        p.mouse.down()
+        p.mouse.move(*self.px(42, 5), steps=6)
+        p.mouse.up()
+        p.check("input[name='px-tool-snow'][value='remove']")
+        p.mouse.click(*self.px(10, 10))
+        p.mouse.click(*self.px(10, 10), button="right")
+        self.wait_saved()
+        a = self.answers()["snow"]
+        self.assertEqual(a["pixels"], {"add": [[1, 2], [40, 5], [41, 5], [42, 5]]})
+        self.assertEqual(a["regions"]["barn"]["add"], [[8, 5], [9, 5], [10, 5]])
+        p.click("button:has-text('Undo')")
+        p.wait_for_timeout(700)
+        self.wait_saved()
+        self.assertEqual(self.answers()["snow"]["pixels"]["remove"], [[10, 10]])
+        self.assertIn("x 10, y 10", p.locator(".px-coord").inner_text())
+        self.assertEqual(self.errors, [])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=1)

@@ -61,7 +61,7 @@ Every question has:
 
 Kinds: `choice`, `multi` (checkboxes: use it when several options can be true, never bundles like "A and B"), `compare` (takes side by side: `sides` says which take is on which side; the page shows
 "Left"/"Right" until the pick and stores the option id; `randomized: true` only if the sides were drawn at random,
-a known fixed order gets `false`), `rank`, `text`, `scale`, `confirm`. A question that only
+a known fixed order gets `false`), `rank`, `text`, `scale`, `confirm`, `pixels` (mark pixels of an image). A question that only
 matters after another answer gets `show_if`. A major decision gets a `one_pager` (text, facts, a pros and cons
 table, images, a chart) above it; lots of it goes in `tabs`. Code or a build: `refs` say where to test it. Keep a set to 12 open questions at most.
 

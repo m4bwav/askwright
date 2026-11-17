@@ -6,6 +6,14 @@ Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (ID
 
 ## Unreleased
 
+## 0.38.0
+
+### C-20261116-9 · 2026-11-16 · New question kind `pixels`: point at exact pixels of an image
+- because: user request (reviewing roof-snow overlays on pixel-art building sprites by pointing, not describing)
+- files: skills/askwright/scripts/ask.py (KINDS, image_size, lint_pixels, clean_answer, answer_state, read_answers `--json`, `pixels` command), skills/askwright/scripts/page/app.js and app.css (pixelsArea), references/schema.md (Pixels), references/writing-questions.md (Pointing at pixels), SKILL.md (Kinds), tests/test_ask.py (PixelsTests), tests/test_page.py (PixelsPageTests), tests/fixtures/pixels
+A `pixels` question shows its one image as a zoomable canvas with named brushes; the answer stores marked pixels per brush and per named region. `ask.py read` summarises counts and bounding boxes, `--json` lists every pixel, and `ask.py pixels` writes one PNG mask per brush with the standard library.
+scripts/budget.py: the install band's yellow limit goes from 464 KB to 488 KB for the new page code (482 KB installed).
+
 ## 0.37.1
 
 ### C-20261116-8 · 2026-11-16 · Project page renders before the grind board and chain runs load

@@ -30,7 +30,7 @@ A set is one folder holding `questions.json`. The server writes `answers.json`, 
 | Field | Required | Meaning |
 |---|---|---|
 | `id` | yes | Unique in the set; same characters as the set id. |
-| `kind` | yes | `choice`, `multi`, `compare`, `rank`, `text`, `scale` or `confirm`. |
+| `kind` | yes | `choice`, `multi`, `compare`, `rank`, `text`, `scale`, `confirm` or `pixels`. |
 | `title` | yes | Short label, shown above the question and in lists (80 characters at most). Unique among open questions. |
 | `question` | yes | One question, ending in `?`. Unique among open questions. |
 | `why` | yes | What the answer changes. Three sentences at most; put more in a `one_pager`. |
@@ -80,6 +80,40 @@ up in the set folder first, then in each media root.
 
 A gallery item is one complete case. Keep a side-by-side comparison in one image so changing cases does not
 hide one of its candidates; `scripts/contact.py out.png a.png b.png --labels ... --scale 3` makes one (Pillow).
+## Pixels
+
+A `pixels` question has exactly one image in `media` (PNG, GIF, JPEG or WebP; it is the canvas) and `options` as
+brushes: at least one `{id, label, color?}` (`color` is `#rgb` or `#rrggbb`; a palette fills in otherwise). `look_for`
+is still required. The page draws the image with nearest-neighbour zoom; click paints a pixel, drag paints a stroke,
+size 1, 2 or 3, right-click or the Eraser removes, Undo, Clear, zoom - and +, and the hovered coordinate (and region)
+shows under it. Touch works. Not sure and Something else (explained in the note) still apply.
+
+| Field | Meaning |
+|---|---|
+| `scale` | Whole zoom from 1 to 64. Default: fit the width. |
+| `grid` | `true` draws pixel grid lines when zoomed 6x or more. |
+| `regions` | `[{"id", "label", "x", "y", "w", "h"}]`: named rectangles inside the image (one per sprite on a sheet). Answers are also grouped per region in region-local coordinates. |
+| `guess` | Optional: `{"pixels": {"<brush id>": [[x, y], ...]}, "why", "confidence"}`. |
+
+```json
+{"id": "snow", "kind": "pixels", "title": "Roof snow",
+ "question": "Where is the roof snow wrong?", "why": "The marks go straight into the snow masks.",
+ "background": "Two 96x96 buildings on one sheet with the generated snow overlay.",
+ "look_for": ["Roof edges where the snow stops short of the eaves"],
+ "media": [{"src": "sheet.png", "alt": "Mill and barn with snow"}],
+ "options": [{"id": "add", "label": "Snow should be here", "color": "#3af"},
+             {"id": "remove", "label": "No snow here", "color": "#f43"}],
+ "grid": true,
+ "regions": [{"id": "mill", "label": "Mill", "x": 0, "y": 0, "w": 96, "h": 96},
+             {"id": "barn", "label": "Barn", "x": 96, "y": 0, "w": 96, "h": 96}]}
+```
+
+The answer in `answers.json`: `"pixels": {"add": [[x, y], ...]}` in image coordinates (sorted, no repeats, empty
+brushes left out) and `"regions": {"mill": {"add": [[lx, ly], ...]}}` region-local. With no marks it counts only with
+a note (`note_only`), Not sure, or Something else. `ask.py read` prints per brush and region `{"count", "bbox": [x0,
+y0, x1, y1]}` plus `brushes` (id to label); `--json` adds `points`. `ask.py pixels SET QID --out DIR` writes
+`<qid>_<brush>.png` per brush: white marks on transparent, the image's size.
+
 ## Projects
 
 A project record lives in the user-wide registry (`~/.askwright/projects/<slug>.json`, or under `ASKWRIGHT_HOME`), one file per project, keyed by a slug of its name: `{"name", "description", "repos", "dirs", "goals", "status", "direction", "history": [{"at", "kind", "text", "path"?}], "created", "updated"}`. `ask.py project NAME [--description T] [--repo URL]... [--dir DIR]... [--goal T]... [--remove-repo|--remove-dir|--remove-goal X] [--status active|needs-direction|paused|done] [--needs-direction QUESTION] [--note TEXT] [--prompt-run FILE]` creates or updates it (creating needs `--description`; a set registered from a hand-written file creates a record with none, which its page shows as missing); history keeps the last 500 notes, status changes and prompt runs. `ask.py project` lists every project with its sets, status and first and last prompt run. Registering a set whose `project` names a project creates the record if missing and adds the set's `path` to `dirs`. The project page (`/projects/<slug>`, on the dashboard and every question server) shows status, a Needs you box, created, last worked on, first and last prompt run, the newest continue prompt (Copy start command), goals, each folder's `ai-docs/HANDOFF.md` opening, folders, sets, and one history merged with the folders' dated `ai-docs/log.md` entries.
@@ -99,6 +133,7 @@ or record choices. Left/Right arrows inside the gallery change cases, not questi
 - `multi`: any number of N.
 - `rank`: the person orders every option and presses "Use this order".
 - `text`: a free answer. Use it only when choices cannot cover the answer.
+- `pixels`: the person paints exact pixels of one image (see "Pixels").
 
 Every kind except `text` gets "Not sure, ask me later" (`unsure`) and "Something else" (`other`, explained in the
 note); `text` gets "Not sure".

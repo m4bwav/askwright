@@ -2660,6 +2660,95 @@ class AgentsTests(unittest.TestCase):
         self.assertIn("lease ran out", old["stale_reason"])
 
 
+class PixelsTests(unittest.TestCase):
+    """The pixels kind: lint, answers from the page, read and the mask helper."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="askw-px-"))
+        shutil.copytree(FIX / "media", self.tmp / "media")
+        self.dir = self.tmp / "pixels"
+        self.dir.mkdir()
+        self.data = json.loads((FIX / "pixels" / "questions.json").read_text(encoding="utf-8"))
+        self.write()
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def write(self):
+        (self.dir / "questions.json").write_text(json.dumps(self.data), encoding="utf-8")
+
+    def q(self):
+        return self.data["questions"][0]
+
+    def rules(self):
+        d, data = ask.load_set(self.dir)
+        return {e["rule"] for e in ask.lint_set(d, data, probe=False)[0]}
+
+    def test_fixture_is_clean_and_guess_is_optional(self):
+        self.assertEqual(self.rules(), set())
+        self.q()["guess"] = {"pixels": {}, "why": "no idea", "confidence": "low"}
+        self.write()
+        self.assertEqual(self.rules(), set())
+
+    def test_lint_rules(self):
+        cases = [
+            (lambda q: q.update(options=[]), "options"),
+            (lambda q: q["options"].append({"id": "x", "label": ""}), "option-label"),
+            (lambda q: q["options"][0].update(color="blue"), "pixels-color"),
+            (lambda q: q["media"].append(dict(q["media"][0])), "pixels-media"),
+            (lambda q: q.update(media=[{"src": "clip.mp4"}]), "pixels-media"),
+            (lambda q: q.update(scale=0), "pixels-scale"),
+            (lambda q: q.update(grid="yes"), "pixels-grid"),
+            (lambda q: q["regions"].append({"id": "big", "label": "Big", "x": 40, "y": 0, "w": 32, "h": 8}),
+             "pixels-regions"),
+            (lambda q: q["regions"].append({"id": "mill", "label": "Again", "x": 0, "y": 0, "w": 1, "h": 1}),
+             "pixels-regions"),
+            (lambda q: q.update(guess={"pixels": {"nope": []}, "why": "x", "confidence": "low"}), "guess-pixels"),
+        ]
+        base = copy.deepcopy(self.data)
+        for fn, rule in cases:
+            self.data = copy.deepcopy(base)
+            fn(self.q())
+            self.write()
+            self.assertIn(rule, self.rules(), rule)
+
+    def test_image_size(self):
+        self.assertEqual(ask.image_size(FIX / "media" / "swatch.png"), (64, 48))
+        self.assertIsNone(ask.image_size(FIX / "media" / "tone.wav"))
+
+    def test_clean_answer_and_regions(self):
+        q = self.q()
+        a = ask.clean_answer(q, {"pixels": {"add": [[1, 2], [1, 2], [40, 5]], "remove": []}, "note": "eaves"},
+                             self.dir)
+        self.assertEqual(a["pixels"], {"add": [[1, 2], [40, 5]]})
+        self.assertEqual(a["regions"], {"mill": {"add": [[1, 2]]}, "barn": {"add": [[8, 5]]}})
+        self.assertEqual(ask.answer_state(q, a), "answered")
+        for bad in ({"pixels": {"add": [[64, 0]]}}, {"pixels": {"add": [[1.5, 0]]}}, {"pixels": {"zap": [[0, 0]]}},
+                    {"choice": "add"}):
+            with self.assertRaises(ValueError):
+                ask.clean_answer(q, bad, self.dir)
+        self.assertEqual(ask.answer_state(q, ask.clean_answer(q, {"pixels": {}}, self.dir)), "unanswered")
+        self.assertEqual(ask.answer_state(q, ask.clean_answer(q, {"pixels": {}, "note": "hm"}, self.dir)), "note_only")
+        self.assertEqual(ask.answer_state(q, ask.clean_answer(q, {"choice": "unsure"}, self.dir)), "unsure")
+
+    def test_read_summary_json_and_masks(self):
+        a = ask.clean_answer(self.q(), {"pixels": {"add": [[1, 2], [3, 4]], "remove": [[40, 1]]}}, self.dir)
+        a.update(rev=1, q_rev=1)
+        ask.write_json_atomic(self.dir / "answers.json", {"askwright": 1, "rev": 1, "answers": {"snow": a}})
+        r = ask.read_answers(self.dir)["answers"][0]
+        self.assertEqual(r["pixels"]["add"], {"count": 2, "bbox": [1, 2, 3, 4]})
+        self.assertEqual(r["regions"]["barn"]["remove"], {"count": 1, "bbox": [8, 1, 8, 1]})
+        self.assertEqual(r["brushes"]["add"], "Snow should be here")
+        code, out = run_cli("read", self.dir, "--json")
+        self.assertEqual(code, 0)
+        self.assertEqual(out["answers"][0]["pixels"]["add"]["points"], [[1, 2], [3, 4]])
+        self.assertEqual(out["answers"][0]["regions"]["mill"]["add"]["points"], [[1, 2], [3, 4]])
+        code, out = run_cli("pixels", self.dir, "snow", "--out", self.tmp / "masks")
+        self.assertEqual(code, 0, out)
+        self.assertEqual(out["masks"]["add"]["count"], 2)
+        self.assertEqual(ask.image_size(out["masks"]["remove"]["path"]), (64, 48))
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=1)
 

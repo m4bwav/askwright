@@ -2475,6 +2475,18 @@ class AgentsTests(unittest.TestCase):
         self.assertIn("transcript written 2 min ago", row["evidence"])
         self.assertNotIn("SECRET", json.dumps(out))
 
+    def test_time_totals_from_start_to_last_activity(self):
+        rows = [{"status": "recent", "started": self.agents.iso(self.now - 3600), "last_activity": self.agents.iso(self.now - 600)},
+                {"status": "live", "started": self.agents.iso(self.now - 1200)},
+                {"status": "possibly stale"}]
+        t = self.agents.time_totals(rows, self.now)
+        self.assertEqual(rows[0]["running_minutes"], 50)
+        self.assertEqual(rows[1]["running_minutes"], 20)  # live: counted up to now
+        self.assertNotIn("running_minutes", rows[2])
+        self.assertEqual(t["running_minutes"], 70)
+        self.assertEqual(sum(t["by_day"].values()), 70)
+        self.assertIn("totals", self.collect())
+
     def test_live_process_from_registry(self):
         (self.home / "sessions" / "1.json").write_text(json.dumps(
             {"pid": os.getpid(), "sessionId": "s-live", "cwd": str(self.proj), "kind": "interactive",

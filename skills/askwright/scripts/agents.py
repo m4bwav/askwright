@@ -434,7 +434,27 @@ def collect(dirs, home=None, now=None, window_hours=WINDOW_HOURS, remote=True):
         result["note"] = f"this machine, and other machines through {repo}"
     if repos:
         out.sort(key=lambda r: ({"live": 0, "recent": 1}.get(r["status"], 2), r.get("minutes_quiet") or 0))
+    result["totals"] = time_totals(out, now)
     return result
+
+
+def time_totals(rows, now):
+    """How long each session has been running (start to last activity, or to now while live), and the sum per day
+    of the start date. Sets row['running_minutes']; sessions without a start time count nowhere."""
+    total, by_day = 0, {}
+    for r in rows:
+        start = parse_iso(r.get("started")) if r.get("started") else None
+        if start is None:
+            continue
+        end = now if r.get("status") == "live" else (parse_iso(r.get("last_activity")) if r.get("last_activity") else None)
+        if end is None or end < start:
+            continue
+        mins = round((end - start) / 60)
+        r["running_minutes"] = mins
+        total += mins
+        day = time.strftime("%Y-%m-%d", time.localtime(start))
+        by_day[day] = by_day.get(day, 0) + mins
+    return {"running_minutes": total, "by_day": dict(sorted(by_day.items(), reverse=True))}
 
 
 # ---- other machines: shared through the repository host (grindwright's "work.remote" channel)

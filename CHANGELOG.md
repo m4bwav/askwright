@@ -6,6 +6,13 @@ Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (ID
 
 ## Unreleased
 
+## 0.36.0
+
+### C-20261116-6 · 2026-11-16 · Who is running shows how long each session has run, and totals per day
+- because: user request (Jennifer wants time-worked and how-long-running totals)
+- files: skills/askwright/scripts/agents.py (time_totals, collect), skills/askwright/scripts/page/project.js (agentRow, loadAgents), tests/test_ask.py (AgentsTests)
+Each row gets `running_minutes` (start to last activity, or to now while live) and the result a `totals` block (sum and per start day); the project page shows Running for on each row and the agent-time totals in the header line.
+
 ## 0.35.1
 
 ### C-20261116-5 · 2026-11-16 · The hub's presence pass reads the project list it is given

@@ -199,6 +199,7 @@ function render(p) {
 }
 
 const AGO = m => m == null ? "" : m < 60 ? `${m} min ago` : `${Math.floor(m / 60)} h ${m % 60} min ago`;
+const DUR = m => m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${m % 60} min`;
 
 function agentRow(r) {
   const box = node("article", "", "agent " + r.status.replace(/[^a-z]+/g, "-"));
@@ -217,6 +218,7 @@ function agentRow(r) {
   add("Machine", r.machine);
   add("Started", r.started ? when(r.started) : "");
   add("Last activity", r.last_activity ? `${when(r.last_activity)} (${AGO(r.minutes_quiet)})` : "none seen");
+  if (r.running_minutes != null) add("Running for", DUR(r.running_minutes) + (r.status === "live" ? " so far" : ""));
   add("Session", r.session);
   if (r.stale_reason) add("Why stale", r.stale_reason);
   add("How it is known", r.evidence.join("; "));
@@ -234,13 +236,19 @@ function when(iso) {
   return isNaN(d) ? iso : d.toLocaleString();
 }
 
+function totalsText(t) {
+  if (!t || !t.running_minutes) return "";
+  const days = Object.entries(t.by_day || {}).map(([d, m]) => `${d} ${DUR(m)}`).join(", ");
+  return ` Agent time: ${DUR(t.running_minutes)} in total (${days}).`;
+}
+
 async function loadAgents() {
   const meta = document.querySelector("#running-meta");
   try {
     const d = await api("/api/agents?slug=" + encodeURIComponent(slug));
     const live = d.rows.filter(r => r.status === "live").length;
     meta.textContent = (d.rows.length ? `${d.rows.length} seen, ${live} live.` : "No agent session seen in this project's folders.")
-      + ` Checked ${when(d.built)}; refreshes every 15 s. ${d.note || ""}`;
+      + totalsText(d.totals) + ` Checked ${when(d.built)}; refreshes every 15 s. ${d.note || ""}`;
     const rows = document.querySelector("#running-rows");
     rows.replaceChildren(...d.rows.map(agentRow), ...d.problems.map(p => node("p", "Could not read: " + p, "problem")));
     const idle = d.worktrees_idle || [];

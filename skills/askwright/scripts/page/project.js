@@ -248,7 +248,7 @@ const DUR = m => m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${m % 60} min`;
 function agentRow(r) {
   const box = node("article", "", "agent " + r.status.replace(/[^a-z]+/g, "-"));
   const head = node("p", "", "agent-head");
-  head.append(node("strong", r.status), node("span", " " + (r.kind || (r.claims.length && !r.cwd ? "grindwright claim" : "session")), "meta"));
+  head.append(node("strong", r.status), node("span", " " + (r.kind || (r.claims.length && !r.cwd ? "grindwright claim" : (r.chain_claims || []).length && !r.cwd ? "chainwright claim" : "session")), "meta"));
   if (r.claims.some(c => c.quiet || (c.session_info || {}).quiet)) head.append(node("span", " quiet mode (no new work)", "tag"));
   if (r.claims.some(c => c.handed_to || c.handed_off || c.handoff)) head.append(node("span", " handed off", "tag"));
   if (r.claims.some(c => c.taken_over_from || c.took_over || c.takeover)) head.append(node("span", " taken over", "tag"));
@@ -258,6 +258,7 @@ function agentRow(r) {
   const facts = node("dl", "", "facts small");
   const add = (k, v) => { if (v) fact(facts, k, v); };
   add("Branch", r.branch);
+  add("Chain", (r.chain_claims || []).map(c => `${c.chain} (claimed by manager ${c.manager}, ${AGO(c.minutes)})`).join("; "));
   add("Folder", r.worktree || r.cwd);
   add("Machine", r.machine);
   add("Started", r.started ? when(r.started) : "");

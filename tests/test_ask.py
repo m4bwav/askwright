@@ -2659,6 +2659,30 @@ class AgentsTests(unittest.TestCase):
         self.assertEqual(old["status"], "possibly stale")
         self.assertIn("lease ran out", old["stale_reason"])
 
+    def test_chain_claims(self):
+        """0.39.0: open chainwright claims show; a fresh one joins the session naming its prompt, an old one is stale."""
+        cw = self.tmp / "cw"
+        cw.mkdir()
+        ledger = self.proj / "chains.json"
+        old = time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime(self.now - 300 * 60))
+        new = time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime(self.now - 2 * 60))
+        ledger.write_text(json.dumps({"chains": [
+            {"name": "art", "prompt": str(self.proj / "art-prompt.md"), "claim": {"manager": "m1", "at": new}},
+            {"name": "old", "prompt": str(self.proj / "old-prompt.md"), "claim": {"manager": "m0", "at": old}},
+            {"name": "idle", "prompt": str(self.proj / "idle.md")}]}), encoding="utf-8")
+        (cw / "runs.json").write_text(json.dumps({"runs": {str(ledger): {}}}), encoding="utf-8")
+        f = self.transcript("s1", 1)
+        with open(f, "a", encoding="utf-8") as h:
+            h.write(json.dumps({"type": "user", "message": {"content": "Execute art-prompt.md"}}) + "\n")
+        os.utime(f, (self.now - 60,) * 2)
+        with mock.patch.dict(os.environ, {"CHAINWRIGHT_HOME": str(cw)}):
+            res = self.agents.collect([str(self.proj)], home=self.home, now=self.now, remote=False)
+        rows = {r["session"]: r for r in res["rows"]}
+        self.assertEqual([c["chain"] for c in rows["s1"]["chain_claims"]], ["art"])
+        self.assertEqual(rows["chain old"]["status"], "possibly stale")
+        self.assertIn("min old", rows["chain old"]["stale_reason"])
+        self.assertNotIn("chain idle", rows)
+
 
 class PixelsTests(unittest.TestCase):
     """The pixels kind: lint, answers from the page, read and the mask helper."""

@@ -229,6 +229,39 @@ def grind_claims(folder):
     return claims, sessions
 
 
+def chain_claims(roots, now):
+    """Open chainwright claims in ledgers listed in ~/.chainwright/runs.json whose ledger, chain prompt, handoff
+    or cwd sits in the project. Returns (claims, problems)."""
+    reg = Path(os.environ.get("CHAINWRIGHT_HOME") or (Path.home() / ".chainwright")) / "runs.json"
+    if not reg.is_file():
+        return [], []
+    try:
+        runs = (json.loads(reg.read_text(encoding="utf-8")) or {}).get("runs") or {}
+    except (OSError, ValueError) as e:
+        return [], [f"cannot read the chainwright run list: {e}"]
+    out, problems = [], []
+    for path in runs:
+        try:
+            doc = json.loads(Path(path).read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            continue
+        except (OSError, ValueError) as e:
+            problems.append(f"cannot read chain ledger {Path(path).as_posix()}: {e}")
+            continue
+        for c in doc.get("chains") or []:
+            claim = c.get("claim")
+            if not isinstance(claim, dict):
+                continue
+            spots = [path] + [c.get(k) for k in ("prompt", "handoff", "cwd") if c.get(k)]
+            if not any(inside(x, roots) for x in spots):
+                continue
+            at = parse_iso(claim.get("at"))
+            out.append({"chain": c.get("name") or "", "manager": claim.get("manager") or "", "at": claim.get("at"),
+                        "minutes": round((now - at) / 60) if at else None, "ledger": Path(path).as_posix(),
+                        "prompt": Path(c["prompt"]).name.lower() if c.get("prompt") else ""})
+    return out, problems
+
+
 def tail_names(path, needles):
     """True when the last part of a transcript mentions one of the folders (lower-case match)."""
     try:
@@ -263,7 +296,7 @@ def collect(dirs, home=None, now=None, window_hours=WINDOW_HOURS, remote=True):
             roots.add(norm(path))
             raw.add(str(Path(path)))
             trees[norm(path)] = {"path": Path(path).as_posix(), "branch": branch}
-    rows = {}
+    rows, tpaths = {}, {}
 
     # 1. live registry
     reg, registry = home / "sessions", {}
@@ -322,6 +355,7 @@ def collect(dirs, home=None, now=None, window_hours=WINDOW_HOURS, remote=True):
                     row["started"] = iso(facts["started"])
                 row["evidence"].append(f"transcript written {minutes} min ago")
                 row["subagents"] = subagents(folder / sid, now)
+                tpaths[sid] = t
         # sessions started in a parent folder (one level up, a workspace of many repos) that work here:
         # their recent tool calls name one of the project's folders. Read only to match; nothing is shown.
         spellings = roots | {x.replace("\\", "/").rstrip("/").lower() for x in raw}  # as typed and resolved
@@ -349,6 +383,7 @@ def collect(dirs, home=None, now=None, window_hours=WINDOW_HOURS, remote=True):
                 if not moved_in and not here and not tail_names(t, needles):
                     continue
                 minutes = round((now - mtime) / 60)
+                tpaths[t.stem] = t
                 rows[t.stem] = {"session": t.stem, "cwd": Path(facts["cwd"]).as_posix(),
                                 "process_alive": registry.get(t.stem, False),
                                 "machine": this_host(), "branch": "", "title": facts["title"] or "",
@@ -361,7 +396,7 @@ def collect(dirs, home=None, now=None, window_hours=WINDOW_HOURS, remote=True):
     else:
         problems.append(f"no Claude Code transcripts folder at {pdir.as_posix()}")
 
-    # 3. grindwright claims
+    # 3b is below; 3. grindwright claims
     claims_all, grind_sessions = [], {}
     for d in dirs:
         if not Path(d).exists():
@@ -386,13 +421,33 @@ def collect(dirs, home=None, now=None, window_hours=WINDOW_HOURS, remote=True):
                      "branch": c["branch"], "title": c["title"], "evidence": ["grindwright claim only, no session seen"
                                                                            + (" (lease expired)" if c["lease_expired"] else "")]}
 
+    # 3b. chainwright claims: a manager handed this chain to a session. Joined to the session whose transcript
+    # names the chain's prompt file; otherwise its own row, stale once the claim is older than RECENT_MINUTES.
+    cclaims, cprob = chain_claims(roots, now)
+    problems += cprob
+    for c in cclaims:
+        match = next((r for sid, r in rows.items() if c["prompt"] and sid in tpaths
+                      and tail_names(tpaths[sid], {c["prompt"]})), None)
+        if match:
+            match.setdefault("chain_claims", []).append(c)
+            match["evidence"].append(f"chainwright claim on chain {c['chain']}")
+            continue
+        old = c["minutes"] is None or c["minutes"] > RECENT_MINUTES
+        rows[f"chain:{c['ledger']}:{c['chain']}"] = {
+            "session": f"chain {c['chain']}", "chain_claims": [c], "process_alive": False, "machine": this_host(),
+            "branch": "", "title": f"chain {c['chain']} (manager {c['manager']})", "started": c["at"],
+            "status_hint": "possibly stale" if old else "claimed, no session seen",
+            "evidence": [f"chainwright claim only, no session seen; claimed {c['minutes']} min ago in {c['ledger']}"]}
+
     # status and order
     out = []
     for r in rows.values():
         r.setdefault("subagents", [])
         r.setdefault("claims", [])
         minutes = r.get("minutes_quiet")
-        r["status"] = status_of(minutes, r["process_alive"])
+        r["status"] = r.pop("status_hint", None) or status_of(minutes, r["process_alive"])
+        if r["status"] == "possibly stale" and r.get("chain_claims") and not r.get("last_activity"):
+            r["stale_reason"] = f"chain claim {r['chain_claims'][0]['minutes']} min old and no session seen"
         if (r["status"] == "live" and not r["process_alive"] and registry_ok and r.get("machine") == this_host()
                 and not registry.get(r["session"])):
             r["status"] = "recent"  # written lately, but no live Claude Code process holds it: ended or idle
@@ -409,7 +464,7 @@ def collect(dirs, home=None, now=None, window_hours=WINDOW_HOURS, remote=True):
                 f"; lease ran out {c_age(r['claims'][0], now)}" if r["claims"][0].get("lease_expired") else "")
         tree = next((trees[k] for k in trees if r.get("cwd") and inside(r["cwd"], {k})), None)
         r["worktree"] = tree["path"] if tree else r.get("worktree") or ""
-        if r["status"] == "possibly stale" and not r["claims"] and minutes is not None and minutes > RECENT_MINUTES:
+        if r["status"] == "possibly stale" and not r["claims"] and not r.get("chain_claims") and minutes is not None and minutes > RECENT_MINUTES:
             continue  # finished sessions in the window are history, not running
         out.append(r)
     out.sort(key=lambda r: ({"live": 0, "recent": 1}.get(r["status"], 2), r.get("minutes_quiet") or 0))

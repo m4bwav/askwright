@@ -6,6 +6,13 @@ Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (ID
 
 ## Unreleased
 
+## 0.39.0
+
+### C-20261116-10 · 2026-11-16 · Who is running lists open chainwright claims
+- because: user request (Jennifer's who-is-running check; running-agents item "chain open claims")
+- files: skills/askwright/scripts/agents.py (chain_claims, collect step 3b), page/project.js (agentRow), tests/test_ask.py (AgentsTests.test_chain_claims)
+An open claim in a chainwright ledger listed in ~/.chainwright/runs.json, whose ledger, prompt, handoff or cwd sits in the project, joins the session whose transcript names the chain's prompt file; otherwise it is its own row, "claimed, no session seen" when under 2 h old and "possibly stale" with its age after that. The project page shows a Chain fact on the row.
+
 ## 0.38.0
 
 ### C-20261116-9 · 2026-11-16 · New question kind `pixels`: point at exact pixels of an image

@@ -93,6 +93,8 @@ shows under it. Touch works. Not sure and Something else (explained in the note)
 | `scale` | Whole zoom from 1 to 64. Default: fit the width. |
 | `grid` | `true` draws pixel grid lines when zoomed 6x or more. |
 | `regions` | `[{"id", "label", "x", "y", "w", "h"}]`: named rectangles inside the image (one per sprite on a sheet). Answers are also grouped per region in region-local coordinates. |
+| `layers` | `{"base": "bare.png", "top": "snow.png"}`, same size, found like media. The canvas is base with top over it; `media` may then be left out (if given, it must be the same size). |
+| brush `effect` | `tint` (default: a see-through colour), `reveal` (the pixel shows the base only, so the top looks erased; needs `layers`) or `fill` (the pixel shows the brush's `fill`, default `#fff`, as if top content were added). Reveal and fill marks keep a corner dot in the brush colour; "Show marks" hides them and "Hold to compare" shows the untouched picture. Answers are the same. |
 | `guess` | Optional: `{"pixels": {"<brush id>": [[x, y], ...]}, "why", "confidence"}`. |
 
 ```json

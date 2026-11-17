@@ -56,7 +56,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-VERSION = "0.39.0"
+VERSION = "0.40.0"
 DEFAULT_PORT = 47631  # the shared server's port; ASKWRIGHT_PORT moves it (0 picks a free one)
 PAGE = Path(__file__).resolve().parent / "page"
 BUNDLE = re.compile(r"^(those|these|both|all of)\b|\bplus\b", re.I)
@@ -676,8 +676,11 @@ def image_size(path):
 def pixels_canvas(d, data, q):
     """(path, width, height) of a pixels question's one image, or raises AskError."""
     m = (q.get("media") or [None])[0]
+    lay = q.get("layers")
+    if not m and isinstance(lay, dict) and lay.get("base"):
+        m = {"src": lay["base"]}
     if not isinstance(m, dict) or not m.get("src"):
-        raise AskError("a pixels question needs one image in media")
+        raise AskError("a pixels question needs one image in media (or layers)")
     path, _ = find_media(d, media_roots(d, data), m["src"])
     size = image_size(path)
     if not size:
@@ -1168,7 +1171,7 @@ def lint_set(d, data, probe=True):
             if status == "open" and layout == "stack" and image_count >= 4:
                 W("long-media", "stacking four or more images makes a long page; use a gallery for examples "
                   "of one decision, or split independent decisions into smaller questions", qid)
-        has_media = bool(q.get("media")) or any(isinstance(o, dict) and o.get("media") for o in q.get("options") or [])
+        has_media = bool(q.get("media") or q.get("layers")) or any(isinstance(o, dict) and o.get("media") for o in q.get("options") or [])
         look = q.get("look_for")
         if look is not None and (not isinstance(look, list) or not all(isinstance(x, str) for x in look)):
             E("look-for", "look_for must be a list of strings", qid)
@@ -1208,6 +1211,13 @@ def lint_set(d, data, probe=True):
                 if kind == "pixels" and "color" in o and not re.fullmatch(r"#[0-9A-Fa-f]{3}(?:[0-9A-Fa-f]{3})?",
                                                                           str(o["color"])):
                     E("pixels-color", f"brush {oid}: color must be #rgb or #rrggbb", qid)
+                if kind == "pixels" and o.get("effect", "tint") not in ("tint", "reveal", "fill"):
+                    E("pixels-effect", f"brush {oid}: effect must be tint, reveal or fill", qid)
+                if kind == "pixels" and o.get("effect") == "reveal" and not q.get("layers"):
+                    E("pixels-effect", f"brush {oid}: reveal needs layers (base and top)", qid)
+                if kind == "pixels" and "fill" in o and not re.fullmatch(r"#[0-9A-Fa-f]{3}(?:[0-9A-Fa-f]{3})?",
+                                                                         str(o["fill"])):
+                    E("pixels-color", f"brush {oid}: fill must be #rgb or #rrggbb", qid)
         if kind == "pixels":
             lint_pixels(d, data, q, qid, E)
 
@@ -1280,9 +1290,28 @@ def lint_set(d, data, probe=True):
 
 
 def lint_pixels(d, data, q, qid, E):
-    media = q.get("media")
-    if not isinstance(media, list) or len(media) != 1 or not isinstance(media[0], dict) \
-            or media_type(media[0].get("src") or "", media[0].get("type")) != "image":
+    media, lay = q.get("media"), q.get("layers")
+    if lay is not None:
+        if not isinstance(lay, dict) or set(lay) != {"base", "top"}:
+            E("pixels-layers", 'layers must be {"base": "<image>", "top": "<image>"}', qid)
+            return
+        sizes = []
+        for k in ("base", "top"):
+            try:
+                sizes.append(image_size(find_media(d, media_roots(d, data), lay[k])[0]))
+            except AskError as e:
+                E("pixels-layers", f"layers {k}: {lay[k]} is {e} (set folder and media_roots)", qid)
+                return
+        if None in sizes or sizes[0] != sizes[1]:
+            E("pixels-layers", "layers base and top must be PNG, GIF, JPEG or WebP images of the same size", qid)
+            return
+        if media in (None, []):
+            media = None
+    if media is not None and (not isinstance(media, list) or len(media) != 1 or not isinstance(media[0], dict)
+                              or media_type(media[0].get("src") or "", media[0].get("type")) != "image"):
+        E("pixels-media", "a pixels question needs exactly one image in media: the canvas", qid)
+        return
+    if media is None and lay is None:
         E("pixels-media", "a pixels question needs exactly one image in media: the canvas", qid)
         return
     sc = q.get("scale")
@@ -1296,6 +1325,8 @@ def lint_pixels(d, data, q, qid, E):
         if "PNG" in str(e):
             E("pixels-media", str(e), qid)
         return  # missing or outside is reported by the media check
+    if lay is not None and media and tuple(sizes[0]) != (w, h):
+        E("pixels-layers", f"media is {w}x{h} but the layers are {sizes[0][0]}x{sizes[0][1]}", qid)
     regions = q.get("regions")
     if regions is None:
         return
@@ -2421,6 +2452,8 @@ def page_set(srv, remote=False):
         if not isinstance(q, dict):
             continue
         q["media"] = [url(m) for m in q.get("media") or [] if isinstance(m, dict)]
+        if isinstance(q.get("layers"), dict):
+            q["layers"] = {k: url({"src": v, "type": "image"}) for k, v in q["layers"].items() if isinstance(v, str)}
         for o in q.get("options") or []:
             if isinstance(o, dict) and o.get("media"):
                 o["media"] = [url(m) for m in o["media"] if isinstance(m, dict)]

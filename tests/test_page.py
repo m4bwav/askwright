@@ -1212,5 +1212,40 @@ class PixelsPageTests(PageCase):
         self.assertEqual(self.errors, [])
 
 
+class PixelLayersPageTests(PageCase):
+    SET = FIX / "layers"
+
+    def rgba(self, x, y):
+        return self.page.evaluate("([x, y]) => [...document.querySelector('.px-canvas').getContext('2d')"
+                                  ".getImageData(x * 16 + 8, y * 16 + 8, 1, 1).data]", [x, y])
+
+    def test_reveal_fill_show_marks_and_compare(self):
+        p = self.open()
+        p.wait_for_function("document.querySelector('.px-canvas').width === 16 * 16")
+        p.wait_for_timeout(200)
+        self.assertEqual(self.rgba(2, 2), [255, 255, 255, 255])  # snow over the roof
+        box = p.locator(".px-canvas").bounding_box()
+        at = lambda x, y: (box["x"] + x * 16 + 8, box["y"] + y * 16 + 8)
+        p.mouse.click(*at(10, 12))  # add: fill white over bare roof
+        p.check("input[name='px-tool-snow'][value='remove']")
+        p.mouse.click(*at(2, 2))  # remove: reveal the base
+        self.wait_saved()
+        self.assertEqual(self.answers()["snow"]["pixels"], {"add": [[10, 12]], "remove": [[2, 2]]})
+        self.assertEqual(self.rgba(2, 2), [90, 60, 40, 255])
+        self.assertEqual(self.rgba(10, 12), [255, 255, 255, 255])
+        corner = lambda: self.page.evaluate("[...document.querySelector('.px-canvas').getContext('2d')"
+                                            ".getImageData(2 * 16, 2 * 16, 1, 1).data]")
+        self.assertNotEqual(corner(), [90, 60, 40, 255])  # the corner dot
+        p.uncheck("text=Show marks")
+        self.assertEqual(corner(), [90, 60, 40, 255])
+        btn = p.locator("button:has-text('Hold to compare')").bounding_box()
+        p.mouse.move(btn["x"] + 5, btn["y"] + 5)
+        p.mouse.down()
+        self.assertEqual(self.rgba(2, 2), [255, 255, 255, 255])
+        p.mouse.up()
+        self.assertEqual(self.rgba(2, 2), [90, 60, 40, 255])
+        self.assertEqual(self.errors, [])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=1)

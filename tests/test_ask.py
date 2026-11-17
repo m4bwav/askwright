@@ -2773,6 +2773,59 @@ class PixelsTests(unittest.TestCase):
         self.assertEqual(ask.image_size(out["masks"]["remove"]["path"]), (64, 48))
 
 
+class PixelLayersTests(PixelsTests):
+    """Layered pixels questions: lint of layers, effects and fill; answers keep the same format."""
+
+    def setUp(self):
+        super().setUp()
+        self.data = json.loads((FIX / "layers" / "questions.json").read_text(encoding="utf-8"))
+        self.write()
+
+    def test_fixture_is_clean_and_guess_is_optional(self):
+        self.assertEqual(self.rules(), set())
+        a = ask.clean_answer(self.q(), {"pixels": {"remove": [[15, 15]]}}, self.dir)
+        self.assertEqual(a["pixels"], {"remove": [[15, 15]]})
+        with self.assertRaises(ValueError):
+            ask.clean_answer(self.q(), {"pixels": {"remove": [[16, 0]]}}, self.dir)
+
+    def test_lint_rules(self):
+        cases = [
+            (lambda q: q.update(layers={"base": "bare.png"}), "pixels-layers"),
+            (lambda q: q.update(layers={"base": "bare.png", "top": "swatch.png"}), "pixels-layers"),
+            (lambda q: q.update(layers={"base": "bare.png", "top": "nope.png"}), "pixels-layers"),
+            (lambda q: q.update(media=[{"src": "swatch.png", "alt": "a"}]), "pixels-layers"),
+            (lambda q: q["options"][0].update(effect="blur"), "pixels-effect"),
+            (lambda q: q["options"][0].update(fill="white"), "pixels-color"),
+            (lambda q: q.pop("layers"), "pixels-media"),
+        ]
+        base = copy.deepcopy(self.data)
+        for fn, rule in cases:
+            self.data = copy.deepcopy(base)
+            fn(self.q())
+            self.write()
+            self.assertIn(rule, self.rules(), rule)
+        self.data = copy.deepcopy(base)
+        self.q().pop("layers")
+        self.q()["media"] = [{"src": "swatch.png", "alt": "a"}]
+        self.write()
+        self.assertIn("pixels-effect", self.rules())  # reveal without layers
+        self.data = copy.deepcopy(base)
+        self.q()["media"] = [{"src": "bare.png", "alt": "a"}]
+        self.write()
+        self.assertEqual(self.rules(), set())
+
+    def test_image_size(self):
+        self.assertEqual(ask.image_size(FIX / "media" / "snow.png"), (16, 16))
+
+    def test_clean_answer_and_regions(self):
+        pass
+
+    def test_read_summary_json_and_masks(self):
+        code, out = run_cli("pixels", self.dir, "snow", "--out", self.tmp / "masks")
+        self.assertEqual(code, 0, out)
+        self.assertEqual(out["width"], 16)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=1)
 

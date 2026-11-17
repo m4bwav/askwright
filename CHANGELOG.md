@@ -6,6 +6,13 @@ Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (ID
 
 ## Unreleased
 
+## 0.40.0
+
+### C-20261116-11 · 2026-11-16 · Pixels questions get a layered mode that shows the fix
+- because: user request (roof snow overlays: see the result of a mark, not a tint)
+- files: skills/askwright/scripts/ask.py (pixels_canvas, lint_pixels, page payload `layers`), skills/askwright/scripts/page/app.js (pixelsArea), references/schema.md (Pixels), references/writing-questions.md, tests/test_ask.py (PixelLayersTests), tests/test_page.py (PixelLayersPageTests), tests/fixtures/layers and media/bare.png, snow.png
+`layers: {base, top}` composites top over base; brushes take `effect` `reveal` (shows the base), `fill` (the brush's `fill` colour) or `tint`. The page draws the result per pixel with a corner dot per mark, a Show marks switch and Hold to compare. Answers and `ask.py pixels` are unchanged.
+
 ## 0.39.0
 
 ### C-20261116-10 · 2026-11-16 · Who is running lists open chainwright claims

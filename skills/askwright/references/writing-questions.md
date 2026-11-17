@@ -115,6 +115,8 @@ handoff or a chat reply: the person has to find the files, guess what to look fo
   outline", "the seam is at these pixels". Words like "the left edge of the roof" cost a round trip; marks do not.
 - One image per question (a contact sheet is fine: name each sprite with `regions` so the answer comes back per
   sprite in its own coordinates). Name each brush by the fix it asks for ("Snow should be here", "No snow here").
+- For an overlay (snow, a decal) give `layers` and brushes with `effect` `reveal` and `fill`: the person sees the
+  fixed result as they paint, not a tint.
 - No guess is needed. Read with `ask.py read --json` for every pixel, or `ask.py pixels SET QID --out DIR` for one
   mask PNG per brush, and apply them to the masks yourself.
 

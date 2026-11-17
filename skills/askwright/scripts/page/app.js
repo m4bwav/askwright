@@ -938,6 +938,10 @@
     for (const [b, pts] of Object.entries(a.pixels || {})) for (const [x, y] of pts) marks.set(x + "," + y, b);
     const undo = [];
     let tool = brushes[0] ? brushes[0].id : null, size = 1, W = 0, H = 0, zoom = q.scale || 0, stroke = null, regionsOn = true;
+    // Layered mode: the canvas is base with top over it, and reveal/fill brushes show the fixed result per pixel.
+    const lay = q.layers && q.layers.base && q.layers.top ? q.layers : null;
+    let showMarks = true, holding = false, baseD = null, compD = null;
+    const work = document.createElement("canvas");
     const canvas = h("canvas", { class: "px-canvas", "aria-label": "Image to mark: " + (m.alt || m.src || "") });
     const ctx = canvas.getContext("2d");
     const img = new Image();
@@ -960,15 +964,26 @@
       const z = zoom;
       canvas.width = W * z; canvas.height = H * z;
       ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(img, 0, 0, W * z, H * z);
-      ctx.globalAlpha = 0.6;
-      for (const [k, b] of marks) {
+      if (compD) {
+        const out = new ImageData(new Uint8ClampedArray(compD.data), W, H);
+        if (!holding) for (const [k, b] of marks) {
+          const br = brushes.find((o) => o.id === b) || {};
+          const [x, y] = k.split(",").map(Number), i = (y * W + x) * 4;
+          if (br.effect === "reveal") out.data.set(baseD.data.subarray(i, i + 4), i);
+          else if (br.effect === "fill") out.data.set(rgb(br.fill || "#fff"), i);
+        }
+        work.getContext("2d").putImageData(out, 0, 0);
+        ctx.drawImage(work, 0, 0, W * z, H * z);
+      } else ctx.drawImage(img, 0, 0, W * z, H * z);
+      if (!holding) for (const [k, b] of marks) {
         const [x, y] = k.split(",").map(Number);
         const br = brushes.find((o) => o.id === b);
+        const tint = !br || !br.effect || br.effect === "tint";
+        if (!tint && !showMarks) continue;
         ctx.fillStyle = br ? color(br) : "#ff00ff";
-        ctx.fillRect(x * z, y * z, z, z);
+        if (tint) { ctx.globalAlpha = 0.6; ctx.fillRect(x * z, y * z, z, z); ctx.globalAlpha = 1; }
+        else ctx.fillRect(x * z, y * z, Math.max(1, z >> 2), Math.max(1, z >> 2));  // corner dot keeps the mark findable
       }
-      ctx.globalAlpha = 1;
       if (q.grid && z >= 6) {
         ctx.strokeStyle = "rgba(128,128,128,.35)"; ctx.lineWidth = 1; ctx.beginPath();
         for (let x = 0; x <= W; x++) { ctx.moveTo(x * z + 0.5, 0); ctx.lineTo(x * z + 0.5, H * z); }
@@ -1021,13 +1036,27 @@
     };
     canvas.addEventListener("pointerup", end);
     canvas.addEventListener("pointercancel", end);
-    img.addEventListener("load", () => {
+    function rgb(hex) {
+      let v = hex.slice(1); if (v.length === 3) v = [...v].map((c) => c + c).join("");
+      return [0, 2, 4].map((i) => parseInt(v.slice(i, i + 2), 16)).concat(255);
+    }
+    img.addEventListener("load", async () => {
       W = img.naturalWidth; H = img.naturalHeight;
+      if (lay) {
+        const top = new Image();
+        top.src = lay.top.url;
+        try { await top.decode(); } catch (e) { coord.textContent = "The top layer did not load."; }
+        work.width = W; work.height = H;
+        const c = work.getContext("2d", { willReadFrequently: true });
+        c.drawImage(img, 0, 0); baseD = c.getImageData(0, 0, W, H);
+        c.drawImage(top, 0, 0); compD = c.getImageData(0, 0, W, H);
+      }
       if (!zoom) zoom = Math.max(1, Math.min(32, Math.floor(Math.min(main.clientWidth || 640, 960) / W)));
       draw();
     });
     img.addEventListener("error", () => { coord.textContent = "The image did not load."; });
-    if (m.url && !m.missing) img.src = m.url;
+    const src = lay ? lay.base : m;
+    if (src.url && !src.missing) img.src = src.url;
     const tools = h("div", { class: "px-tools", role: "radiogroup", "aria-label": "Brush" });
     const toolBtn = (id, label, col) => h("label", { class: "px-tool" },
       h("input", { type: "radio", name: "px-tool-" + q.id, value: id, checked: id === tool, onchange: () => { tool = id; } }),
@@ -1044,6 +1073,9 @@
       btn("Clear", () => { if (!marks.size) return; undo.push(new Map(marks)); marks.clear(); draw(); sync(); }),
       btn("-", () => { zoom = Math.max(1, zoom - (zoom > 8 ? 2 : 1)); draw(); }, "Zoom out"), zoomLabel,
       btn("+", () => { zoom = Math.min(64, zoom + (zoom >= 8 ? 2 : 1)); draw(); }, "Zoom in"),
+      lay ? h("label", null, Object.assign(h("input", { type: "checkbox", checked: true }), { onchange: (e) => { showMarks = e.target.checked; draw(); } }), " Show marks") : null,
+      lay ? Object.assign(btn("Hold to compare", () => {}), { onpointerdown: () => { holding = true; draw(); },
+        onpointerup: () => { holding = false; draw(); }, onpointerleave: () => { if (holding) { holding = false; draw(); } } }) : null,
       (q.regions || []).length ? btn("Regions", () => { regionsOn = !regionsOn; draw(); }, "Show or hide region outlines") : null);
     const unsure = h("input", { type: "checkbox", value: "unsure", checked: a.choice === "unsure" });
     unsure.addEventListener("change", () => { const d = draft(q.id); d.choice = unsure.checked ? "unsure" : null; other.checked = false; picked(q); changed(q.id, true); });

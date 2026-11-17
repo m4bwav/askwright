@@ -1,0 +1,24 @@
+{
+  "askwright": 1,
+  "id": "roof-snow-layers",
+  "title": "Fix the snow on the roof",
+  "project": "askwright tests",
+  "media_roots": ["../media"],
+  "questions": [
+    {
+      "id": "snow",
+      "kind": "pixels",
+      "title": "Snow overlay",
+      "question": "Where should the roof snow change?",
+      "why": "The marked pixels go straight into the snow mask.",
+      "background": "A bare roof sprite with a generated snow layer on top.",
+      "look_for": ["Snow that hangs past the eaves or stops short of them"],
+      "layers": {"base": "bare.png", "top": "snow.png"},
+      "options": [
+        {"id": "add", "label": "Snow should be here", "color": "#3af", "effect": "fill", "fill": "#fff"},
+        {"id": "remove", "label": "No snow here", "color": "#f43", "effect": "reveal"}
+      ],
+      "scale": 16
+    }
+  ]
+}

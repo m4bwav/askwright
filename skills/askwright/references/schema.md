@@ -138,7 +138,9 @@ or record choices. Left/Right arrows inside the gallery change cases, not questi
 - `pixels`: the person paints exact pixels of one image (see "Pixels").
 
 Every kind except `text` gets "Not sure, ask me later" (`unsure`) and "Something else" (`other`, explained in the
-note); `text` gets "Not sure".
+note); `text` gets "Not sure". Every kind also gets "Question irrelevant or obsolete" (`obsolete`) and "Won't answer"
+(`decline`): stored as `choice`, they count as answered without a pick or a note, while `unsure` stays open. These
+four ids are reserved. `picks export` skips items answered with either.
 
 ### Guesses
 

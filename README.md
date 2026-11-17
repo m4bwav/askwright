@@ -16,7 +16,7 @@ every question page is as good as the best one, instead of whatever the agent im
 - Video, audio and images, side-by-side takes shown as "Left" and "Right" until you pick, galleries for image-heavy
   questions, a listen bench for voices and sounds. Click a picture or a Pick button to choose.
 - The agent's guess under the options (an unsure one waits behind "Show my guess"); nothing is pre-selected.
-  "Not sure, ask me later" and "Something else" on every question, and a note box that takes screenshots.
+  "Not sure, ask me later", "Something else", "Question irrelevant or obsolete" and "Won't answer" on every question, and a note box that takes screenshots.
 - Keys for everything, light and dark themes, WCAG 2.2 AA, no network access. Every change saves at once.
 
 Every feature with screenshots: [the wiki](https://github.com/m4bwav/askwright/wiki).

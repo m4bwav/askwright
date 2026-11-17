@@ -56,6 +56,7 @@
   function stateOf(q, a) {
     if (!a) return "unanswered";
     if (a.choice === "unsure") return "unsure";
+    if (SKIPS.includes(a.choice)) return "answered";
     if (q.kind === "text") { if ((a.text || "").trim()) return "answered"; }
     else if (q.kind === "multi") { if ((a.choices || []).length) return "answered"; }
     else if (q.kind === "rank") { if ((a.order || []).length) return "answered"; }
@@ -81,9 +82,26 @@
   const inLine = (q) => !done(q) || q.id === S.current || S.showAnswered;
   const draft = (qid) => (S.answers[qid] = S.answers[qid] || {});
 
+  // Close a question without a pick; unlike "Not sure" it counts as answered.
+  const SKIPS = ["obsolete", "decline"];
+  const SKIP_TEXT = { obsolete: "Question irrelevant or obsolete", decline: "Won't answer" };
+  const EXTRA_IDS = ["unsure", "other", ...SKIPS];
+  // Checkboxes for kinds without radio rows (rank, text, pixels): "Not sure" plus the skips, one at a time.
+  function extraBoxes(q, a, ids, onSet) {
+    const boxes = ids.map((id) => h("input", { type: "checkbox", value: id, checked: a.choice === id }));
+    boxes.forEach((b) => b.addEventListener("change", () => {
+      boxes.forEach((o) => { if (o !== b) o.checked = false; });
+      const d = draft(q.id); d.choice = b.checked ? b.value : null;
+      onSet(d, b.checked ? b.value : null);
+      picked(q); changed(q.id, true);
+    }));
+    return { clear: () => boxes.forEach((b) => (b.checked = false)),
+      els: boxes.map((b) => h("label", { class: "opt extra" }, b, h("span", { class: "label", text: optLabel(q, b.value) }))) };
+  }
   function optLabel(q, oid) {
     if (oid === "unsure") return "Not sure, ask me later";
     if (oid === "other") return "Something else";
+    if (SKIP_TEXT[oid]) return SKIP_TEXT[oid];
     const o = (q.options || []).find((x) => x.id === oid);
     return o ? o.label : oid;
   }
@@ -103,6 +121,7 @@
     if (s === "unanswered") return "Not answered";
     if (s === "unsure") return "Not sure, ask me later";
     let t = "";
+    if (SKIPS.includes(a.choice)) t = optLabel(q, a.choice); else
     if (s === "answered") {
       if (q.kind === "multi") t = a.choices.map((c) => shownLabel(q, c, true)).join(", ");
       else if (q.kind === "rank") t = a.order.map((c, i) => i + 1 + ". " + optLabel(q, c)).join("  ");
@@ -876,23 +895,21 @@
       };
       draw();
       const useBtn = h("button", { type: "button", class: "btn primary", text: (a.order || []).length ? "Order saved" : "Use this order", onclick: () => {
-        const d = draft(q.id); d.order = order.slice(); if (d.choice === "unsure") d.choice = null;
-        useBtn.textContent = "Order saved"; unsure.checked = false; picked(q); changed(q.id, true);
+        const d = draft(q.id); d.order = order.slice(); d.choice = null;
+        useBtn.textContent = "Order saved"; ex.clear(); picked(q); changed(q.id, true);
       } });
-      const unsure = h("input", { type: "checkbox", value: "unsure", checked: a.choice === "unsure" });
-      unsure.addEventListener("change", () => { const d = draft(q.id); d.choice = unsure.checked ? "unsure" : null; if (unsure.checked) { d.order = []; useBtn.textContent = "Use this order"; } picked(q); changed(q.id, true); });
-      fs.append(ol, h("div", { class: "rank-actions" }, useBtn, h("label", { class: "opt extra" }, unsure, h("span", { class: "label", text: "Not sure, ask me later" }))));
+      const ex = extraBoxes(q, a, ["unsure", ...SKIPS], (d, v) => { if (v) { d.order = []; useBtn.textContent = "Use this order"; } });
+      fs.append(ol, h("div", { class: "rank-actions" }, useBtn, ...ex.els));
       return fs;
     }
     if (q.kind === "pixels") return pixelsArea(q, a, fs);
     if (q.kind === "text") {
       const ta = h("textarea", { id: "ans-text", rows: "4" });
       ta.value = a.text || "";
-      ta.addEventListener("input", () => { const d = draft(q.id); d.text = ta.value; if (ta.value.trim() && d.choice === "unsure") { d.choice = null; unsure.checked = false; } changed(q.id); });
-      const unsure = h("input", { type: "checkbox", value: "unsure", checked: a.choice === "unsure" });
-      unsure.addEventListener("change", () => { draft(q.id).choice = unsure.checked ? "unsure" : null; changed(q.id, true); });
+      ta.addEventListener("input", () => { const d = draft(q.id); d.text = ta.value; if (ta.value.trim() && d.choice) { d.choice = null; ex.clear(); } changed(q.id); });
+      const ex = extraBoxes(q, a, ["unsure", ...SKIPS], () => {});
       fs.append(h("div", { class: "answer-text" }, h("label", { for: "ans-text", class: "visually-hidden", text: "Your answer" }), ta));
-      if (!S.study) fs.append(h("div", { class: "opts" }, h("label", { class: "opt extra" }, unsure, h("span", { class: "label", text: "Not sure, ask me later" }))));
+      if (!S.study) fs.append(h("div", { class: "opts" }, ...ex.els));
       return fs;
     }
     const multi = q.kind === "multi";
@@ -908,14 +925,16 @@
       if (q.kind !== "scale") box.append(h("hr", { class: "sep" }));
       box.append(optRow(multi ? "checkbox" : "radio", name, "unsure", "Not sure, ask me later", null, a.choice === "unsure", n++, true));
       box.append(optRow(multi ? "checkbox" : "radio", name, "other", "Something else", "Say what in the note below", chosen.includes("other"), n++, true));
+      for (const sk of SKIPS) box.append(optRow(multi ? "checkbox" : "radio", name, sk, SKIP_TEXT[sk], null, a.choice === sk, n++, true));
     }
     box.addEventListener("change", (e) => {
       const v = e.target.value;
       const d = draft(q.id);
       if (multi) {
-        if (v === "unsure") { d.choice = e.target.checked ? "unsure" : null; if (e.target.checked) d.choices = []; }
-        else { d.choices = [...box.querySelectorAll("input:checked")].map((i) => i.value).filter((x) => x !== "unsure"); if (d.choices.length) d.choice = null; }
-        box.querySelectorAll("input").forEach((i) => { i.checked = v === "unsure" ? (i.value === "unsure" && !!d.choice) : (i.value === "unsure" ? false : (d.choices || []).includes(i.value)); });
+        const sole = (x) => x === "unsure" || SKIPS.includes(x);  // these stand alone: they clear the picks and each other
+        if (sole(v)) { d.choice = e.target.checked ? v : null; if (e.target.checked) d.choices = []; }
+        else { d.choices = [...box.querySelectorAll("input:checked")].map((i) => i.value).filter((x) => !sole(x)); if (d.choices.length) d.choice = null; }
+        box.querySelectorAll("input").forEach((i) => { i.checked = sole(i.value) ? i.value === d.choice : (d.choices || []).includes(i.value); });
       } else d.choice = v;
       picked(q);
       changed(q.id, true);
@@ -1077,14 +1096,10 @@
       lay ? Object.assign(btn("Hold to compare", () => {}), { onpointerdown: () => { holding = true; draw(); },
         onpointerup: () => { holding = false; draw(); }, onpointerleave: () => { if (holding) { holding = false; draw(); } } }) : null,
       (q.regions || []).length ? btn("Regions", () => { regionsOn = !regionsOn; draw(); }, "Show or hide region outlines") : null);
-    const unsure = h("input", { type: "checkbox", value: "unsure", checked: a.choice === "unsure" });
-    unsure.addEventListener("change", () => { const d = draft(q.id); d.choice = unsure.checked ? "unsure" : null; other.checked = false; picked(q); changed(q.id, true); });
-    const other = h("input", { type: "checkbox", value: "other", checked: a.choice === "other" });
-    other.addEventListener("change", () => { const d = draft(q.id); d.choice = other.checked ? "other" : null; unsure.checked = false; picked(q); changed(q.id, true); if (other.checked && !(d.note || "").trim()) $("#note", main)?.focus(); });
+    const ex = extraBoxes(q, a, EXTRA_IDS, (d, v) => { if (v === "other" && !(d.note || "").trim()) $("#note", main)?.focus(); });
     count.textContent = pxText(q, a.pixels) || "No pixels marked";
     fs.append(tools, bar, wrap, h("p", { class: "px-status" }, coord, " · ", count),
-      h("div", { class: "opts" }, h("label", { class: "opt extra" }, unsure, h("span", { class: "label", text: "Not sure, ask me later" })),
-        h("label", { class: "opt extra" }, other, h("span", { class: "label", text: "Something else (say what in the note)" }))));
+      h("div", { class: "opts" }, ...ex.els));
     return fs;
   }
 
@@ -1093,7 +1108,7 @@
     const reveal = done(q);
     main.querySelectorAll(".opt[data-oid]").forEach((row) => {
       const oid = row.dataset.oid;
-      if (oid !== "unsure" && oid !== "other") row.querySelector(".label").textContent = shownLabel(q, oid, reveal);
+      if (!EXTRA_IDS.includes(oid)) row.querySelector(".label").textContent = shownLabel(q, oid, reveal);
     });
     main.querySelectorAll(".bench-label[data-oid]").forEach((el) => { el.textContent = shownLabel(q, el.dataset.oid, reveal); });
     markPicks(q);

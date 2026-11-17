@@ -6,6 +6,13 @@ Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (ID
 
 ## Unreleased
 
+## 0.41.0
+
+### C-20261117-1 · 2026-11-17 · "Question irrelevant or obsolete" and "Won't answer" on every question
+- because: user request ("Not sure" leaves a question unanswered, and when no option fits, "Something else" forced typing a note)
+- files: skills/askwright/scripts/ask.py (SKIPS, answer_state, label_of, clean_answer, picks export), scripts/page/app.js (option rows, rank, text and pixels checkboxes), references/schema.md, references/writing-questions.md, SKILL.md, README.md, tests
+- Two new built-in choices, `obsolete` and `decline`, close a question as answered with no pick and no note needed; "Not sure" still keeps it open. They are reserved option ids, stand alone on multi questions, and `picks export` skips items answered with them.
+
 ## 0.40.0
 
 ### C-20261116-11 · 2026-11-16 · Pixels questions get a layered mode that shows the fix

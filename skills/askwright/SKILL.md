@@ -54,7 +54,7 @@ Every question has:
 - `look_for`: on any question with media or a comparison, the concrete things that decide it, with times
   ("The arrow from 6.0 s: does it stay in his neck?"). Times become "Play from 6.0 s" buttons.
 - `options` that name the action or the thing ("Re-render tonight (10 to 12 h)", "Take 5"), never "Left", "A",
-  "Yes" or "No". The page adds "Not sure, ask me later" and "Something else" itself.
+  "Yes" or "No". The page adds "Not sure", "Something else", "Question irrelevant or obsolete" and "Won't answer" itself; the last two count as answered, so read them as "drop it", not as a pick.
 - `guess`: your answer and why, with an honest `confidence` (`high` or `low` only). `high` shows under the options; `low` hides behind
   a "Show my guess" button, and the read-back tells you whether it was opened before the pick. The guess is
   never pre-selected. Vary which option it is; do not always list your pick first.

@@ -2754,6 +2754,11 @@ class PixelsTests(unittest.TestCase):
         self.assertEqual(ask.answer_state(q, ask.clean_answer(q, {"pixels": {}}, self.dir)), "unanswered")
         self.assertEqual(ask.answer_state(q, ask.clean_answer(q, {"pixels": {}, "note": "hm"}, self.dir)), "note_only")
         self.assertEqual(ask.answer_state(q, ask.clean_answer(q, {"choice": "unsure"}, self.dir)), "unsure")
+        for skip in ask.SKIPS:  # irrelevant or won't answer: closed without a pick, so answered
+            self.assertEqual(ask.answer_state(q, ask.clean_answer(q, {"choice": skip}, self.dir)), "answered")
+        for kind in ("choice", "multi", "rank", "text"):
+            self.assertEqual(ask.answer_state({"kind": kind}, {"choice": "decline"}), "answered")
+        self.assertEqual(ask.label_of(q, "obsolete"), "Question irrelevant or obsolete")
 
     def test_read_summary_json_and_masks(self):
         a = ask.clean_answer(self.q(), {"pixels": {"add": [[1, 2], [3, 4]], "remove": [[40, 1]]}}, self.dir)

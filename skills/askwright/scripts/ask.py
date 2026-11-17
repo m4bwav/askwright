@@ -65,7 +65,8 @@ MODES = ("decide", "study")
 STUDY_KINDS = ("choice", "text")  # a quiz asks multiple-choice or written questions
 KEY_FIELDS = ("correct", "why")  # option fields a study page only sees after submitting
 STATUSES = ("open", "superseded", "withdrawn", "closed")
-EXTRAS = ("unsure", "other")  # built into every kind except text; reserved as option ids
+SKIPS = ("obsolete", "decline")  # close a question without a pick: it counts as answered
+EXTRAS = ("unsure", "other") + SKIPS  # built into every kind; reserved as option ids
 ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$")
 MAX_UPLOAD = 10 * 1024 * 1024
 MAX_JSON = 1024 * 1024
@@ -1197,7 +1198,7 @@ def lint_set(d, data, probe=True):
                     continue
                 oid, label = o.get("id"), str(o.get("label") or "").strip()
                 if not isinstance(oid, str) or not ID_RE.match(oid) or oid in EXTRAS or oid in seen_ids:
-                    E("option-id", f"option id {oid!r} is missing, repeated or reserved (unsure, other)", qid)
+                    E("option-id", f"option id {oid!r} is missing, repeated or reserved (unsure, other, obsolete, decline)", qid)
                 seen_ids.add(oid)
                 key = label if study else label.lower()  # in a quiz, "We" and "we" can be the whole question
                 if not label or key in seen_labels:
@@ -1527,6 +1528,8 @@ def answer_state(q, a):
     kind = q.get("kind")
     if a.get("choice") == "unsure":
         return "unsure"
+    if a.get("choice") in SKIPS:
+        return "answered"
     if kind == "text":
         if str(a.get("text") or "").strip():
             return "answered"
@@ -1631,6 +1634,10 @@ def label_of(q, oid):
         return "Not sure, ask me later"
     if oid == "other":
         return "Something else (see note)"
+    if oid == "obsolete":
+        return "Question irrelevant or obsolete"
+    if oid == "decline":
+        return "Won't answer"
     for o in q.get("options") or []:
         if o.get("id") == oid:
             return o.get("label")
@@ -1743,7 +1750,7 @@ def clean_answer(q, body, d, study=False):
     a = {}
     choice = body.get("choice")
     if choice is not None:
-        allowed = {"unsure"} if kind in ("multi", "rank", "text") else ids | set(EXTRAS)
+        allowed = {"unsure", *SKIPS} if kind in ("multi", "rank", "text") else ids | set(EXTRAS)
         if kind == "pixels":
             allowed = set(EXTRAS)
         if study:  # a quiz answer is one of its options; there is no "not sure" or "something else"
@@ -3937,7 +3944,7 @@ def cmd_picks_build(a):
     for item, c in list(groups.items()):
         labs = [x for x, _ in c]
         if len(set(labs)) < len(labs) or any(not ID_RE.match(x) or x in EXTRAS + ("reroll",) for x in labs):
-            skipped[item] = "labels must be unique ids other than unsure, other and reroll"
+            skipped[item] = "labels must be unique ids other than unsure, other, obsolete, decline and reroll"
         elif not (a.skip_picked and (old.get(item) or {}).get("pick")):
             continue
         else:
@@ -4017,6 +4024,9 @@ def cmd_picks_export(a):
                 continue
             if r["status"] != "open" or r.get("stale") or r["state"] != "answered":
                 skipped[item] = "stale" if r.get("stale") else (r["state"] if r["status"] == "open" else r["status"])
+                continue
+            if r["choice"] in SKIPS:
+                skipped[item] = r["choice"]
                 continue
             reroll = r["choice"] in ("reroll", "other")
             fams[item] = {"pick": None if reroll else r["choice"], "reroll": reroll, "note": r["note"][:500]}

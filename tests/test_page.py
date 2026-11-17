@@ -855,6 +855,22 @@ class GitHubPageTests(PageCase):
         self.assertEqual(self.errors, [])
 
 
+class SkipOptionTests(PageCase):
+    def test_skip_options_answer_without_a_note(self):
+        # "Question irrelevant or obsolete" and "Won't answer" close a question; "Not sure" leaves it open.
+        p = self.open()
+        self.assertEqual(p.locator("#ans input[value=obsolete]").count(), 1)
+        p.locator("#ans input[value=decline]").check()
+        for _ in range(50):
+            ans = ask.read_answers(self.dir)["answers"]
+            if any(r["choice"] == "decline" and r["state"] == "answered" for r in ans):
+                break
+            time.sleep(0.1)
+        else:
+            self.fail("decline was not saved as answered")
+        self.assertEqual(self.errors, [])
+
+
 class ClickMediaTests(PageCase):
     """0.9.0: click a picture, or the Pick button under a clip or sound, to pick the option it stands for."""
 

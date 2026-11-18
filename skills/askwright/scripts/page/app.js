@@ -964,7 +964,8 @@
     let tool = brushes[0] ? brushes[0].id : null, size = 1, W = 0, H = 0, zoom = q.scale || 0, stroke = null, regionsOn = true;
     // Layered mode: the canvas is base with top over it, and reveal/fill brushes show the fixed result per pixel.
     const lay = q.layers && q.layers.base && q.layers.top ? q.layers : null;
-    let showMarks = true, holding = false, baseD = null, compD = null;
+    let showMarks = true, holding = false, view = "fixed", baseD = null, compD = null, srcD = null;
+    let mode = "paint", tol = 24, rectA = null, rectB = null;  // paint | rect | wand
     const work = document.createElement("canvas");
     const canvas = h("canvas", { class: "px-canvas", "aria-label": "Image to mark: " + (m.alt || m.src || "") });
     const ctx = canvas.getContext("2d");
@@ -988,9 +989,13 @@
       const z = zoom;
       canvas.width = W * z; canvas.height = H * z;
       ctx.imageSmoothingEnabled = false;
-      if (compD) {
+      const v = holding ? "original" : view, plain = v !== "fixed";
+      if (compD && v === "bare") {
+        work.getContext("2d").putImageData(baseD, 0, 0);
+        ctx.drawImage(work, 0, 0, W * z, H * z);
+      } else if (compD) {
         const out = new ImageData(new Uint8ClampedArray(compD.data), W, H);
-        if (!holding) for (const [k, b] of marks) {
+        if (!plain) for (const [k, b] of marks) {
           const br = brushes.find((o) => o.id === b) || {};
           const [x, y] = k.split(",").map(Number), i = (y * W + x) * 4;
           if (br.effect === "reveal") out.data.set(baseD.data.subarray(i, i + 4), i);
@@ -999,7 +1004,7 @@
         work.getContext("2d").putImageData(out, 0, 0);
         ctx.drawImage(work, 0, 0, W * z, H * z);
       } else ctx.drawImage(img, 0, 0, W * z, H * z);
-      if (!holding) for (const [k, b] of marks) {
+      if (!plain) for (const [k, b] of marks) {
         const [x, y] = k.split(",").map(Number);
         const br = brushes.find((o) => o.id === b);
         const tint = !br || !br.effect || br.effect === "tint";
@@ -1007,6 +1012,12 @@
         ctx.fillStyle = br ? color(br) : "#ff00ff";
         if (tint) { ctx.globalAlpha = 0.6; ctx.fillRect(x * z, y * z, z, z); ctx.globalAlpha = 1; }
         else ctx.fillRect(x * z, y * z, Math.max(1, z >> 2), Math.max(1, z >> 2));  // corner dot keeps the mark findable
+      }
+      if (rectA && rectB) {
+        const x0 = Math.min(rectA[0], rectB[0]), y0 = Math.min(rectA[1], rectB[1]);
+        const w = Math.abs(rectA[0] - rectB[0]) + 1, hh = Math.abs(rectA[1] - rectB[1]) + 1;
+        ctx.strokeStyle = "#fff"; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+        ctx.strokeRect(x0 * z + 0.5, y0 * z + 0.5, w * z - 1, hh * z - 1); ctx.setLineDash([]);
       }
       if (q.grid && z >= 6) {
         ctx.strokeStyle = "rgba(128,128,128,.35)"; ctx.lineWidth = 1; ctx.beginPath();
@@ -1037,13 +1048,39 @@
       }
       draw();
     }
+    function setPx(x, y, erase) { if (erase || tool === "erase") marks.delete(x + "," + y); else marks.set(x + "," + y, tool); }
+    function fillRect(a, b, erase) {
+      for (let y = Math.min(a[1], b[1]); y <= Math.max(a[1], b[1]); y++)
+        for (let x = Math.min(a[0], b[0]); x <= Math.max(a[0], b[0]); x++) setPx(x, y, erase);
+    }
+    // Magic wand: contiguous pixels whose colour is within tol of the clicked one, kept inside the clicked region.
+    function wand(p, erase) {
+      const d = (view === "bare" ? baseD : compD) || srcD;
+      if (!d) return;
+      const r = regionAt(p[0], p[1]) || { x: 0, y: 0, w: W, h: H };
+      const i0 = (p[1] * W + p[0]) * 4, c0 = [0, 1, 2, 3].map((k) => d.data[i0 + k]);
+      const seen = new Uint8Array(W * H), st = [p[0], p[1]];
+      while (st.length) {
+        const y = st.pop(), x = st.pop();
+        if (x < r.x || y < r.y || x >= r.x + r.w || y >= r.y + r.h) continue;
+        const j = y * W + x;
+        if (seen[j]) continue; seen[j] = 1;
+        let dist = 0; for (let k = 0; k < 4; k++) dist = Math.max(dist, Math.abs(d.data[j * 4 + k] - c0[k]));
+        if (dist > tol) continue;
+        setPx(x, y, erase);
+        st.push(x + 1, y, x - 1, y, x, y + 1, x, y - 1);
+      }
+    }
     canvas.addEventListener("contextmenu", (e) => e.preventDefault());
     canvas.addEventListener("pointerdown", (e) => {
       if (fs.disabled || !W) return;
       e.preventDefault();
       canvas.setPointerCapture(e.pointerId);
       stroke = { erase: e.button === 2, before: new Map(marks) };
-      paint(at(e), stroke.erase);
+      const p = at(e);
+      if (mode === "rect") { rectA = rectB = p; draw(); }
+      else if (mode === "wand") { if (p) wand(p, stroke.erase); draw(); }
+      else paint(p, stroke.erase);
     });
     canvas.addEventListener("pointermove", (e) => {
       const p = at(e);
@@ -1051,10 +1088,13 @@
         const r = regionAt(p[0], p[1]);
         coord.textContent = "x " + p[0] + ", y " + p[1] + (r ? " · " + r.label + " (" + (p[0] - r.x) + ", " + (p[1] - r.y) + ")" : "");
       }
-      if (stroke) paint(p, stroke.erase);
+      if (stroke && mode === "rect") { if (p && rectA) { rectB = p; draw(); } }
+      else if (stroke && mode === "paint") paint(p, stroke.erase);
     });
     const end = () => {
       if (!stroke) return;
+      if (mode === "rect" && rectA && rectB) fillRect(rectA, rectB, stroke.erase);
+      rectA = rectB = null; draw();
       undo.push(stroke.before); if (undo.length > 100) undo.shift();
       stroke = null; sync();
     };
@@ -1074,6 +1114,10 @@
         const c = work.getContext("2d", { willReadFrequently: true });
         c.drawImage(img, 0, 0); baseD = c.getImageData(0, 0, W, H);
         c.drawImage(top, 0, 0); compD = c.getImageData(0, 0, W, H);
+      } else {
+        work.width = W; work.height = H;
+        const c = work.getContext("2d", { willReadFrequently: true });
+        c.drawImage(img, 0, 0); srcD = c.getImageData(0, 0, W, H);
       }
       if (!zoom) zoom = Math.max(1, Math.min(32, Math.floor(Math.min(main.clientWidth || 640, 960) / W)));
       draw();
@@ -1090,14 +1134,23 @@
     tools.append(toolBtn("erase", "Eraser (or right-click)", null));
     const sizeSel = h("select", { "aria-label": "Brush size", onchange: () => { size = +sizeSel.value; } },
       [1, 2, 3].map((n) => h("option", { value: n, text: n + " px" })));
+    const modeSel = h("select", { "aria-label": "Selection tool", onchange: () => { mode = modeSel.value; tolL.hidden = mode !== "wand"; } },
+      [["paint", "Brush"], ["rect", "Rectangle"], ["wand", "Magic wand"]].map(([v, t]) => h("option", { value: v, text: t })));
+    const tolIn = h("input", { type: "range", min: 0, max: 128, value: tol, "aria-label": "Magic wand tolerance",
+      oninput: () => { tol = +tolIn.value; } });
+    const tolL = h("label", { hidden: true }, "Tolerance ", tolIn);
+    const viewSel = h("select", { "aria-label": "View", onchange: () => { view = viewSel.value; draw(); } },
+      [["fixed", "With my fixes"], ["original", "Original (no fixes)"], ["bare", "Without snow"]].map(([v, t]) => h("option", { value: v, text: t })));
     const btn = (text, fn, label) => h("button", { type: "button", class: "btn small", text, "aria-label": label || text, onclick: fn });
     const bar = h("div", { class: "px-bar" },
+      h("label", null, "Tool ", modeSel), tolL,
       h("label", null, "Size ", sizeSel),
       btn("Undo", () => { if (undo.length) { const prev = undo.pop(); marks.clear(); for (const [k, v] of prev) marks.set(k, v); draw(); sync(); } }),
       btn("Clear", () => { if (!marks.size) return; undo.push(new Map(marks)); marks.clear(); draw(); sync(); }),
       btn("-", () => { zoom = Math.max(1, zoom - (zoom > 8 ? 2 : 1)); draw(); }, "Zoom out"), zoomLabel,
       btn("+", () => { zoom = Math.min(64, zoom + (zoom >= 8 ? 2 : 1)); draw(); }, "Zoom in"),
       lay ? h("label", null, Object.assign(h("input", { type: "checkbox", checked: true }), { onchange: (e) => { showMarks = e.target.checked; draw(); } }), " Show marks") : null,
+      lay ? h("label", null, "View ", viewSel) : null,
       lay ? Object.assign(btn("Hold to compare", () => {}), { onpointerdown: () => { holding = true; draw(); },
         onpointerup: () => { holding = false; draw(); }, onpointerleave: () => { if (holding) { holding = false; draw(); } } }) : null,
       (q.regions || []).length ? btn("Regions", () => { regionsOn = !regionsOn; draw(); }, "Show or hide region outlines") : null);

@@ -1268,6 +1268,27 @@ class PixelLayersPageTests(PageCase):
         self.assertEqual(self.rgba(2, 2), [90, 60, 40, 255])
         self.assertEqual(self.errors, [])
 
+    def test_view_rectangle_and_wand(self):
+        p = self.open()
+        p.wait_for_function("document.querySelector('.px-canvas').width === 16 * 16")
+        p.wait_for_timeout(200)
+        p.select_option("select[aria-label='View']", "bare")
+        self.assertEqual(self.rgba(2, 2), [90, 60, 40, 255])  # snow hidden
+        p.select_option("select[aria-label='View']", "fixed")
+        self.assertEqual(self.rgba(2, 2), [255, 255, 255, 255])
+        box = p.locator(".px-canvas").bounding_box()
+        at = lambda x, y: (box["x"] + x * 16 + 8, box["y"] + y * 16 + 8)
+        p.check("input[name='px-tool-snow'][value='remove']")
+        p.select_option("select[aria-label='Selection tool']", "rect")
+        p.mouse.move(*at(1, 1)); p.mouse.down(); p.mouse.move(*at(2, 3)); p.mouse.up()
+        self.wait_saved()
+        self.assertEqual(sorted(self.answers()["snow"]["pixels"]["remove"]),
+                         [[1, 1], [1, 2], [1, 3], [2, 1], [2, 2], [2, 3]])
+        p.select_option("select[aria-label='Selection tool']", "wand")
+        p.mouse.click(*at(5, 5), button="right")  # wand erase clears a same-colour patch
+        self.wait_saved()
+        self.assertEqual(self.errors, [])
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=1)

@@ -6,6 +6,13 @@ Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (ID
 
 ## Unreleased
 
+## 0.43.0
+
+### C-20261117-3 · 2026-11-17 · Pixel editor: view switch, rectangle and magic wand
+- because: user request (compare should stay on without holding, show the image without snow, select areas faster)
+- files: skills/askwright/scripts/page/app.js (pixels), tests/test_page.py (PixelLayersPageTests)
+A View menu on layered pixel questions keeps the canvas on "With my fixes", "Original (no fixes)" or "Without snow" (the base layer); Hold to compare stays. A Tool menu adds Rectangle (drag a box, the brush fills it, right-drag erases) and Magic wand (click fills the touching pixels of the same colour within a tolerance slider, kept inside the clicked region; right-click erases).
+
 ## 0.42.0
 
 ### C-20261117-2 · 2026-11-17 · Extra answers move into one menu; the note pane collapses

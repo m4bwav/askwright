@@ -195,3 +195,4 @@ Known bug from the bug-review prompt. Reproduced read-only on the owner's inbox:
 - 2026-11-16: 0.40.0: pixels `layers` {base, top} with brush `effect` reveal/fill/tint; the page composites per pixel through ImageData (corner dot per mark, Show marks, Hold to compare). Answer format unchanged.
 - 2026-11-17: built-in choices obsolete/decline added (0.41.0); they count as answered, unlike unsure.
 - 2026-11-17: 0.42.0 extras in one 'Other answers' select (#extra); note is <details class=note>, tests open it via '.note summary'.
+- 2026-11-17: 0.43.0 pixel editor gets a View menu (fixes/original/without snow), Rectangle and Magic wand tools. tests/test_visual.py top-bar row fails on main already (2 fails, small width).

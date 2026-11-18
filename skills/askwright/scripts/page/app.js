@@ -1166,6 +1166,22 @@
   }
 
   // ------------------------------------------------------------ paint: edit the pixels of one image and save it
+  const ICONS = {
+    pencil: "M4 20l4-1L19 8l-3-3L5 16z", erase: "M9 20h11M4 15l9-9 6 6-6 6H8z", pick: "M15 3l6 6-3 3-6-6zM13 8l-8 8v3h3l8-8",
+    fill: "M4 11l7-7 8 8-7 7zM4 11h15M20 15c0 2 1.5 3 1.5 4.5a1.5 1.5 0 0 1-3 0c0-1.5 1.5-2.5 1.5-4.5z",
+    replace: "M4 8h13l-3-3M20 16H7l3 3", undo: "M9 14L4 9l5-5M4 9h11a5 5 0 0 1 0 10h-4",
+    redo: "M15 14l5-5-5-5M20 9H9a5 5 0 0 0 0 10h4", reset: "M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5",
+    zout: "M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-5-5M8 11h6", zin: "M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-5-5M8 11h6M11 8v6",
+    eye: "M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z",
+    clear: "M4 4h16v16H4zM4 12h8V4M12 20v-8h8", save: "M5 3h11l3 3v15H5zM8 3v5h8M8 21v-7h8v7",
+    download: "M12 4v12M7 11l5 5 5-5M5 20h14",
+  };
+  function icon(name) {
+    const NS = "http://www.w3.org/2000/svg", svg = document.createElementNS(NS, "svg"), path = document.createElementNS(NS, "path");
+    svg.setAttribute("viewBox", "0 0 24 24"); svg.setAttribute("aria-hidden", "true"); svg.setAttribute("class", "icon");
+    path.setAttribute("d", ICONS[name]); svg.append(path);
+    return svg;
+  }
   function paintArea(q, a, fs) {
     const m = (q.media || [])[0] || {};
     const attUrl = (p) => BASE + "/m/0/" + p.split("/").map(encodeURIComponent).join("/");
@@ -1342,33 +1358,37 @@
       draw();
     })();
     const tools = h("div", { class: "px-tools", role: "radiogroup", "aria-label": "Tool" });
-    for (const [id, label] of [["pencil", "Pencil"], ["erase", "Eraser (to transparent)"], ["pick", "Eyedropper"],
-      ["fill", "Fill area"], ["replace", "Replace colour everywhere"]]) {
-      tools.append(h("label", { class: "px-tool" },
-        h("input", { type: "radio", name: "paint-tool-" + q.id, value: id, checked: id === tool, onchange: () => { tool = id; tolL.hidden = !["fill", "replace"].includes(id); } }),
-        h("span", { text: label })));
+    for (const [id, label] of [["pencil", "Pencil"], ["erase", "Eraser: makes pixels transparent (or right-click)"],
+      ["pick", "Eyedropper: pick a colour (or Alt+click)"], ["fill", "Fill the touching area"], ["replace", "Replace this colour everywhere"]]) {
+      tools.append(h("label", { class: "px-tool icon-tool", title: label },
+        h("input", { type: "radio", name: "paint-tool-" + q.id, value: id, checked: id === tool, "aria-label": label, onchange: () => { tool = id; tolL.hidden = !["fill", "replace"].includes(id); } }),
+        icon(id)));
     }
     const tolIn = h("input", { type: "range", min: 0, max: 128, value: tol, "aria-label": "Tolerance", oninput: () => { tol = +tolIn.value; tolV.textContent = tol; } });
     const tolV = h("span", { class: "px-zoom", text: String(tol) });
-    const tolL = h("label", { hidden: true }, "Tolerance ", tolIn, tolV);
+    const tolL = h("label", { hidden: true, title: "Tolerance: how close a colour must be to count" }, "± ", tolIn, tolV);
     const sizeSel = h("select", { "aria-label": "Pencil size", onchange: () => { size = +sizeSel.value; } },
       [1, 2, 3, 4, 6, 8].map((n) => h("option", { value: n, text: n + " px" })));
-    const btn = (text, fn, label, cls) => h("button", { type: "button", class: "btn small" + (cls ? " " + cls : ""), text, "aria-label": label || text, onclick: fn });
+    const btn = (ic, fn, label, cls, text) => {
+      const b = h("button", { type: "button", class: "btn small icon-btn" + (cls ? " " + cls : ""), title: label, "aria-label": label, onclick: fn }, icon(ic));
+      if (text) b.append(h("span", { text }));
+      return b;
+    };
     const step = (from, to) => { if (!from.length) return; to.push(snap()); cur = from.pop(); edited(); draw(); };
     const colors = h("div", { class: "px-bar paint-colors" },
-      sw, h("label", null, "Colour ", colorIn), h("label", null, "Opacity ", alphaIn),
-      btn("Transparent", () => setCol([0, 0, 0, 0], true), "Use transparent"),
+      sw, Object.assign(colorIn, { title: "Colour" }), h("label", { title: "Opacity", class: "icon-tool" }, alphaIn),
+      btn("clear", () => setCol([0, 0, 0, 0], true), "Transparent"),
       recentBox);
     const bar = h("div", { class: "px-bar" },
-      tolL, h("label", null, "Size ", sizeSel),
-      btn("Undo", () => step(undo, redo)), btn("Redo", () => step(redo, undo)),
-      btn("Reset to original", () => { if (!orig) return; undo.push(snap()); redo.length = 0; cur = new ImageData(new Uint8ClampedArray(orig.data), W, H); edited(); draw(); }),
-      btn("-", () => { zoom = Math.max(1, zoom - (zoom > 8 ? 2 : 1)); draw(); }, "Zoom out"), zoomLabel,
-      btn("+", () => { zoom = Math.min(64, zoom + (zoom >= 8 ? 2 : 1)); draw(); }, "Zoom in"),
-      Object.assign(btn("Hold to compare", () => {}), { onpointerdown: () => { holding = true; draw(); },
+      Object.assign(sizeSel, { title: "Pencil size" }), tolL,
+      btn("undo", () => step(undo, redo), "Undo"), btn("redo", () => step(redo, undo), "Redo"),
+      btn("reset", () => { if (!orig) return; undo.push(snap()); redo.length = 0; cur = new ImageData(new Uint8ClampedArray(orig.data), W, H); edited(); draw(); }, "Reset to original"),
+      btn("zout", () => { zoom = Math.max(1, zoom - (zoom > 8 ? 2 : 1)); draw(); }, "Zoom out"), zoomLabel,
+      btn("zin", () => { zoom = Math.min(64, zoom + (zoom >= 8 ? 2 : 1)); draw(); }, "Zoom in"),
+      Object.assign(btn("eye", () => {}, "Hold to compare with the original"), { onpointerdown: () => { holding = true; draw(); },
         onpointerup: () => { holding = false; draw(); }, onpointerleave: () => { if (holding) { holding = false; draw(); } } }));
     const saveBar = h("div", { class: "px-bar" },
-      btn("Save edited image", saveEdit, null, "primary"), btn("Download PNG", download), status);
+      btn("save", saveEdit, "Save edited image", "primary", "Save"), btn("download", download, "Download PNG"), status);
     const ex = extraMenu(q, a, EXTRA_IDS, () => {});
     fs.append(tools, colors, bar, h("div", { class: "px-wrap paint-wrap" }, canvas),
       h("p", { class: "px-status" }, coord, " · Alt+click picks a colour, right-click erases"), saveBar, ex.el);

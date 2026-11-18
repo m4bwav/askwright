@@ -6,6 +6,13 @@ Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (ID
 
 ## Unreleased
 
+## 0.44.1
+
+### C-20261118-2 · 2026-11-18 · Paint toolbar uses icons with tooltips
+- because: user request (word buttons crowded the editor)
+- files: skills/askwright/scripts/page/app.js (ICONS, icon, paintArea), app.css (icon, icon-btn, icon-tool), tests/test_page.py (PaintPageTests)
+Every paint tool and button is an inline SVG icon with a tooltip and the same text as its accessible name; Save keeps a short word. Behaviour and answers are unchanged.
+
 ## 0.44.0
 
 ### C-20261118-1 · 2026-11-18 · New question kind `paint`: edit an image's pixels and save it

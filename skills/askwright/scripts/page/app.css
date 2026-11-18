@@ -410,3 +410,9 @@ dialog::backdrop { background: rgb(0 0 0 / .5); }
 .px-canvas { display: block; image-rendering: crisp-edges; image-rendering: pixelated; touch-action: none; cursor: crosshair; }
 fieldset:disabled .px-canvas { cursor: default; }
 .px-status { color: var(--muted); font-size: .875rem; font-variant-numeric: tabular-nums; }
+.paint-wrap { background: repeating-conic-gradient(#c8c8c8 0 25%, #fff 0 50%) 0 0 / 16px 16px; }
+.paint-swatch { width: 1.6rem; height: 1.6rem; background-clip: padding-box; }
+.paint-recent { display: inline-flex; gap: .25rem; flex-wrap: wrap; }
+.paint-chip { cursor: pointer; padding: 0; }
+.paint-status { color: var(--muted); font-size: .875rem; }
+.paint-status.unsaved { color: var(--warn, #b45309); font-weight: 600; }

@@ -60,7 +60,7 @@ VERSION = "0.43.0"
 DEFAULT_PORT = 47631  # the shared server's port; ASKWRIGHT_PORT moves it (0 picks a free one)
 PAGE = Path(__file__).resolve().parent / "page"
 BUNDLE = re.compile(r"^(those|these|both|all of)\b|\bplus\b", re.I)
-KINDS = ("choice", "multi", "compare", "rank", "text", "scale", "confirm", "pixels")
+KINDS = ("choice", "multi", "compare", "rank", "text", "scale", "confirm", "pixels", "paint")
 MODES = ("decide", "study")
 STUDY_KINDS = ("choice", "text")  # a quiz asks multiple-choice or written questions
 KEY_FIELDS = ("correct", "why")  # option fields a study page only sees after submitting
@@ -1185,7 +1185,7 @@ def lint_set(d, data, probe=True):
                 W("vague-look-for", f"look_for {item!r} does not name a concrete thing to look at", qid)
 
         ids = option_ids(q)
-        if kind != "text":
+        if kind not in ("text", "paint"):
             opts = q.get("options")
             if not isinstance(opts, list) or len(opts) < (1 if kind == "pixels" else 2):
                 E("options", "a question needs at least 2 options (text questions need none, pixels needs one brush)",
@@ -1219,7 +1219,7 @@ def lint_set(d, data, probe=True):
                 if kind == "pixels" and "fill" in o and not re.fullmatch(r"#[0-9A-Fa-f]{3}(?:[0-9A-Fa-f]{3})?",
                                                                          str(o["fill"])):
                     E("pixels-color", f"brush {oid}: fill must be #rgb or #rrggbb", qid)
-        if kind == "pixels":
+        if kind in ("pixels", "paint"):
             lint_pixels(d, data, q, qid, E)
 
         g = q.get("guess")
@@ -1236,6 +1236,8 @@ def lint_set(d, data, probe=True):
                                   or not all(isinstance(v, list) for v in gp.values())):
                 E("guess-pixels", 'a pixels guess is {"pixels": {"<brush id>": [[x, y], ...]}, "why", "confidence"}',
                   qid)
+        elif kind == "paint":
+            pass  # the person edits the picture; there is nothing to guess
         elif not isinstance(g, dict):
             E("guess", "every question carries the agent's guess: {option, why, confidence}", qid)
         else:
@@ -1542,6 +1544,9 @@ def answer_state(q, a):
     elif kind == "pixels":
         if any(a.get("pixels") or {}) or a.get("choice") == "other":
             return "answered"
+    elif kind == "paint":
+        if a.get("edited") or a.get("choice") == "other":
+            return "answered"
     elif a.get("choice"):
         return "answered"
     if str(a.get("note") or "").strip() or a.get("attachments"):
@@ -1693,7 +1698,7 @@ def read_answers(d, since=None, include_all=False, attempt=None, full=False):
             out.append(r)
             continue
         if a.get("source") == "remote":
-            r["untrusted"] = ["text", "note", "timecodes", "attachments"]
+            r["untrusted"] = ["text", "note", "timecodes", "attachments", "edited"]
         matched = None
         if kind == "multi":
             r["choices"] = a.get("choices") or []
@@ -1711,10 +1716,12 @@ def read_answers(d, since=None, include_all=False, attempt=None, full=False):
             r["regions"] = {rid: {b: pixel_summary(v, full) for b, v in rb.items()}
                             for rid, rb in (a.get("regions") or {}).items()}
             r["brushes"] = {b: label_of(q, b) for b in px}
+        elif kind == "paint":
+            r["edited"] = str(d / a["edited"]) if a.get("edited") else None
         if a.get("choice"):
             r["choice"] = a["choice"]
             r["label"] = label_of(q, a["choice"])
-            if kind not in ("multi", "rank", "text", "pixels"):
+            if kind not in ("multi", "rank", "text", "pixels", "paint"):
                 matched = a["choice"] == g.get("option")
             sides = q.get("sides") or {}
             side = [k for k, v in sides.items() if k != "randomized" and v == a["choice"]]
@@ -1751,7 +1758,7 @@ def clean_answer(q, body, d, study=False):
     choice = body.get("choice")
     if choice is not None:
         allowed = {"unsure", *SKIPS} if kind in ("multi", "rank", "text") else ids | set(EXTRAS)
-        if kind == "pixels":
+        if kind in ("pixels", "paint"):
             allowed = set(EXTRAS)
         if study:  # a quiz answer is one of its options; there is no "not sure" or "something else"
             allowed = set() if kind == "text" else ids
@@ -1794,6 +1801,12 @@ def clean_answer(q, body, d, study=False):
             raise ValueError("too many marked pixels")
         a["pixels"] = clean
         a["regions"] = pixel_regions(q, clean)
+    ed = body.get("edited")
+    if ed is not None:
+        if kind != "paint" or not isinstance(ed, str) or not re.fullmatch(r"attachments/[A-Za-z0-9_.-]+[.]png", ed) \
+                or ".." in ed or not (d / ed).is_file():
+            raise ValueError("edited must be a saved PNG attachment of a paint question")
+        a["edited"] = ed
     for field, cap in (("text", 20000), ("note", 20000)):
         if body.get(field) is not None:
             if not isinstance(body[field], str) or len(body[field]) > cap:

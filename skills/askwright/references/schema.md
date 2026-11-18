@@ -116,6 +116,16 @@ a note (`note_only`), Not sure, or Something else. `ask.py read` prints per brus
 y0, x1, y1]}` plus `brushes` (id to label); `--json` adds `points`. `ask.py pixels SET QID --out DIR` writes
 `<qid>_<brush>.png` per brush: white marks on transparent, the image's size.
 
+## Paint
+
+`kind: "paint"` shows its one image (`media`, PNG, GIF, JPEG or WebP) in a pixel editor: pencil (sizes 1 to 8),
+eraser to transparent (also right-click), eyedropper (also Alt+click, with recent colours), fill a touching area,
+replace a colour everywhere (both with a tolerance slider), colour and opacity, Transparent, undo, redo, reset,
+zoom, hold to compare with the original, Save edited image and Download PNG. `scale` and `grid` work as for
+pixels. It takes no options and no guess. Saving uploads the PNG to the set's `attachments/` folder and the answer
+stores `"edited": "attachments/<qid>-<n>.png"`; reopening the question loads the latest saved edit. An edit, or
+"Something else" with a note, answers it. `ask.py read` prints `edited` as an absolute path.
+
 ## Projects
 
 A project record lives in the user-wide registry (`~/.askwright/projects/<slug>.json`, or under `ASKWRIGHT_HOME`), one file per project, keyed by a slug of its name: `{"name", "description", "repos", "dirs", "goals", "status", "direction", "history": [{"at", "kind", "text", "path"?}], "created", "updated"}`. `ask.py project NAME [--description T] [--repo URL]... [--dir DIR]... [--goal T]... [--remove-repo|--remove-dir|--remove-goal X] [--status active|needs-direction|paused|done] [--needs-direction QUESTION] [--note TEXT] [--prompt-run FILE]` creates or updates it (creating needs `--description`; a set registered from a hand-written file creates a record with none, which its page shows as missing); history keeps the last 500 notes, status changes and prompt runs. `ask.py project` lists every project with its sets, status and first and last prompt run. Registering a set whose `project` names a project creates the record if missing and adds the set's `path` to `dirs`. The project page (`/projects/<slug>`, on the dashboard and every question server) shows status, a Needs you box, created, last worked on, first and last prompt run, the newest continue prompt (Copy start command), goals, each folder's `ai-docs/HANDOFF.md` opening, folders, sets, and one history merged with the folders' dated `ai-docs/log.md` entries.
@@ -136,6 +146,7 @@ or record choices. Left/Right arrows inside the gallery change cases, not questi
 - `rank`: the person orders every option and presses "Use this order".
 - `text`: a free answer. Use it only when choices cannot cover the answer.
 - `pixels`: the person paints exact pixels of one image (see "Pixels").
+- `paint`: the person edits the image's pixels and saves the result (see "Paint").
 
 Every kind except `text` gets "Not sure, ask me later" (`unsure`) and "Something else" (`other`, explained in the
 note); `text` gets "Not sure". Every kind also gets "Question irrelevant or obsolete" (`obsolete`) and "Won't answer"

@@ -2831,6 +2831,47 @@ class PixelLayersTests(PixelsTests):
         self.assertEqual(out["width"], 16)
 
 
+class PaintTests(unittest.TestCase):
+    """The paint kind: lint without options or guess, the edited answer and read."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="askw-paint-"))
+        shutil.copytree(FIX / "media", self.tmp / "media")
+        self.dir = self.tmp / "paint"
+        self.dir.mkdir()
+        self.data = json.loads((FIX / "paint" / "questions.json").read_text(encoding="utf-8"))
+        (self.dir / "questions.json").write_text(json.dumps(self.data), encoding="utf-8")
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_lint_clean_and_needs_one_image(self):
+        d, data = ask.load_set(self.dir)
+        self.assertEqual([e["rule"] for e in ask.lint_set(d, data, probe=False)[0]], [])
+        data["questions"][0]["media"] = []
+        self.assertIn("pixels-media", {e["rule"] for e in ask.lint_set(d, data, probe=False)[0]})
+
+    def test_edited_answer_state_and_read(self):
+        q = self.data["questions"][0]
+        (self.dir / "attachments").mkdir()
+        (self.dir / "attachments" / "touchup-1.png").write_bytes((FIX / "media" / "swatch.png").read_bytes())
+        a = ask.clean_answer(q, {"edited": "attachments/touchup-1.png"}, self.dir)
+        self.assertEqual(ask.answer_state(q, a), "answered")
+        self.assertEqual(ask.answer_state(q, ask.clean_answer(q, {"note": "hm"}, self.dir)), "note_only")
+        self.assertEqual(ask.answer_state(q, ask.clean_answer(q, {"choice": "other", "note": "redo"}, self.dir)),
+                         "answered")
+        for bad in ({"edited": "attachments/missing.png"}, {"edited": "../x.png"}, {"edited": "questions.json"},
+                    {"choice": "nope"}):
+            with self.assertRaises(ValueError):
+                ask.clean_answer(q, bad, self.dir)
+        ans = ask.load_answers(self.dir)
+        ans["answers"]["touchup"] = a
+        (self.dir / "answers.json").write_text(json.dumps(ans), encoding="utf-8")
+        r = ask.read_answers(self.dir)["answers"][0]
+        self.assertEqual(Path(r["edited"]).name, "touchup-1.png")
+        self.assertEqual(r["state"], "answered")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=1)
 

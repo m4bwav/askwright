@@ -1290,5 +1290,53 @@ class PixelLayersPageTests(PageCase):
         self.assertEqual(self.errors, [])
 
 
+class PaintPageTests(PageCase):
+    SET = FIX / "paint"
+
+    def px(self, x, y):
+        c = self.page.locator(".px-canvas")
+        c.scroll_into_view_if_needed()
+        box = c.bounding_box()
+        return box["x"] + x * 8 + 4, box["y"] + y * 8 + 4
+
+    def rgba(self, x, y):
+        return self.page.evaluate("([x, y]) => [...document.querySelector('.px-canvas').getContext('2d')"
+                                  ".getImageData(x * 8 + 4, y * 8 + 4, 1, 1).data]", [x, y])
+
+    def test_pick_paint_erase_fill_undo_and_save(self):
+        p = self.open()
+        p.wait_for_function("document.querySelector('.px-canvas').width === 64 * 8")
+        src = self.rgba(5, 5)
+        p.check("input[name='paint-tool-touchup'][value='pick']")
+        p.mouse.click(*self.px(5, 5))
+        p.check("input[name='paint-tool-touchup'][value='pencil']")
+        p.mouse.click(*self.px(30, 30))
+        self.assertEqual(self.rgba(30, 30)[:3], src[:3])
+        p.mouse.click(*self.px(31, 30), button="right")
+        self.assertEqual(self.rgba(31, 30)[3], 0)
+        p.click("button:has-text('Undo')")
+        self.assertNotEqual(self.rgba(31, 30)[3], 0)
+        p.click("button:has-text('Transparent')")
+        p.check("input[name='paint-tool-touchup'][value='replace']")
+        p.mouse.click(*self.px(5, 5))
+        self.assertEqual(self.rgba(5, 5)[3], 0)
+        self.assertIn("Unsaved", p.locator(".paint-status").inner_text())
+        p.click("button:has-text('Save edited image')")
+        p.wait_for_function("document.querySelector('.paint-status').textContent.startsWith('Saved edit')")
+        self.wait_saved()
+        a = self.answers()["touchup"]
+        self.assertTrue(a["edited"].startswith("attachments/touchup-"))
+        self.assertTrue((self.dir / a["edited"]).read_bytes().startswith(b"\x89PNG"))
+        self.page.reload()
+        p.wait_for_selector("text=Edited image saved")
+        p.click("text=Change")
+        p.wait_for_selector(".paint-status")
+        self.assertIn("Saved edit", p.locator(".paint-status").inner_text())
+        p.wait_for_function("document.querySelector('.px-canvas').width === 64 * 8")
+        p.wait_for_timeout(300)
+        self.assertEqual(self.rgba(5, 5)[3], 0)
+        self.assertEqual(self.errors, [])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=1)

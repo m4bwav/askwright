@@ -120,6 +120,15 @@ handoff or a chat reply: the person has to find the files, guess what to look fo
 - No guess is needed. Read with `ask.py read --json` for every pixel, or `ask.py pixels SET QID --out DIR` for one
   mask PNG per brush, and apply them to the masks yourself.
 
+## Editing pixels
+
+- Use `kind: "paint"` when the person should fix the picture themselves rather than describe or mark the fix:
+  "make the white ring transparent", "touch up the grass". They get a pencil, an eraser to transparent, an
+  eyedropper (or Alt+click), fill and replace-a-colour-everywhere with a tolerance, colour with opacity, undo and
+  redo, zoom and hold to compare, then press Save edited image.
+- One image per question, no options and no guess. `ask.py read` gives the saved PNG's path as `edited`: copy it
+  over the asset (after any checks the project needs) instead of redoing the edit.
+
 ## Refs and tabs
 
 If answering means testing, playing or reading something, say where: `refs` with the folder to open, the important

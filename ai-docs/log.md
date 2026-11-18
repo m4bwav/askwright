@@ -196,3 +196,5 @@ Known bug from the bug-review prompt. Reproduced read-only on the owner's inbox:
 - 2026-11-17: built-in choices obsolete/decline added (0.41.0); they count as answered, unlike unsure.
 - 2026-11-17: 0.42.0 extras in one 'Other answers' select (#extra); note is <details class=note>, tests open it via '.note summary'.
 - 2026-11-17: 0.43.0 pixel editor gets a View menu (fixes/original/without snow), Rectangle and Magic wand tools. tests/test_visual.py top-bar row fails on main already (2 fails, small width).
+- 2026-11-18: 0.44.0 new kind `paint` (pixel editor: pencil, eraser to transparent, eyedropper, fill, replace colour, opacity, undo/redo; saves the PNG as answer `edited`). Owner request for a second reviewer touching up building sprites. Gotcha: Python write_text on Windows writes CRLF and check_skills rejects it; pass newline="
+". Page tests must scroll a tall canvas into view before mouse clicks (Playwright mouse does not scroll). Install budget limit raised 496 to 512 KB.

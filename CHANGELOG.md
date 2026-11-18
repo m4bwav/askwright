@@ -6,6 +6,13 @@ Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (ID
 
 ## Unreleased
 
+## 0.44.0
+
+### C-20261118-1 · 2026-11-18 · New question kind `paint`: edit an image's pixels and save it
+- because: user request (a reviewer wants to make a sprite's white ring transparent and touch up its grass herself, with an eyedropper and other tools)
+- files: skills/askwright/scripts/ask.py (KINDS, lint, answer_state, read_answers, clean_answer `edited`), skills/askwright/scripts/page/app.js (paintArea), app.css, SKILL.md (Kinds), references/schema.md (Paint), references/writing-questions.md (Editing pixels), tests/test_ask.py (PaintTests), tests/test_page.py (PaintPageTests), tests/fixtures/paint, scripts/budget.py
+A `paint` question opens its one image in a pixel editor (pencil, eraser to transparent, eyedropper, fill, replace a colour everywhere, opacity, undo and redo, zoom, hold to compare). Save edited image uploads the PNG through the existing attachment route (same cap and magic-byte check) and the answer records it as `edited`; `ask.py read` returns its path. scripts/budget.py: the install band's yellow limit goes from 496 KB to 512 KB for the editor (507 KB installed).
+
 ## 0.43.0
 
 ### C-20261117-3 · 2026-11-17 · Pixel editor: view switch, rectangle and magic wand

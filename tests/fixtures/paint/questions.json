@@ -1,0 +1,21 @@
+{
+  "askwright": 1,
+  "id": "sprite-touchup",
+  "title": "Touch up the sprite",
+  "project": "askwright tests",
+  "media_roots": ["../media"],
+  "questions": [
+    {
+      "id": "touchup",
+      "kind": "paint",
+      "title": "Sprite touch-up",
+      "question": "Can you fix the pixels that look wrong and save the edited image?",
+      "why": "The saved image replaces the sprite in the game.",
+      "background": "A test swatch stands in for a building sprite with a stray white circle around it.",
+      "look_for": ["White pixels around the sprite that should be transparent"],
+      "media": [{"src": "swatch.png", "type": "image", "alt": "Building sprite"}],
+      "scale": 8,
+      "grid": true
+    }
+  ]
+}

@@ -3186,7 +3186,7 @@ def detach(a):
     log = open(d / "server.log", "ab")
     kw = {"stdin": subprocess.DEVNULL, "stdout": log, "stderr": log, "cwd": str(d)}
     if os.name == "nt":
-        flags = subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
+        flags = 0x08000000 | subprocess.CREATE_NEW_PROCESS_GROUP  # CREATE_NO_WINDOW: a hidden console the children inherit; DETACHED_PROCESS made each child flash a window
         try:
             proc = subprocess.Popen(cmd, creationflags=flags | 0x01000000, **kw)  # CREATE_BREAKAWAY_FROM_JOB
         except OSError:

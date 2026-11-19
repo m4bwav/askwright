@@ -6,6 +6,13 @@ Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (ID
 
 ## Unreleased
 
+## 0.46.0
+
+### C-20261118-4 · 2026-11-18 · A held pull request stays a draft until the answers are applied, not just answered
+- because: user request (answering a held set made the pull request ready for review before any of the answers were acted on, so it could be merged with them unapplied)
+- files: skills/askwright/scripts/gh.py (holds, post, reply, applied), skills/askwright/scripts/ask.py (gh-applied), skills/askwright/references/github.md, tests/test_ask.py (GitHubDraftHoldTests)
+New `gh-applied <set> [--commit SHA] [--note TEXT]`, run after the answers are acted on and pushed: it posts the answers first when `gh-reply` never ran, then a comment with a hidden `askwright:applied v1` block, and marks the pull request ready once every hold on it has one (still only when askwright made it a draft). It refuses while a question is unanswered or held. `gh-reply` and the page's "Post answers to GitHub" button no longer release the hold; on a held pull request the answers comment says it stays a draft until they are applied.
+
 ## 0.45.0
 
 ### C-20261118-3 · 2026-11-18 · Questions on an open pull request keep it a draft until they are answered

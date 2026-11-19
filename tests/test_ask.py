@@ -2943,11 +2943,22 @@ class GitHubTests(FakeGhCase):
 
 
 class GitHubDraftHoldTests(FakeGhCase):
-    """0.45.0: questions posted on an open pull request make it a draft until the answers reply."""
+    """0.45.0: questions posted on an open pull request make it a draft; 0.46.0: until gh-applied, not the answers."""
 
     def setUp(self):
         super().setUp()
+        self.s.data["questions"] = [self.s.q("music")]
+        self.s.write(self.s.data)
         self.pull(5)
+
+    def answer(self):
+        st, d = self.api("/api/answer", {"qid": "music", "choice": "tone", "q_rev": 1})
+        self.assertEqual(st, 200, d)
+
+    def applied(self, set_dir, *extra):
+        code, out = run_cli("gh-applied", set_dir, *extra)
+        self.assertEqual(code, 0, out)
+        return out
 
     def pull(self, number, **fields):
         st = self.gh_state() if self.state.exists() else {"comments": [], "calls": []}
@@ -2967,27 +2978,56 @@ class GitHubDraftHoldTests(FakeGhCase):
         (d / "github.json").unlink(missing_ok=True)
         return d
 
-    def test_post_drafts_the_pull_request_and_reply_marks_it_ready(self):
+    def test_post_drafts_the_pull_request_and_applied_marks_it_ready(self):
         code, out = run_cli("gh-post", self.s.dir, "--repo", "o/r", "--issue", 5)
         self.assertEqual(code, 0, out)
         self.assertEqual(out["draft"], {"held": True, "draft": True, "converted": True})
         self.assertTrue(self.is_draft())
         body = self.gh_state()["comments"][0]["body"]
         self.assertIn("<!-- askwright:draft-hold v1 ", body)
-        self.assertIn("stays a draft until these questions are answered", body)
+        self.assertIn("answered and the answers applied", body)
 
-        code, out = run_cli("gh-reply", self.s.dir)
+        self.answer()
+        code, out = run_cli("gh-reply", self.s.dir)  # also the page's "Post answers to GitHub" button
         self.assertEqual(code, 0, out)
+        self.assertNotIn("draft", out)
+        self.assertTrue(self.is_draft())  # answered is not applied
+        self.assertIn("Still a draft until these answers are applied", self.gh_state()["comments"][-1]["body"])
+
+        out = self.applied(self.s.dir, "--commit", "abc1234", "--note", "Moved the button.")
         self.assertEqual(out["draft"], {"ready": True})
         self.assertFalse(self.is_draft())
+        body = self.gh_state()["comments"][-1]["body"]
+        self.assertIn("<!-- askwright:applied v1 ", body)
+        self.assertIn("Applied in abc1234.", body)
+        self.assertIn("Moved the button.", body)
         self.assertEqual(self.mutations(), ["convertPullRequestToDraft", "markPullRequestReadyForReview"])
+
+    def test_applied_posts_the_answers_first_when_no_reply_was_made(self):
+        run_cli("gh-post", self.s.dir, "--repo", "o/r", "--issue", 5)
+        self.answer()
+        out = self.applied(self.s.dir)
+        bodies = [c["body"] for c in self.gh_state()["comments"]]
+        self.assertIn("<!-- askwright:answers v1 ", bodies[1])
+        self.assertIn("<!-- askwright:applied v1 ", bodies[2])
+        self.assertEqual(out["answers_url"], self.gh_state()["comments"][1]["html_url"])
+        self.assertFalse(self.is_draft())
+
+    def test_applied_refuses_while_a_question_is_unanswered(self):
+        run_cli("gh-post", self.s.dir, "--repo", "o/r", "--issue", 5)
+        code, out = run_cli("gh-applied", self.s.dir)
+        self.assertEqual(code, 1, out)
+        self.assertIn("music", out["error"])
+        self.assertEqual(len(self.gh_state()["comments"]), 1)
+        self.assertTrue(self.is_draft())
 
     def test_an_issue_is_never_held(self):
         code, out = run_cli("gh-post", self.s.dir, "--repo", "o/r", "--issue", 7)
         self.assertEqual(code, 0, out)
         self.assertEqual(out["draft"], {"held": False})
         self.assertNotIn("draft-hold", self.gh_state()["comments"][0]["body"])
-        self.assertNotIn("draft", run_cli("gh-reply", self.s.dir)[1])
+        self.answer()
+        self.assertNotIn("draft", self.applied(self.s.dir))
         self.assertEqual(self.mutations(), [])
 
     def test_closed_or_merged_pull_requests_are_not_held(self):
@@ -3008,24 +3048,28 @@ class GitHubDraftHoldTests(FakeGhCase):
         self.pull(5, draft=True)
         code, out = run_cli("gh-post", self.s.dir, "--repo", "o/r", "--issue", 5)
         self.assertEqual(out["draft"], {"held": True, "draft": True, "converted": False})
-        code, out = run_cli("gh-reply", self.s.dir)
+        self.answer()
+        out = self.applied(self.s.dir)
         self.assertFalse(out["draft"]["ready"])
         self.assertIn("draft before", out["draft"]["reason"])
         self.assertTrue(self.is_draft())
         self.assertEqual(self.mutations(), [])
 
-    def test_ready_only_after_the_last_open_set_is_answered(self):
+    def test_ready_only_after_the_last_held_set_is_applied(self):
+        self.answer()
         second = self.second_set()
         run_cli("gh-post", self.s.dir, "--repo", "o/r", "--issue", 5)
         code, out = run_cli("gh-post", second, "--repo", "o/r", "--issue", 5)
         self.assertEqual(out["draft"], {"held": True, "draft": True, "converted": False})
 
-        out = run_cli("gh-reply", self.s.dir)[1]
+        out = self.applied(self.s.dir)
         self.assertFalse(out["draft"]["ready"])
-        self.assertIn("still open", out["draft"]["reason"])
+        self.assertIn("not applied yet", out["draft"]["reason"])
         self.assertTrue(self.is_draft())
 
-        self.assertEqual(run_cli("gh-reply", second)[1]["draft"], {"ready": True})
+        self.assertEqual(run_cli("gh-reply", second)[0], 0)
+        self.assertTrue(self.is_draft())  # the second set answered, not applied
+        self.assertEqual(self.applied(second)["draft"], {"ready": True})
         self.assertFalse(self.is_draft())
 
     def test_a_refused_draft_change_never_fails_the_post_or_reply(self):

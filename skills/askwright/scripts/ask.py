@@ -56,7 +56,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-VERSION = "0.45.0"
+VERSION = "0.46.0"
 DEFAULT_PORT = 47631  # the shared server's port; ASKWRIGHT_PORT moves it (0 picks a free one)
 PAGE = Path(__file__).resolve().parent / "page"
 BUNDLE = re.compile(r"^(those|these|both|all of)\b|\bplus\b", re.I)
@@ -4080,6 +4080,10 @@ def cmd_gh_reply(a):
     return emit(gh_call(lambda g: g.reply(a.set, load_set, read_answers, write_json_atomic)))
 
 
+def cmd_gh_applied(a):
+    return emit(gh_call(lambda g: g.applied(a.set, a.commit, a.note, load_set, read_answers, write_json_atomic)))
+
+
 def cmd_gh_answers(a):
     return emit(gh_call(lambda g: g.answers(a.ref)))
 
@@ -4236,6 +4240,8 @@ def main(argv=None):
     s = sub.add_parser("gh-pull", help="make a local set from a GitHub askwright comment")
     s.add_argument("ref", help="OWNER/REPO#N or a comment URL"); s.add_argument("--out")
     sub.add_parser("gh-reply", help="post this set's answers back to its GitHub comment").add_argument("set")
+    s = sub.add_parser("gh-applied", help="after acting on the answers: say so on GitHub; a held pull request is ready")
+    s.add_argument("set"); s.add_argument("--commit", help="the commit that applies them"); s.add_argument("--note")
     sub.add_parser("gh-answers", help="read answers posted by gh-reply").add_argument("ref")
     s = sub.add_parser("dashboard", help="run the shared server: the inbox and every registered set, on one port")
     s.add_argument("--port", type=int, help="default 47631, or ASKWRIGHT_PORT")

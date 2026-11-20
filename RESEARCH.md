@@ -92,6 +92,13 @@ Newest first. One entry per material finding; a quiet refresh gets one entry say
 - Magnitude: n/a (initial)
 - Applied: C-20261024-2
 
+### R-20261119-1 · 2026-11-19 · Conditional (follow-up) questions in survey tools
+- Summary: SurveyJS `visibleIf` keeps hidden values by default, so a changed top-level answer does not propagate down a chain unless `clearInvisibleValues: "onHidden"` wipes them (which loses the answer if the person switches back, and has edge cases when data loads async). Qualtrics display logic shows per-question conditions; its progress bar can exclude a branch. askwright takes the middle road: keep the stored answer, evaluate visibility through the whole chain, and leave hidden answers out of status counts and `read`.
+- Track: practice
+- Sources: [SurveyJS conditional logic](https://surveyjs.io/form-library/examples/implement-conditional-logic-to-change-question-visibility/documentation), [SurveyJS onHidden issue](https://lightrun.com/answers/surveyjs-survey-library-clearinvisiblevalues-onhidden-makes-survey-nullify-some-question-values-while-loading-data), [Qualtrics branch logic](https://www.qualtrics.com/support/edit-survey/survey-flow/standard-elements/branch-logic/), [Qualtrics skip logic](https://www.qualtrics.com/support/edit-survey/question-options/skip-logic/)
+- Magnitude: minor
+- Applied: C-20261119-1
+
 ### R-20261024-2 · 2026-10-24 · Agent question tools and prior art (creation pass)
 - Summary: AskUserQuestion, MCP elicitation and Apps, Codex, Cursor, Gemini and VS Code question tools, and the human-in-the-loop MCP servers. Nothing in wide use covers many questions with media, images in answers and answers read over hours; mcp-feedback-enhanced's security history sets the server's guards (127.0.0.1, Host and Origin checks, a token, no command execution). Entries R-A01 to R-A13.
 - Track: tooling

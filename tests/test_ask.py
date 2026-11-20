@@ -272,6 +272,12 @@ class LintTests(unittest.TestCase):
         self.assertError(qmod("redo-how", lambda q: q.update(show_if={"question": "ghost", "option": ["x"]})), "show-if")
         self.assertError(qmod("redo-how", lambda q: q.update(show_if={"question": "arrow", "option": ["zz"]})), "show-if")
 
+    def test_show_if_loop(self):
+        def m(data):
+            qs = {q["id"]: q for q in data["questions"]}
+            qs["arrow"]["show_if"] = {"question": "redo-how", "option": ["seed"]}
+        self.assertError(m, "show-if-loop")
+
     def test_sides(self):
         self.assertWarning(qmod("arrow", lambda q: q["sides"].update(randomized=False)), "sides-not-randomized")
         self.assertError(qmod("arrow", lambda q: q["sides"].update(left="zz")), "sides")
@@ -1277,6 +1283,32 @@ class StateTests(unittest.TestCase):
         self.assertIn("redo-how", st["waiting"])
         self.put({"arrow": {"choice": "redo", "q_rev": 2, "rev": 1}})
         self.assertIn("redo-how", ask.summarize(self.s.dir)["unanswered"])
+
+    def test_show_if_chain_cascades_and_read_drops_hidden(self):
+        self.s.cleanup()
+        def m(data):
+            data["questions"].append({
+                "id": "seed-count", "kind": "choice", "title": "How many seeds", "question": "How many new seeds?",
+                "why": "More seeds cost more renders.", "show_if": {"question": "redo-how", "option": ["seed"]},
+                "options": [{"id": "four", "label": "Four"}, {"id": "eight", "label": "Eight"}],
+                "guess": {"option": "four", "why": "Usually enough.", "confidence": "low"}})
+        self.s = TempSet(m)
+        chain = {"redo-how": {"choice": "seed", "rev": 2}, "seed-count": {"choice": "eight", "rev": 3}}
+        self.put(dict(chain, arrow={"choice": "redo", "q_rev": 2, "rev": 1}))
+        st = ask.summarize(self.s.dir)
+        self.assertIn("seed-count", st["answered"])
+        self.assertIn("seed-count", [a["qid"] for a in ask.read_answers(self.s.dir)["answers"]])
+        self.put(dict(chain, arrow={"choice": "t5", "q_rev": 2, "rev": 1}))  # changed: the branch goes away
+        st = ask.summarize(self.s.dir)
+        self.assertEqual(sorted(st["not_applicable"]), ["redo-how", "seed-count"])
+        self.assertNotIn("seed-count", st["answered"])
+        got = [a["qid"] for a in ask.read_answers(self.s.dir)["answers"]]
+        self.assertNotIn("redo-how", got)
+        self.assertNotIn("seed-count", got)
+        alls = {a["qid"]: a["state"] for a in ask.read_answers(self.s.dir, include_all=True)["answers"]}
+        self.assertEqual(alls["seed-count"], "not_applicable")
+        self.put({})  # trigger unanswered: the whole chain waits
+        self.assertIn("seed-count", ask.summarize(self.s.dir)["waiting"])
 
     def test_read(self):
         self.put({"arrow": {"choice": "t5", "q_rev": 2, "rev": 1, "note": "good", "timecodes": [{"t": 1.2}]},

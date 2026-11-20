@@ -56,7 +56,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-VERSION = "0.46.0"
+VERSION = "0.47.0"
 DEFAULT_PORT = 47631  # the shared server's port; ASKWRIGHT_PORT moves it (0 picks a free one)
 PAGE = Path(__file__).resolve().parent / "page"
 BUNDLE = re.compile(r"^(those|these|both|all of)\b|\bplus\b", re.I)
@@ -1277,6 +1277,14 @@ def lint_set(d, data, probe=True):
             want = [want] if isinstance(want, str) else want
             if not trig or trig is q or not isinstance(want, list) or not set(want) <= set(option_ids(trig)):
                 E("show-if", "show_if needs {question: <id in the set>, option: [<its option ids>]}", qid)
+            else:
+                chain, cur = {qid}, trig
+                while isinstance(cur, dict) and isinstance(cur.get("show_if"), dict):
+                    if cur.get("id") in chain:
+                        E("show-if-loop", "show_if questions trigger each other in a loop, so none can show", qid)
+                        break
+                    chain.add(cur.get("id"))
+                    cur = by_id.get(cur["show_if"].get("question"))
 
         check_blocks(q.get("one_pager"), qid, "one_pager")
 
@@ -1554,16 +1562,25 @@ def answer_state(q, a):
     return "unanswered"
 
 
-def visibility(q, by_id, answers):
-    """'shown', 'waiting' (its show_if trigger is not answered yet) or 'not_applicable'."""
+def visibility(q, by_id, answers, _seen=None):
+    """'shown', 'waiting' (its show_if trigger is not answered yet) or 'not_applicable'.
+
+    Follow-ups chain: a question whose trigger is itself waiting or not applicable takes that state, so changing
+    an early answer hides the whole branch under it even though the branch's own answers stay on disk."""
     si = q.get("show_if")
     if not si:
         return "shown"
+    seen = (_seen or set()) | {q.get("id")}
     trig = by_id.get(si.get("question"))
     want = si.get("option")
     want = [want] if isinstance(want, str) else (want or [])
+    if not trig or trig.get("id") in seen:
+        return "waiting"
+    up = visibility(trig, by_id, answers, seen)
+    if up != "shown":
+        return up
     a = answers.get(si.get("question"))
-    if not trig or answer_state(trig, a) != "answered":
+    if answer_state(trig, a) != "answered":
         return "waiting"
     picked = a.get("choices") or [a.get("choice")]
     return "shown" if set(picked) & set(want) else "not_applicable"
@@ -1681,10 +1698,18 @@ def read_answers(d, since=None, include_all=False, attempt=None, full=False):
         return read_study(d, data, attempt)
     ans = load_answers(d)
     out = []
-    for q in data.get("questions") or []:
+    qs = [q for q in data.get("questions") or [] if isinstance(q, dict)]
+    by_id = {q.get("id"): q for q in qs}
+    for q in qs:
         qid = q.get("id")
         a = ans["answers"].get(qid) or {}
         state = answer_state(q, a)
+        vis = visibility(q, by_id, ans["answers"])
+        if vis != "shown":  # a follow-up whose trigger answer changed: its old answer no longer counts
+            if include_all:
+                out.append({"qid": qid, "title": q.get("title"), "kind": q.get("kind"),
+                            "status": q.get("status", "open"), "state": vis})
+            continue
         if (state == "unanswered" and not include_all) or (since is not None and a.get("rev", 0) <= since):
             continue
         g = q.get("guess") or {}

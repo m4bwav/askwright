@@ -56,7 +56,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-VERSION = "0.48.0"
+VERSION = "0.48.1"
 DEFAULT_PORT = 47631  # the shared server's port; ASKWRIGHT_PORT moves it (0 picks a free one)
 PAGE = Path(__file__).resolve().parent / "page"
 BUNDLE = re.compile(r"^(those|these|both|all of)\b|\bplus\b", re.I)
@@ -718,7 +718,7 @@ def probe_codecs(path):
         return None
     try:
         r = subprocess.run([exe, "-v", "error", "-show_entries", "stream=codec_type,codec_name", "-of", "json",
-                            str(path)], capture_output=True, text=True, timeout=20)
+                            str(path)], capture_output=True, text=True, timeout=20, **OWN_CONSOLE)
         streams = json.loads(r.stdout).get("streams", [])
     except (OSError, ValueError, subprocess.SubprocessError):
         return None
@@ -2228,7 +2228,7 @@ def tailscale(*args):
     if not exe:
         raise AskError("Tailscale is not installed; see references/remote.md")
     try:
-        r = subprocess.run([exe, *args], capture_output=True, text=True, timeout=30)
+        r = subprocess.run([exe, *args], capture_output=True, text=True, timeout=30, **OWN_CONSOLE)
     except subprocess.TimeoutExpired as e:  # serve waits on a link while HTTPS certificates are off
         said = e.stdout or b""
         said = said.decode("utf-8", "replace") if isinstance(said, bytes) else said
@@ -3060,7 +3060,7 @@ def desktop_dir():
     if os.name == "nt":  # the desktop may be redirected (OneDrive), so ask Windows
         try:
             out = subprocess.run(["powershell", "-NoProfile", "-Command", "[Environment]::GetFolderPath('Desktop')"],
-                                 capture_output=True, text=True, timeout=30).stdout.strip()
+                                 capture_output=True, text=True, timeout=30, **OWN_CONSOLE).stdout.strip()
             if out:
                 return Path(out)
         except (OSError, subprocess.SubprocessError):
@@ -3099,7 +3099,7 @@ def cmd_shortcut(a):
               "$s.IconLocation=%s;$s.WorkingDirectory=%s;$s.Description='Open the Askwright dashboard';"
               "$s.WindowStyle=7;$s.Save()") % (q(path), q(target), q(subprocess.list2cmdline([script] + args)),
                                                q(str(icon) + ",0"), q(home))
-        r = subprocess.run(["powershell", "-NoProfile", "-Command", ps], capture_output=True, text=True, timeout=60)
+        r = subprocess.run(["powershell", "-NoProfile", "-Command", ps], capture_output=True, text=True, timeout=60, **OWN_CONSOLE)
         if r.returncode != 0 or not path.exists():
             return emit({"ok": False, "error": "could not create the shortcut: " + (r.stderr.strip() or "unknown")})
     else:

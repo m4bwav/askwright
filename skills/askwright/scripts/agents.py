@@ -12,7 +12,7 @@ Sources (each optional; one that cannot be read is named in "problems", never si
   - grindwright claims           <folder>/ai-docs/grind/ledger.jsonl items in state running, sessions/*.json
   - other machines               when the grind profile has "work.remote", the repository host's grind-claim/* refs
                                  (grindwright's shared claims) and grind-presence/* refs, where each machine publishes
-                                 its own rows (publish(); titles, ids, branches, folders, times; never message text)
+                                 its own rows (publish())
 
 Standard library only. Other plugins import collect(); `python agents.py --dir PATH` prints one JSON object.
 """
@@ -32,6 +32,7 @@ RECENT_MINUTES = 120     # after this, activity alone no longer counts as runnin
 WINDOW_HOURS = 24        # transcripts older than this are not read at all
 SUBAGENT_MINUTES = 30    # an unfinished subagent quiet longer than this is shown as possibly stale
 HEAD_BYTES = 65536
+NO_WINDOW = {"creationflags": 0x08000000} if os.name == "nt" else {}
 PASS_ITEM_KEYS = ("handed_off", "taken_over", "paused_by", "handed_to", "handoff", "taken_over_from", "quiet")
 PASS_SESSION_KEYS = ("quiet", "mode", "handed_to", "handoff")
 
@@ -104,7 +105,7 @@ def worktrees(folder):
     """[(path, branch)] of the folder's git worktrees; [] when it is not a repository."""
     try:
         out = subprocess.run(["git", "-C", str(folder), "worktree", "list", "--porcelain"], capture_output=True,
-                             text=True, timeout=10).stdout
+                             text=True, timeout=10, **NO_WINDOW).stdout
     except (OSError, subprocess.SubprocessError):
         return []
     rows, path = [], None
@@ -537,7 +538,7 @@ def gh_api(*args, body=None):
     cmd = os.environ.get("ASKWRIGHT_GH")
     argv = (json.loads(cmd) if cmd else ["gh"]) + ["api", *args] + (["--input", "-"] if body is not None else [])
     r = subprocess.run(argv, input=json.dumps(body) if body is not None else None, capture_output=True, text=True,
-                       encoding="utf-8", timeout=30)
+                       encoding="utf-8", timeout=30, **NO_WINDOW)
     if r.returncode:
         raise RuntimeError(((r.stderr or r.stdout or "gh failed").strip().splitlines() or ["gh failed"])[-1])
     return json.loads(r.stdout) if r.stdout.strip() else {}

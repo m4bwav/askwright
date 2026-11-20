@@ -46,7 +46,7 @@ A set is one folder holding `questions.json`. The server writes `answers.json`, 
 | `one_pager` | no | Background blocks shown above the question (below). |
 | `refs` | no | Folders, files and links that help answer it: see "Refs". |
 | `tabs` | no | Extra tabs of background beside the question: see "Tabs". |
-| `show_if` | no | `{"question": "<id>", "option": ["<option id>", ...]}`: the question joins the line only after that answer. |
+| `show_if` | no | `{"question": "<id>", "option": ["<option id>", ...]}`: the question joins the line only after that answer. Follow-ups chain (a follow-up can trigger another); when an earlier answer changes, the whole branch under it hides. A hidden question is neither asked nor counted: `status` lists it as `waiting` or `not_applicable`, `read` leaves its stored answer out (`--all` shows it with that state), and the answer comes back if the trigger is switched back. A loop is a lint error (`show-if-loop`). |
 | `status` | no | `open` (default), `closed`, `superseded` (needs `superseded_by`) or `withdrawn` (needs `reason`). Only open questions are on the page. |
 | `rev` | no | Starts at 1. Raise it when you change a question that may already be answered; answers to an older rev are reported as `stale`. `ask.py add --replace` does it for you. |
 | `supersedes` | no | `"<old id>"` (or `"<old id>@<rev>"`). `ask.py add` marks the old question superseded. |

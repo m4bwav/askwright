@@ -69,13 +69,18 @@
   const pxCount = (px) => Object.values(px || {}).reduce((n, v) => n + v.length, 0);
   const st = (q) => stateOf(q, S.answers[q.id]);
   const done = (q) => ["answered", "unsure"].includes(st(q));
-  function vis(q) {
+  // Follow-ups chain: a hidden or waiting trigger hides everything under it; stored answers stay for a switch back.
+  function vis(q, seen) {
     const si = q.show_if;
     if (!si) return "shown";
+    seen = new Set(seen || []).add(q.id);
     const t = byId(si.question);
     const want = [].concat(si.option || []);
+    if (!t || seen.has(t.id)) return "waiting";
+    const up = vis(t, seen);
+    if (up !== "shown") return up;
     const a = S.answers[si.question];
-    if (!t || stateOf(t, a) !== "answered") return "waiting";
+    if (stateOf(t, a) !== "answered") return "waiting";
     const picked = (a.choices || []).length ? a.choices : [a.choice];
     return picked.some((p) => want.includes(p)) ? "shown" : "not_applicable";
   }
@@ -1541,6 +1546,7 @@
       if (v === "not_applicable") return null;
       if (v === "waiting") {
         const t = byId(q.show_if.question);
+        if (vis(t) !== "shown") return null;  // deeper follow-ups stay out of the list until their trigger shows
         return h("li", null, h("span", { text: q.title }), h("span", { class: "tag", text: "Shows if you pick " + [].concat(q.show_if.option).map((o) => optLabel(t, o)).join(" or ") + " in " + t.title }));
       }
       const s = st(q);

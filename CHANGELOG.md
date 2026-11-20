@@ -6,6 +6,13 @@ Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (ID
 
 ## Unreleased
 
+## 0.47.0
+
+### C-20261119-1 · 2026-11-19 · Follow-up questions chain, and hidden follow-ups drop out of the set
+- because: user request (questions that only appear after a given answer, e.g. Stop or Remove, then "what to remove"; questions never asked count as done, and the set grows and shrinks as answers change), R-20261119-1
+- files: skills/askwright/scripts/ask.py (visibility, lint_set show_if, read_answers), skills/askwright/scripts/page/app.js (vis, renderOverview), skills/askwright/references/schema.md (show_if), tests/test_ask.py (show_if loop, chain cascade)
+`show_if` already hid a question until its trigger answer. Now a follow-up whose own trigger is hidden or waiting takes that state, so changing an early answer hides the whole branch; `read` no longer reports stored answers to hidden questions (`--all` lists them as `not_applicable` or `waiting`); the overview lists only the next level of waiting follow-ups; and a show_if loop is a lint error. Stored answers stay on disk so switching back restores them.
+
 ## 0.46.0
 
 ### C-20261118-4 · 2026-11-18 · A held pull request stays a draft until the answers are applied, not just answered

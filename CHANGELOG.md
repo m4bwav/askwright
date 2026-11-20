@@ -6,6 +6,13 @@ Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (ID
 
 ## Unreleased
 
+## 0.48.1
+
+### C-20261120-1 · 2026-11-20 · No console window flashes from the dashboard's presence publisher
+- because: user request (empty terminal windows titled with the GitHub CLI path kept flickering)
+- files: skills/askwright/scripts/agents.py (NO_WINDOW on the git worktree list and gh api calls), skills/askwright/scripts/ask.py (OWN_CONSOLE on the ffprobe, tailscale and two powershell calls), tests/test_ask.py (NoConsoleFlashTest), README.md (Works with: three example plugins, the wiki page keeps the full list)
+The dashboard runs under pythonw and publishes grind presence every few seconds through `gh api` and `git worktree list`; without CREATE_NO_WINDOW each call opened a Windows Terminal window for a moment. A test now walks every script and fails on a subprocess call that does not hide its console. The install was 6 bytes under its 520 KB cap, so the README's plugin list and a repeated docstring line were trimmed to make room.
+
 ## 0.48.0
 
 ### C-20261119-2 · 2026-11-19 · Krug rules in the question rubric, and a long-question lint warning

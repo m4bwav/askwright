@@ -3123,5 +3123,30 @@ class GitHubDraftHoldTests(FakeGhCase):
         self.assertTrue(self.gh_state()["comments"])  # the questions are posted all the same
 
 
+class NoConsoleFlashTest(unittest.TestCase):
+    """The dashboard runs under pythonw: a console child started without CREATE_NO_WINDOW opens a terminal window."""
+    GUI_ONLY = {("ask.py", "opener")}  # Explorer, open, xdg-open own their windows
+
+    def test_every_subprocess_call_hides_its_console(self):
+        import ast
+        missing = []
+        for path in sorted(SCRIPTS.glob("*.py")):
+            for node in ast.walk(ast.parse(path.read_text("utf-8"))):
+                if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+                        and isinstance(node.func.value, ast.Name) and node.func.value.id == "subprocess"
+                        and node.func.attr in ("run", "Popen", "call", "check_call", "check_output")):
+                    continue
+                first = node.args[0] if node.args else None
+                if (isinstance(first, ast.List) and first.elts and isinstance(first.elts[0], ast.Name)
+                        and (path.name, first.elts[0].id) in self.GUI_ONLY):
+                    continue
+                if any(k.arg == "creationflags" or k.arg is None for k in node.keywords):
+                    continue  # creationflags=..., or **OWN_CONSOLE / **NO_WINDOW
+                if any(k.arg == "start_new_session" for k in node.keywords):
+                    continue  # the POSIX branch of a detached start
+                missing.append(f"{path.name}:{node.lineno}")
+        self.assertEqual(missing, [], "subprocess calls that would flash a console window on Windows")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=1)

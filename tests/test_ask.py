@@ -1889,6 +1889,14 @@ class ProjectAndListenTests(unittest.TestCase):
         self.assertIn("bundled-options", lint(bundle("choice"))[1])
         self.assertNotIn("bundled-options", lint(bundle("multi"))[1])
 
+    def test_long_question_warns(self):
+        def wordy(n):
+            def mutate(data):
+                data["questions"][0]["question"] = " ".join(["word"] * n) + "?"
+            return mutate
+        self.assertIn("long-question", lint(wordy(41))[1])
+        self.assertNotIn("long-question", lint(wordy(12))[1])
+
     def test_new_project_needs_description(self):
         tmp = Path(tempfile.mkdtemp(prefix="askw-"))
         try:

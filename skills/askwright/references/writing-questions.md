@@ -17,12 +17,15 @@ the question-evaluation research (QAS-99 adapted, R-T11); models under-flag poin
 5. **Leading.** "Obviously", "don't you think", or a guess written as the default. State options neutrally;
    your view goes in `guess`.
 6. **Bad options.** Options overlap, the order is odd, a real outcome is missing (tie, neither, redo), or a
-   label is vague. Each option is something you would actually do.
+   label is vague. Each option is something you would actually do. Each label names what happens if it is
+   picked; readers take the first plausible one, so it must not be a trap (Krug, ch. 2, 4).
 7. **Wrong answer type.** Free text where a choice belongs (the person has to invent the options), or a choice
    where the real answer is a sentence.
 8. **Recall burden.** The person must remember an earlier clip or answer. Show both takes side by side; quote
    the earlier answer in `why`.
-9. **Tangled wording.** Long sentences, double negatives, instructions inside the question. One plain question.
+9. **Tangled wording.** Long sentences, double negatives, instructions inside the question. One plain question
+   (lint `long-question` past 40 words). No welcome paragraph or instructions block before the first question
+   (one sentence at most); fix confusion by cutting words, not adding them (Krug, ch. 5).
 10. **Trivial.** You could have decided this and flagged it in one line. Remove it from the set.
 11. **No guess.** Every question carries your labelled guess with a reason and an honest confidence.
 
@@ -35,7 +38,8 @@ the question-evaluation research (QAS-99 adapted, R-T11); models under-flag poin
   project: what the item is (a card's rules text, a scene's beat), where it shows up, earlier answers and the
   prompt or source the candidates came from. It sits in a collapsed section, so write it for the reader who opens it.
   `ask.py picks build` takes it per item from `--background FILE` (JSON `{item: text}`) or `--background-all`.
-- Group nothing: one decision per screen. A decision with sub-parts becomes a `show_if` chain.
+- Group nothing: one decision per screen. A decision with sub-parts becomes a `show_if` chain: a short first
+  choice, then follow-ups for the chosen branch only (ch. 4).
 
 ## Options
 

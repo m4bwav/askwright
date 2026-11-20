@@ -6,6 +6,13 @@ Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (ID
 
 ## Unreleased
 
+## 0.48.0
+
+### C-20261119-2 · 2026-11-19 · Krug rules in the question rubric, and a long-question lint warning
+- because: book learnings round 6 (Krug, Don't Make Me Think, ch. 2, 4, 5)
+- files: skills/askwright/references/writing-questions.md (11-point check 6 and 9, Questions), skills/askwright/scripts/ask.py (lint_set long-question), tests/test_ask.py (test_long_question_warns)
+Check 6: option labels name what happens if picked, and the first plausible option is never a trap. Check 9: no welcome paragraph or instructions block before the first question, fix confusion by cutting words; lint warns `long-question` when a question is over 40 words (40 is our threshold, not Krug's). Questions: a `show_if` chain starts with a short first choice.
+
 ## 0.47.0
 
 ### C-20261119-1 · 2026-11-19 · Follow-up questions chain, and hidden follow-ups drop out of the set

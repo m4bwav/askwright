@@ -4,28 +4,10 @@
 Standard library only, Python 3.9+, Windows, macOS and Linux. Every command prints one JSON object; `serve` in the
 foreground prints one JSON line when it is ready and then keeps serving until stopped.
 
-  ask.py new <dir> --title T            write an empty questions.json to fill in
-  ask.py lint <set>                     check a set (errors block serve)
-  ask.py serve <set> [--detach]         serve it on 127.0.0.1 after a self-check; --open opens the browser
-  ask.py status <set> [--wait-done]     counts and the lists the agent reports; --claim takes the one continuation
-  ask.py claim <set>                    take this All done for one continuation
-  ask.py pending [--cwd DIR] [--hook]   answered sets no session has picked up
-  ask.py consume <set> [--by W] [--note N]  record that the answers were acted on (Unprocessed tab)
-  ask.py dismiss <set> [--by W] [--note N]  drop a set from Unprocessed and the week warning for good
-  ask.py sweep [--apply] [--prompts F]     answers nothing records as used, in piles; warns past 7 days
-  ask.py read <set> [--since REV]       every answer, with notes, attachments and the guess comparison
-  ask.py close <set> <qid>...           mark questions closed, superseded or withdrawn
-  ask.py add <set> <file.json>          add questions to a set (a reroll round), linting first
-  ask.py inline <set>                   a chat version of a small set, plus an AskUserQuestion mapping
-  ask.py stop <set>                     stop the set's server (by its PID, after it answers a ping)
-  ask.py dashboard [--detach] [--open] shared questions inbox for every registered session
-  ask.py register <set>                 register a question set created before the dashboard
-  ask.py grade <set> [--apply FILE]     study sets: list written answers to grade, or write the grades back
-  ask.py figure <spec.json> <out.svg>   draw a figure (graph, forces, shapes) to look at before using it
+Commands: run `ask.py --help`; every command with its output is on the wiki.
 
 <set> is a folder holding questions.json, or the file itself. The server writes answers.json, events.jsonl,
 attachments/ and server.json next to it; a study set (a quiz) also gets results.json, one entry per attempt.
-See references/schema.md for every field and the Study mode wiki page for quizzes.
 """
 
 import argparse
@@ -56,7 +38,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-VERSION = "0.48.1"
+VERSION = "0.49.0"
 DEFAULT_PORT = 47631  # the shared server's port; ASKWRIGHT_PORT moves it (0 picks a free one)
 PAGE = Path(__file__).resolve().parent / "page"
 BUNDLE = re.compile(r"^(those|these|both|all of)\b|\bplus\b", re.I)
@@ -82,7 +64,8 @@ PAGE_FILES = {"/app.js": ("app.js", "text/javascript; charset=utf-8"), "/app.css
 PAGE_FILES.update({"/dashboard.js": ("dashboard.js", "text/javascript; charset=utf-8"),
                    "/dashboard.css": ("dashboard.css", "text/css; charset=utf-8"),
                    "/project.js": ("project.js", "text/javascript; charset=utf-8"),
-                   "/time.js": ("time.js", "text/javascript; charset=utf-8")})
+                   "/time.js": ("time.js", "text/javascript; charset=utf-8"),
+                   "/pager.js": ("pager.js", "text/javascript; charset=utf-8")})
 PAGE_FILES.update({f"/{n}": (n, "image/svg+xml") for n in ("favicon.svg", "favicon-sessions.svg", "favicon-project.svg")})
 MAGIC = ((b"\x89PNG\r\n\x1a\n", "png"), (b"\xff\xd8\xff", "jpg"), (b"GIF87a", "gif"), (b"GIF89a", "gif"))
 CSP = ("default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; "

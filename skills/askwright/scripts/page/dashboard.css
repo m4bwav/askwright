@@ -21,7 +21,7 @@ button:disabled { cursor: wait; opacity: .65; }
 .skip { position: absolute; left: 16px; top: -80px; padding: 12px; background: #fff; color: #182536; z-index: 1; }
 .skip:focus { top: 10px; }
 #sessions { display: grid; gap: 16px; }
-table.sessions { width: 100%; border-collapse: separate; border-spacing: 0; background: #fff; border: 1px solid #ced7e0; border-radius: 10px; overflow: hidden; }
+table.sessions { width: 100%; border-collapse: separate; border-spacing: 0; background: #fff; border: 1px solid #ced7e0; border-radius: 10px; overflow: clip; }
 table.sessions th { text-align: left; font-size: .8rem; text-transform: uppercase; letter-spacing: .05em; color: #46586e; padding: 10px 14px; border-bottom: 1px solid #ced7e0; }
 table.sessions td { padding: 6px 14px; vertical-align: middle; border-top: 1px solid #e3e9ef; }
 table.sessions tbody:first-of-type tr.row td { border-top: 0; }
@@ -212,3 +212,10 @@ section h2 { font-size: 1.15rem; margin: 28px 0 12px; }
 .subagents { margin: 0; padding-left: 1.2rem; font-size: .9em; }
 .problem { color: #b91c1c; }
 @media (prefers-color-scheme: dark) { .problem { color: #f87171; } }
+table.sessions th { position: sticky; top: 0; z-index: 1; background: #fff; }
+td.num, .pager span { text-align: right; font-variant-numeric: tabular-nums; }
+.pager { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 12px 0; }
+[aria-busy="true"] .loading::before { content: ""; display: inline-block; width: .8em; height: .8em; margin-right: 8px; border: 2px solid; border-right-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(1turn); } }
+@media (prefers-reduced-motion: reduce) { .loading::before { animation: none !important; } }
+@media (prefers-color-scheme: dark) { table.sessions th { background: #1d2939; } }

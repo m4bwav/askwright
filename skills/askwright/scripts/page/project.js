@@ -75,9 +75,7 @@ function setCard(row) {
 }
 
 function report(message) {
-  const error = document.querySelector("#error");
-  error.textContent = message;
-  error.hidden = !message;
+  askError(document.querySelector("#error"), message, message && load);
 }
 
 function toast(message) {
@@ -150,6 +148,12 @@ function renderTimeline(p) {
   more.textContent = showAll ? "Show fewer" : `Show all (${items.length})`;
 }
 
+function renderSets(p) {
+  const paged = askPager("sets", p.sets, () => renderSets(p));
+  document.querySelector("#sets").replaceChildren(...(p.sets.length ? [...paged.rows.map(setCard), paged.nav] :
+    [node("p", "No question sets yet. An agent adds one with ask.py new --project NAME.", "meta")]));
+}
+
 function render(p) {
   document.title = `askwright | ${p.name}`;
   document.querySelector("#name").textContent = p.name;
@@ -193,8 +197,7 @@ function render(p) {
   const places = document.querySelector("#places");
   places.replaceChildren(...p.repos.map(r => place(r, /^https?:\/\//.test(r) ? r : null)), ...p.dirs.map(d => place(d)));
   document.querySelector("#where").hidden = !(p.repos.length || p.dirs.length);
-  const sets = document.querySelector("#sets");
-  sets.replaceChildren(...(p.sets.length ? p.sets.map(setCard) : [node("p", "No question sets yet.")]));
+  renderSets(p);
   renderTimeline(p);
 }
 
@@ -324,14 +327,18 @@ function renderLinks(p) {
 }
 
 async function load() {
+  const main = document.querySelector("main");
+  main.setAttribute("aria-busy", "true");
   try {
     project = (await api("/api/project?slug=" + encodeURIComponent(slug))).project;
     render(project);
     renderLinks(project);
     report("");
   } catch (e) {
-    document.querySelector("#name").textContent = "Project not found";
-    report(e.message);
+    if (!project) document.querySelector("#name").textContent = "Project could not be loaded";
+    report(`${e.message}. Is the askwright server running?`);
+  } finally {
+    main.removeAttribute("aria-busy");
   }
 }
 

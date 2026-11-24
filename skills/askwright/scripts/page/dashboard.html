@@ -9,6 +9,7 @@
 <link rel="icon" href="/favicon-sessions.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/dashboard.css">
 <script src="/time.js" defer></script>
+<script src="/pager.js" defer></script>
 <script src="/dashboard.js" defer></script>
 </head>
 <body>
@@ -42,7 +43,7 @@
   </form>
   <p id="error" role="alert" hidden></p>
   <p id="action-status" role="status"></p>
-  <section id="sessions" aria-label="Question sessions" tabindex="-1"></section>
+  <section id="sessions" aria-label="Question sessions" tabindex="-1" aria-busy="true"><p class="loading">Loading sessions…</p></section>
   </div>
   <div id="panel-projects" role="tabpanel" aria-labelledby="tab-projects" hidden>
     <section id="projects" class="projects" aria-label="Projects"></section>

@@ -6,6 +6,13 @@ Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (ID
 
 ## Unreleased
 
+## 0.49.0
+
+### C-20261123-1 · 2026-11-23 · Paging, loading, error-with-Retry and empty states on the dashboard, project and question pages
+- because: user request ("loading indicators and paging and all the ui best practices for presenting data")
+- files: skills/askwright/scripts/page/pager.js (new: askPager, askError), dashboard.html/js/css (Sessions, Projects and Unprocessed tables paged, sticky headers, tabular numbers, spinner with aria-busy, first-load error with Retry), project.html/js (question sets paged, error with Retry, aria-busy), index.html and app.js (aria-busy while loading, Retry on a failed first load), ask.py (PAGE_FILES serves /pager.js), tests/test_page.py (paging, retry and empty-state tests)
+Lists page at 25 rows with 25/50/100 per page, Previous and Next, "Showing X-Y of N", and the page kept in the URL query so a reload keeps it. The pager hides itself when a list fits on one page. The question page has no paging (one question per screen already).
+
 ## 0.48.1
 
 ### C-20261120-1 · 2026-11-20 · No console window flashes from the dashboard's presence publisher

@@ -1785,10 +1785,16 @@
     else if (k === "?") { e.preventDefault(); $("#keys").showModal(); }
   });
 
-  load().catch((e) => {
-    main.replaceChildren(h("h1", { tabindex: "-1", text: "The questions could not be loaded" }),
-      h("p", { text: e.message + ". Ask the agent to run ask.py serve again and open the new link." }));
-  });
+  function firstLoad() {
+    main.setAttribute("aria-busy", "true");
+    load().catch((e) => {
+      const retry = h("button", { type: "button", class: "retry", text: "Retry" });
+      retry.addEventListener("click", () => { main.replaceChildren(h("p", { role: "status", text: "Loading…" })); firstLoad(); });
+      main.replaceChildren(h("h1", { tabindex: "-1", text: "The questions could not be loaded" }),
+        h("p", { text: e.message + ". Retry, or ask the agent to run ask.py serve again and open the new link." }), retry);
+    }).finally(() => main.removeAttribute("aria-busy"));
+  }
+  firstLoad();
   // ------------------------------------------------------------ hover a small picture: a large copy floats beside it
   // Any picture gets one when there is room to show it 1.3x larger; it never takes the pointer, so clicks still pick.
   const zoom = h("img", { id: "hover-zoom", alt: "", "aria-hidden": "true" });

@@ -52,8 +52,7 @@ async function api(path, body) {
 }
 
 function report(message) {
-  error.textContent = message;
-  error.hidden = !message;
+  askError(error, message, refresh);
 }
 
 function render() {
@@ -72,6 +71,7 @@ function render() {
       row.project && row.project.name, row.project && row.project.path]
       .join(" ").toLowerCase().includes(term));
   visible.sort(compare);
+  const paged = askPager("sessions", visible, render);
   sessions.replaceChildren();
   const table = node("table", "", "sessions");
   const head = node("tr", "");
@@ -94,7 +94,7 @@ function render() {
   const thead = node("thead", "");
   thead.append(head);
   table.append(thead);
-  for (const row of visible) {
+  for (const row of paged.rows) {
     const body = node("tbody", "");
     body.dataset.session = row.id;
     const open = expanded.has(row.id);
@@ -140,7 +140,7 @@ function render() {
     body.append(detailRow);
     table.append(body);
   }
-  if (visible.length) sessions.append(table);
+  if (visible.length) sessions.append(table, paged.nav);
   if (!visible.length) sessions.append(node("p", rows.length ?
     "No sessions match this view. Try another list, All sessions or clear the filters." :
     "No sessions registered yet. Agents register automatically when they create or serve an askwright set."));
@@ -285,7 +285,8 @@ function renderProjects() {
   const thead = node("thead", "");
   thead.append(head);
   const body = node("tbody", "");
-  for (const [slug, c] of items) {
+  const paged = askPager("projects", items, renderProjects);
+  for (const [slug, c] of paged.rows) {
     const tr = node("tr", "", "row");
     const name = node("td", "", "title");
     const a = node("a", c.name);
@@ -303,7 +304,7 @@ function renderProjects() {
     body.append(tr);
   }
   table.append(thead, body);
-  panel.replaceChildren(table);
+  panel.replaceChildren(table, paged.nav);
 }
 
 // The Unprocessed tab: sets holding answers no agent has recorded acting on (ask.py consume), read or not,
@@ -341,7 +342,8 @@ function renderUnconsumed() {
   const thead = node("thead", "");
   thead.append(head);
   const body = node("tbody", "");
-  for (const row of items) {
+  const paged = askPager("unprocessed", items, renderUnconsumed);
+  for (const row of paged.rows) {
     const tr = node("tr", "", row.waiting_days > STALE_DAYS ? "row stale" : "row");
     const title = node("td", "", "title");
     title.append(node("strong", row.title || row.id));
@@ -376,7 +378,7 @@ function renderUnconsumed() {
     body.append(tr);
   }
   table.append(thead, body);
-  panel.replaceChildren(copySweep, table);
+  panel.replaceChildren(copySweep, table, paged.nav);
 }
 
 // Sessions, Projects and Unconsumed tabs; the choice is remembered per browser and #projects or #unconsumed opens one.
@@ -481,6 +483,7 @@ function refresh() {
 }
 
 async function loadSessions() {
+  sessions.setAttribute("aria-busy", "true");
   try {
     const data = await api("/api/sessions");
     const next = JSON.stringify(data.sessions);
@@ -514,7 +517,11 @@ async function loadSessions() {
     } catch (e) { /* the Projects tab shows Active until this works */ }
     report("");
   } catch (e) {
-    report(`Cannot refresh sessions: ${e.message}. Previously loaded counts may be out of date.`);
+    report(snapshot === null ? `Cannot load sessions: ${e.message}. Is the askwright server running?` :
+      `Cannot refresh sessions: ${e.message}. Previously loaded counts may be out of date.`);
+    if (snapshot === null) document.querySelector("#summary").textContent = "Sessions could not be loaded.";
+  } finally {
+    sessions.removeAttribute("aria-busy");
   }
 }
 

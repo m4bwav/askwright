@@ -93,4 +93,5 @@ The compact and per-frame review changes are included in the approved PR scope. 
 - `evals/results/` from `claude plugin eval` holds machine paths and is git-ignored. Delete it before `tests/check_skills.py`, or the guard fails on it.
 
 ## Next single action
+0.49.0 (2026-11-23) added paging/loading/Retry via page/pager.js; install is at the 520 KB cap again (README and ask.py docstring trimmed to fit). tests/test_visual.py has 2 errors that also fail on origin/main (.opt click in overview/top-bar cases), not yet investigated.
 Check PR #19's merge status before further source work. The compact/per-frame fresh-agent outcome cases still need a sandbox-capable runner; do not weaken isolation. Per-frame answer review and the documented figure-scale wiki inaccuracy remain separate follow-ups. Release tags still need approval.

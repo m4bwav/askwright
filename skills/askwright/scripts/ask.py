@@ -38,7 +38,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-VERSION = "0.49.1"
+VERSION = "0.49.2"
 DEFAULT_PORT = 47631  # the shared server's port; ASKWRIGHT_PORT moves it (0 picks a free one)
 PAGE = Path(__file__).resolve().parent / "page"
 BUNDLE = re.compile(r"^(those|these|both|all of)\b|\bplus\b", re.I)
@@ -2368,15 +2368,13 @@ _DISK = {}
 
 
 def disk_version():
-    """The VERSION in this script as it is on disk now; differs from VERSION once a merge or update lands under a
-    running server, whose page files are then newer than its routes."""
-    me = Path(__file__).resolve()
+    """VERSION as this script reads on disk now: newer once an update lands under a running server."""
     try:
-        mtime = me.stat().st_mtime
-        if _DISK.get("mtime") != mtime:
+        me = Path(__file__).resolve()
+        if _DISK.get("t") != me.stat().st_mtime:
             m = re.search(r'^VERSION = "([^"]+)"', me.read_text(encoding="utf-8"), re.M)
-            _DISK.update(mtime=mtime, version=m.group(1) if m else VERSION)
-        return _DISK["version"]
+            _DISK.update(t=me.stat().st_mtime, v=m and m.group(1))
+        return _DISK["v"] or VERSION
     except OSError:
         return VERSION
 
@@ -3287,7 +3285,7 @@ def cmd_dashboard(a):
     if info and info.get("alive"):
         if version_tuple(info.get("version")) >= version_tuple(VERSION):
             return show_existing(info, a.open)
-        stop_quietly(d)  # older than this script: its routes miss page files the merge added
+        stop_quietly(d)  # older than this script, so missing routes for newer page files
         info = server_info(d, check=False)
     if a.detach:
         return detach(a)

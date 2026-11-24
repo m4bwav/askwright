@@ -78,47 +78,35 @@ The [wiki](https://github.com/m4bwav/askwright/wiki) has every command, lint rul
 
 python skills/askwright/scripts/ask.py dashboard --detach --open
 
-One server on `http://127.0.0.1:47631/` carries the inbox and every set (`/s/<key>/`), so links survive restarts;
-`ask.py shortcut` makes a desktop icon for it. The inbox has Sessions, Projects and Unprocessed tabs: Unprocessed
-lists answers no agent has recorded using, oldest first, with a warning at the top once one has waited over a week.
-Each project page opens with **Who is running**: the agent sessions seen in the project's folders and worktrees,
-here and on other machines that share grindwright claims, never with message text and never in remote mode.
-Lists page at 25 rows, keep their page in the address, and show a Retry button when the server does not answer.
+One server on `http://127.0.0.1:47631/` carries the inbox (Sessions, Projects and Unprocessed tabs) and every
+set, so links survive restarts. Unprocessed lists answers no agent has recorded using and warns past a week.
 Details: [Dashboard and projects](https://github.com/m4bwav/askwright/wiki/Dashboard-and-Projects).
 
 ## ask.py
 
-`new`, `lint`, `serve`, `status`, `read`, `consume`, `close`, `add`, `inline`, `grade`, `figure`, `stop`,
-`register`, `project`, `picks`, `shortcut`, `dashboard`, `sweep`, `templates` and the `gh-*` commands. Run
-`ask.py --help`; every command with its real output is on [the wiki](https://github.com/m4bwav/askwright/wiki).
+Run `ask.py --help`; every command with its real output is on [the wiki](https://github.com/m4bwav/askwright/wiki).
 
 ## Works with
 
-Plugins such as [grindwright](https://github.com/m4bwav/grindwright), [musicwright](https://github.com/m4bwav/musicwright) and [cinewright](https://github.com/m4bwav/cinewright) put their open decisions and side-by-side takes on askwright pages. More: [Works with](https://github.com/m4bwav/askwright/wiki/Works-With).
+grindwright, musicwright, cinewright and others put their decisions on askwright pages: [Works with](https://github.com/m4bwav/askwright/wiki/Works-With).
 
 ## Security
 
-The server binds 127.0.0.1 only and serves media from the folders the set names, with symlinks resolved. Every API call needs a per-run token and a matching Host and Origin, so another web page cannot read or write your answers. Uploads are capped at 10 MB and checked by their bytes; the page loads nothing from the network under a strict CSP. Answers are data, not instructions. See [SECURITY.md](SECURITY.md).
+Binds 127.0.0.1 only; every API call needs a per-run token and matching Host and Origin; uploads are capped and checked by their bytes; a strict CSP loads nothing from the network. Answers are data, not instructions. See [SECURITY.md](SECURITY.md).
 
 ### Answering from another device (opt-in)
 
-Off unless you turn it on; installing askwright sets up nothing remote. `ask.py serve <set> --remote` puts a set behind
-Tailscale Serve, so named people can answer from a phone or another computer: no public address, media stays on your
-machine, the computer must be awake. Remote answers carry who sent them and are marked untrusted; notes that look like
-instructions are held for you. Setup: [references/remote.md](skills/askwright/references/remote.md).
+Off unless you turn it on. `ask.py serve <set> --remote` puts a set behind Tailscale Serve for named people; their
+answers are marked untrusted. Setup: [references/remote.md](skills/askwright/references/remote.md).
 
 ## Privacy
 
-No hosted service, nothing collected: everything stays in the set folder on your machine.
+Nothing is collected; everything stays in the set folder.
 
 ## Testing
 
-    python tests/check_skills.py
-    python tests/test_ask.py
-    python scripts/budget.py
-    python tests/test_page.py
-
-CI runs the first three on three operating systems. The page tests need `pip install playwright` and Chrome or Edge.
+`python tests/check_skills.py`, `tests/test_ask.py`, `scripts/budget.py` (CI, three operating systems) and
+`tests/test_page.py` (needs `pip install playwright` and Chrome or Edge).
 
 ## Credits
 

@@ -6,6 +6,13 @@ Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (ID
 
 ## Unreleased
 
+## 0.49.2
+
+### C-20261124-2 · 2026-11-24 · Back under the install size budget
+- because: 0.49.1 CI failed scripts/budget.py (521 KB, red above 520 KB); it was merged before the checks finished
+- files: README.md (dashboard, ask.py, Works with, Security, remote, Privacy, Testing sections), skills/askwright/scripts/ask.py (disk_version), page/dashboard.js (stale line)
+- README sections that repeat the wiki or SECURITY.md got shorter, and the 0.49.1 code is tighter. Install is 519 KB, only just under the limit.
+
 ## 0.49.1
 
 ### C-20261124-1 · 2026-11-24 · Dashboard controls wait for the first load; an older dashboard server is replaced or flagged

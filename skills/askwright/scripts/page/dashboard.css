@@ -51,8 +51,8 @@ article p { margin: 8px 0; line-height: 1.5; }
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); max-width: calc(100% - 32px); padding: 12px 18px; border-radius: 8px; background: #182536; color: #fff; font-weight: 600; box-shadow: 0 4px 14px #0004; }
 .open { background: #244b79; color: #fff; border-color: #244b79; }
 .open:hover { background: #173657; }
-#error, .session-error { color: #9b2525; }
-#error { background: #ffebeb; padding: 16px; border-radius: 6px; }
+#error, #stale, .session-error { color: #9b2525; }
+#error, #stale { background: #ffebeb; padding: 16px; border-radius: 6px; }
 footer { margin-top: 28px; color: #46586e; font-size: .9rem; }
 #views, .actions { display: flex; flex-wrap: wrap; gap: 10px; }
 #views button[aria-pressed=true] { background: #244b79; color: #fff; }
@@ -124,7 +124,7 @@ section h2 { font-size: 1.15rem; margin: 28px 0 12px; }
   .open:hover { background: #c7ddff; }
   #views button[aria-pressed=true] { background: #a6caff; color: #12243d; }
   .snooze > summary, .snooze-menu { background: #1d2939; border-color: #65768b; }
-  #error { background: #402021; }
+  #error, #stale { background: #402021; }
   #error, .session-error { color: #ffb6b6; }
   :focus-visible { outline-color: #ffbc75; }
 }

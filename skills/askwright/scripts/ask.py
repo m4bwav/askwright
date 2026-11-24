@@ -38,7 +38,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-VERSION = "0.49.0"
+VERSION = "0.49.1"
 DEFAULT_PORT = 47631  # the shared server's port; ASKWRIGHT_PORT moves it (0 picks a free one)
 PAGE = Path(__file__).resolve().parent / "page"
 BUNDLE = re.compile(r"^(those|these|both|all of)\b|\bplus\b", re.I)
@@ -2364,6 +2364,23 @@ def hub_port():
         return DEFAULT_PORT
 
 
+_DISK = {}
+
+
+def disk_version():
+    """The VERSION in this script as it is on disk now; differs from VERSION once a merge or update lands under a
+    running server, whose page files are then newer than its routes."""
+    me = Path(__file__).resolve()
+    try:
+        mtime = me.stat().st_mtime
+        if _DISK.get("mtime") != mtime:
+            m = re.search(r'^VERSION = "([^"]+)"', me.read_text(encoding="utf-8"), re.M)
+            _DISK.update(mtime=mtime, version=m.group(1) if m else VERSION)
+        return _DISK["version"]
+    except OSError:
+        return VERSION
+
+
 def version_tuple(v):
     return tuple(int(x) for x in re.findall(r"[0-9]+", str(v or "0"))[:3])
 
@@ -2653,7 +2670,9 @@ class Handler(BaseHTTPRequestHandler):
             if not self.origin_ok():
                 return self.fail(403, "wrong origin")
             if path == "/api/sessions":
-                return self.send_json(200, list_sessions())
+                disk = disk_version()
+                return self.send_json(200, dict(list_sessions(), server_version=VERSION,
+                                                stale=disk if disk != VERSION else None))
             if path == "/api/projects":
                 return self.send_json(200, list_projects())
             if path == "/api/project":
@@ -3266,7 +3285,10 @@ def cmd_dashboard(a):
         return stop_server(d)
     info = server_info(d)
     if info and info.get("alive"):
-        return show_existing(info, a.open)
+        if version_tuple(info.get("version")) >= version_tuple(VERSION):
+            return show_existing(info, a.open)
+        stop_quietly(d)  # older than this script: its routes miss page files the merge added
+        info = server_info(d, check=False)
     if a.detach:
         return detach(a)
     d.mkdir(parents=True, exist_ok=True)

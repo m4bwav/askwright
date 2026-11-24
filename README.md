@@ -23,12 +23,9 @@ Every feature with screenshots: [the wiki](https://github.com/m4bwav/askwright/w
 
 ## Study mode: quizzes that teach
 
-Set `"mode": "study"` and the same page becomes a quiz. Each multiple-choice question has one right option and a
-`why` on every option, so the review after "Submit" shows the score, a score per topic ("Net force 2 / 3 · practice
-this"), and for every question your answer, the right one and why each option is right or wrong. Written
-questions wait for the agent to grade them (`ask.py grade`). "Try again" reshuffles the options and keeps earlier
-attempts in `results.json`. The answer key and the real option ids never reach the browser before submitting.
-Graphs, force diagrams and simple drawings can be drawn from a few lines of JSON (`"figure"` media), in either mode.
+Set `"mode": "study"` and the page becomes a quiz: one right option per question with a `why` on every option,
+a review with a score per topic after "Submit", written answers graded by the agent (`ask.py grade`), and the
+answer key kept off the browser until then. `"figure"` media draws graphs and force diagrams from JSON.
 How to write good wrong answers and explanations: [the Study mode wiki page](https://github.com/m4bwav/askwright/wiki/Study-Mode#how-to-write-a-study-set).
 
 ## What the agent gets back
@@ -56,10 +53,7 @@ As a plain skill for any agent that reads Agent Skills (Copilot, Codex, Cursor a
 and link `skills/askwright` into the agent's skills folder:
 
     git clone https://github.com/m4bwav/askwright
-    # Windows (a junction needs no admin rights)
-    New-Item -ItemType Junction -Path "$HOME\.claude\skills\askwright" -Target "$PWD\askwright\skills\askwright"
-    # macOS / Linux
-    ln -s "$PWD/askwright/skills/askwright" ~/.claude/skills/askwright
+    ln -s "$PWD/askwright/skills/askwright" ~/.claude/skills/askwright   # a junction on Windows
 
 It needs Python 3.9 or later and nothing else. Use `python` on Windows and `python3` on macOS and Linux.
 
@@ -77,9 +71,8 @@ installed it will write a set and serve it. By hand:
 
 ## Documentation
 
-The [wiki](https://github.com/m4bwav/askwright/wiki) has every command with its real output, the question-set
-format, every lint rule with its message, recipes and an FAQ. [skills/askwright/references/schema.md](skills/askwright/references/schema.md)
-lists every field.
+The [wiki](https://github.com/m4bwav/askwright/wiki) has every command, lint rule, recipe and an FAQ;
+[schema.md](skills/askwright/references/schema.md) lists every field.
 
 ## One inbox for all sessions, one page per project
 
@@ -88,17 +81,9 @@ python skills/askwright/scripts/ask.py dashboard --detach --open
 One server on `http://127.0.0.1:47631/` carries the inbox and every set (`/s/<key>/`), so links survive restarts;
 `ask.py shortcut` makes a desktop icon for it. The inbox has Sessions, Projects and Unprocessed tabs: Unprocessed
 lists answers no agent has recorded using, oldest first, with a warning at the top once one has waited over a week.
-Each project page opens with **Who is running**: every Claude Code session seen in the project's folders and their
-git worktrees on this machine (live process, recent transcript, a session started in a parent folder that works
-here, or a grindwright claim), with its branch, folder, start, last activity, running subagents and how it is known.
-A claim with no activity reads as possibly stale with its age; a source that cannot be read is named, never shown
-as an empty list. Rows show titles, ids, branches and times, never message text, and are not served in remote mode.
-When the project has a grindwright state, a `grindwright` link opens its grind page inside the hub (`/grind/<slug>/`),
-with a link back. `python skills/askwright/scripts/agents.py --dir PATH` prints the same list as JSON.
-Other computers: when the project's grind profile shares claims through its repository (`work.remote`), the list
-also shows the other machines' shared grindwright claims and the rows each machine published to a
-`grind-presence/<machine>` ref (`agents.py --dir PATH --publish`, or every three minutes from the hub started with
-`ASKWRIGHT_PRESENCE=1`), each with the machine name and the age of its evidence.
+Each project page opens with **Who is running**: the agent sessions seen in the project's folders and worktrees,
+here and on other machines that share grindwright claims, never with message text and never in remote mode.
+Lists page at 25 rows, keep their page in the address, and show a Retry button when the server does not answer.
 Details: [Dashboard and projects](https://github.com/m4bwav/askwright/wiki/Dashboard-and-Projects).
 
 ## ask.py
@@ -106,11 +91,6 @@ Details: [Dashboard and projects](https://github.com/m4bwav/askwright/wiki/Dashb
 `new`, `lint`, `serve`, `status`, `read`, `consume`, `close`, `add`, `inline`, `grade`, `figure`, `stop`,
 `register`, `project`, `picks`, `shortcut`, `dashboard`, `sweep`, `templates` and the `gh-*` commands. Run
 `ask.py --help`; every command with its real output is on [the wiki](https://github.com/m4bwav/askwright/wiki).
-`ask.py sweep` lists every answer set nothing records as used, sorts it into used-but-not-marked, needs a look and
-not yet processed, and with `--apply` marks the used ones and writes one prompt per project for the rest.
-
-Every command prints one JSON object, except `--version` (plain text) and a usage mistake (argparse text on
-standard error, exit code 2).
 
 ## Works with
 
@@ -129,23 +109,20 @@ instructions are held for you. Setup: [references/remote.md](skills/askwright/re
 
 ## Privacy
 
-askwright has no hosted service and collects nothing. Questions, answers, notes and pasted images stay in the set
-folder on your machine.
+No hosted service, nothing collected: everything stays in the set folder on your machine.
 
 ## Testing
 
-    python tests/check_skills.py     # structure, links, line endings, secrets
-    python tests/test_ask.py         # ask.py: lint rules and the server
-    python scripts/budget.py         # size budget
-    python tests/test_page.py        # the page in Chrome or Edge (development only)
+    python tests/check_skills.py
+    python tests/test_ask.py
+    python scripts/budget.py
+    python tests/test_page.py
 
-CI runs the first three on Windows, macOS and Linux with Python 3.9 and 3.14. The page tests need
-`pip install playwright` and Chrome or Edge, because the bundled Chromium does not play H.264.
-`ASKW_SET=<set folder>` runs the generic page checks on a copy of a real set.
+CI runs the first three on three operating systems. The page tests need `pip install playwright` and Chrome or Edge.
 
 ## Credits
 
-The design draws on the GOV.UK Design System (one question per page, check answers, task list), on review tools
+The design draws on the GOV.UK Design System, on review tools
 such as Prodigy, Label Studio and Frame.io, and on survey-method research. [RESEARCH.md](RESEARCH.md) cites each
 source. The page tests use [axe-core](https://github.com/dequelabs/axe-core) (MPL-2.0), vendored under
 `tests/vendor/` and not shipped with the skill.

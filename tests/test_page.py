@@ -394,6 +394,86 @@ class DashboardPageTests(PageCase):
         p.wait_for_selector("#sessions:has-text('No sessions registered yet')")
 
 
+    def fake_sessions(self, n):
+        now = "2026-11-23T10:00:00Z"
+        return [{"id": "s%02d" % i, "title": "Set %02d" % i, "path": "/x/%d" % i, "pending": 1, "answered": 0,
+                 "created": now, "last_worked": now, "state": "inbox", "unprocessed": True, "waiting_days": 1,
+                 "project": {"slug": "p%d" % (i % 30), "name": "Project %02d" % (i % 30)}} for i in range(n)]
+
+    def test_paging_keeps_place_in_url(self):
+        body = json.dumps({"ok": True, "sessions": self.fake_sessions(60)})
+        self.page.route("**/api/sessions", lambda r: r.fulfill(status=200, content_type="application/json", body=body))
+        p = self.open()
+        self.assertEqual(p.locator("#sessions tbody").count(), 25)
+        nav = p.locator("#sessions .pager")
+        self.assertIn("Showing 1-25 of 60", nav.inner_text())
+        nav.get_by_role("button", name="Next").click()
+        p.wait_for_selector("#sessions .pager:has-text('Showing 26-50 of 60')")
+        self.assertIn("sessions-page=2", p.url)
+        p.reload()
+        p.wait_for_selector("#sessions .pager:has-text('Showing 26-50 of 60')")
+        nav = p.locator("#sessions .pager")
+        nav.get_by_label("Rows per page").select_option("100")
+        p.wait_for_function("() => document.querySelectorAll('#sessions tbody').length === 60")
+        p.click("#tab-projects")
+        self.assertEqual(p.locator("#projects .pager").count(), 1)
+        self.assertIn("Showing 1-25 of 30", p.locator("#projects .pager").inner_text())
+        self.assertEqual(self.errors, [])
+
+    def test_first_load_failure_offers_retry(self):
+        state = {"fail": True}
+        good = json.dumps({"ok": True, "sessions": self.fake_sessions(2)})
+        self.page.route("**/api/sessions", lambda r: r.fulfill(status=500, content_type="application/json",
+                        body='{"ok":false,"error":"server down"}') if state["fail"] else
+                        r.fulfill(status=200, content_type="application/json", body=good))
+        self.page.goto(self.url)
+        self.page.wait_for_selector("#error:visible")
+        self.assertIn("Cannot load sessions: server down", self.page.locator("#error").inner_text())
+        self.assertIsNone(self.page.locator("#sessions").get_attribute("aria-busy"))
+        state["fail"] = False
+        self.page.locator("#error .retry").click()
+        self.page.wait_for_selector("#sessions tbody")
+        self.page.wait_for_selector("#error", state="hidden")
+
+    def project(self, sets):
+        now = "2026-11-23T10:00:00Z"
+        return {"name": "Reel", "slug": "reel", "status": "active", "description": "", "goals": [], "timeline": [],
+                "prompt_files": [], "handoffs": [], "repos": [], "dirs": [], "created": now, "last_worked": now,
+                "first_prompt": None, "last_prompt": None, "prompt_runs": 0, "pending": 0, "answered": 0,
+                "links": {}, "sets": [{"id": "s%d" % i, "title": "Set %d" % i, "pending": 0, "answered": 1,
+                                       "created": now, "last_worked": now} for i in range(sets)]}
+
+    def serve(self, fail=None, sets=0):
+        state = {"fail": fail}
+        def handler(route):
+            if state["fail"]:
+                return route.fulfill(status=500, content_type="application/json", body='{"ok":false,"error":"%s"}' % state["fail"])
+            route.fulfill(status=200, content_type="application/json", body=json.dumps({"ok": True, "project": self.project(sets)}))
+        self.page.route("**/api/project?*", handler)
+        self.page.goto(self.url + "projects/reel")
+        return state
+
+    def test_sets_page_and_empty_state(self):
+        self.serve(sets=30)
+        p = self.page
+        p.wait_for_selector("#sets .pager:has-text('Showing 1-25 of 30')")
+        self.assertEqual(p.locator("#sets .set-card").count(), 25)
+        p.locator("#sets .pager").get_by_role("button", name="Next").click()
+        p.wait_for_function("() => document.querySelectorAll('#sets .set-card').length === 5")
+        self.assertIn("sets-page=2", p.url)
+
+    def test_empty_and_error_with_retry(self):
+        state = self.serve(fail="boom")
+        p = self.page
+        p.wait_for_selector("#error .retry")
+        self.assertIn("boom", p.locator("#error").inner_text())
+        self.assertEqual(p.locator("#name").inner_text(), "Project could not be loaded")
+        state["fail"] = None
+        p.locator("#error .retry").click()
+        p.wait_for_selector("#sets:has-text('No question sets yet')")
+        self.assertTrue(p.locator("#error").is_hidden())
+
+
 class GenericPageTests(PageCase):
     """Hold for any valid set: the fixture by default, or ASKW_SET."""
 
@@ -637,6 +717,17 @@ class FixturePageTests(PageCase):
             line = p.evaluate("() => { const t = document.querySelector('#set-title');"
                               " return t.getBoundingClientRect().height <= parseFloat(getComputedStyle(t).lineHeight) + 1; }")
             self.assertTrue(line, "width %d: the set title wrapped" % width)
+
+    def test_question_page_load_failure_offers_retry(self):
+        state = {"fail": True}
+        self.page.route("**/api/set", lambda r: r.fulfill(status=503, content_type="application/json",
+                        body='{"ok":false,"error":"busy"}') if state["fail"] else r.continue_())
+        self.page.goto(self.url)
+        self.page.wait_for_selector("h1:has-text('could not be loaded')")
+        self.assertIsNone(self.page.locator("#main").get_attribute("aria-busy"))
+        state["fail"] = False
+        self.page.locator("#main .retry").click()
+        self.page.wait_for_selector("[data-q]")
 
     def test_no_console_errors_with_csp(self):
         self.csp_clean()

@@ -29,18 +29,19 @@
   </div>
   <div id="panel-sessions" role="tabpanel" aria-labelledby="tab-sessions">
   <nav id="views" aria-label="Session lists">
-    <button type="button" data-view="inbox" aria-pressed="true">Inbox</button>
-    <button type="button" data-view="snoozed" aria-pressed="false">Snoozed</button>
-    <button type="button" data-view="archived" aria-pressed="false">Archive</button>
+    <button type="button" data-view="inbox" disabled aria-pressed="true">Inbox</button>
+    <button type="button" data-view="snoozed" disabled aria-pressed="false">Snoozed</button>
+    <button type="button" data-view="archived" disabled aria-pressed="false">Archive</button>
   </nav>
   <form id="filters" role="search" aria-label="Find question sessions">
-    <div><label for="search">Find a session</label><input id="search" type="search" placeholder="Title, project or agent"></div>
-    <div><label for="project-filter">Project</label><select id="project-filter"><option value="">All projects</option></select></div>
-    <div><label for="product">Product</label><select id="product"><option value="">All products</option></select></div>
-    <label class="check"><input id="show-all" type="checkbox"> All sessions, including answered</label>
-    <label class="check"><input id="show-broken" type="checkbox"> <span>Unavailable sessions (<span id="broken-count">0</span>)</span></label>
-    <button id="refresh" type="button">Refresh</button>
+    <div><label for="search">Find a session</label><input id="search" type="search" disabled placeholder="Title, project or agent"></div>
+    <div><label for="project-filter">Project</label><select id="project-filter" disabled><option value="">All projects</option></select></div>
+    <div><label for="product">Product</label><select id="product" disabled><option value="">All products</option></select></div>
+    <label class="check"><input id="show-all" type="checkbox" disabled> All sessions, including answered</label>
+    <label class="check"><input id="show-broken" type="checkbox" disabled> <span>Unavailable sessions (<span id="broken-count">0</span>)</span></label>
+    <button id="refresh" type="button" disabled>Refresh</button>
   </form>
+  <p id="stale" role="alert" hidden></p>
   <p id="error" role="alert" hidden></p>
   <p id="action-status" role="status"></p>
   <section id="sessions" aria-label="Question sessions" tabindex="-1" aria-busy="true"><p class="loading">Loading sessions…</p></section>

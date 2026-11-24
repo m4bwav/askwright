@@ -431,9 +431,27 @@ class DashboardPageTests(PageCase):
         self.assertIn("Cannot load sessions: server down", self.page.locator("#error").inner_text())
         self.assertIsNone(self.page.locator("#sessions").get_attribute("aria-busy"))
         state["fail"] = False
+        for sel in ("#search", "#project-filter", "#product", "#show-all", "#show-broken", "#refresh", "[data-view='inbox']"):
+            self.assertTrue(self.page.locator(sel).is_disabled(), sel + " is usable before any sessions loaded")
         self.page.locator("#error .retry").click()
         self.page.wait_for_selector("#sessions tbody")
         self.page.wait_for_selector("#error", state="hidden")
+        for sel in ("#search", "#project-filter", "#product", "#show-all", "#show-broken", "#refresh", "[data-view='inbox']"):
+            self.assertTrue(self.page.locator(sel).is_enabled(), sel + " stayed disabled after the load")
+
+    def test_every_script_and_style_is_served(self):
+        # A server older than its page files 404s a script the HTML names, and the page silently stops drawing.
+        p = self.open()
+        for src in p.locator("script[src], link[rel=stylesheet]").evaluate_all(
+                "els => els.map(e => e.src || e.href)"):
+            self.assertEqual(p.request.get(src).status, 200, src)
+
+    def test_stale_server_shows_restart_line(self):
+        body = json.dumps({"ok": True, "sessions": self.fake_sessions(2), "server_version": "0.1.0", "stale": "9.9.9"})
+        self.page.route("**/api/sessions", lambda r: r.fulfill(status=200, content_type="application/json", body=body))
+        p = self.open()
+        p.wait_for_selector("#stale:visible")
+        self.assertIn("ask.py dashboard", p.locator("#stale").inner_text())
 
     def project(self, sets):
         now = "2026-11-23T10:00:00Z"

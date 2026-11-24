@@ -6,6 +6,13 @@ Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (ID
 
 ## Unreleased
 
+## 0.49.1
+
+### C-20261124-1 · 2026-11-24 · Dashboard controls wait for the first load; an older dashboard server is replaced or flagged
+- because: user report ("all session pages doesn't work any more"; inputs were usable before the list loaded)
+- files: skills/askwright/scripts/ask.py (cmd_dashboard, disk_version, /api/sessions), page/dashboard.html, dashboard.js, dashboard.css; tests/test_page.py
+- A dashboard started on 0.48.1 kept running after 0.49.0 merged under it, 404ed the new pager.js, and the sessions list stopped drawing. `ask.py dashboard` now replaces a running server older than itself; /api/sessions reports when the script on disk is newer and the page shows a restart line. Filters, list buttons and Refresh start disabled and turn on after the first successful load. New page tests: controls disabled until loaded, every script and stylesheet answers 200, the stale line shows.
+
 ## 0.49.0
 
 ### C-20261123-1 · 2026-11-23 · Paging, loading, error-with-Retry and empty states on the dashboard, project and question pages

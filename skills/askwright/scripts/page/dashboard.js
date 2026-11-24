@@ -506,12 +506,12 @@ async function loadSessions() {
       render();
       renderUnconsumed();
     }
-    // The controls stay off until the first list arrives, so nobody filters a list that is not there.
+    // Controls stay off until the first list arrives.
     for (const c of document.querySelectorAll("#filters [disabled], [data-view][disabled]")) c.disabled = false;
     const stale = document.querySelector("#stale");
     stale.hidden = !data.stale;
-    stale.textContent = data.stale ? `This server runs askwright ${data.server_version}, but ${data.stale} is on disk, ` +
-      "so parts of this page may not load. Restart it: ask.py dashboard (it replaces an older server)." : "";
+    stale.textContent = data.stale ? `Server ${data.server_version} is older than ${data.stale} on disk; ` +
+      "run ask.py dashboard to restart it." : "";
     try {
       const list = (await api("/api/projects")).projects;
       const key = JSON.stringify(list.map(p => [p.slug, p.status, p.direction]));

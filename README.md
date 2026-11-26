@@ -44,7 +44,7 @@ The agent is told never to fill them with its guess.
 
 ## Install
 
-As a Claude Code plugin:
+In Claude Code:
 
     /plugin marketplace add m4bwav/askwright
     /plugin install askwright@askwright

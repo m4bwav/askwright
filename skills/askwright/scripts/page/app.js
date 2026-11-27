@@ -957,6 +957,128 @@
     if (menu) fs.append(menu.el);
     return fs;
   }
+  // ------------------------------------------------------------ editor view: zoom where clicked, pan, pinch, fit, keys
+  // Shared by the pixels and paint editors. st: { zoom(), setZoom(z), size() -> [W, H], cancel(), undo(), redo(), key(k) }.
+  // Capture listeners on the canvas run before the editor's own, so a pan, zoom or pinch never paints.
+  const NAV_HINT = "Pinch or Ctrl+wheel zooms where you point; two fingers, Space+drag or the hand pans.";
+  function pxGrid(ctx, W, H, z) {
+    ctx.strokeStyle = "rgba(128,128,128,.35)"; ctx.lineWidth = 1; ctx.beginPath();
+    for (let x = 0; x <= W; x++) { ctx.moveTo(x * z + 0.5, 0); ctx.lineTo(x * z + 0.5, H * z); }
+    for (let y = 0; y <= H; y++) { ctx.moveTo(0, y * z + 0.5); ctx.lineTo(W * z, y * z + 0.5); }
+    ctx.stroke();
+  }
+  function pxAt(canvas, e, W, H) {
+    const r = canvas.getBoundingClientRect();
+    const x = Math.floor((e.clientX - r.left) / r.width * W), y = Math.floor((e.clientY - r.top) / r.height * H);
+    return x >= 0 && y >= 0 && x < W && y < H ? [x, y] : null;
+  }
+  const zStep = (z, d) => d > 0 ? Math.min(64, z + (z >= 8 ? 2 : 1)) : Math.max(1, z - (z > 8 ? 2 : 1));
+  function editorView(fs, wrap, canvas, st) {
+    const nav = { mode: "draw" }, pts = new Map();
+    let pan = null, pinch = null, space = false, over = false;
+    const cursor = h("div", { class: "px-cursor", hidden: true });
+    wrap.append(cursor);
+    function zoomAt(z, cx, cy) {
+      const old = st.zoom(), [W, H] = st.size();
+      z = Math.max(1, Math.min(64, Math.round(z)));
+      if (!W || z === old) return;
+      const r = canvas.getBoundingClientRect(), wr = wrap.getBoundingClientRect();
+      const ox = wr.left + wrap.clientLeft, oy = wr.top + wrap.clientTop;
+      if (cx == null) { cx = ox + wrap.clientWidth / 2; cy = oy + wrap.clientHeight / 2; }
+      const fx = Math.max(0, Math.min(W, (cx - r.left) / old)), fy = Math.max(0, Math.min(H, (cy - r.top) / old));
+      st.setZoom(z);
+      wrap.scrollLeft = fx * z - (cx - ox); wrap.scrollTop = fy * z - (cy - oy);
+    }
+    nav.zoomAt = zoomAt;
+    nav.step = (d, cx, cy) => zoomAt(zStep(st.zoom(), d), cx, cy);
+    nav.fit = () => {
+      const [W, H] = st.size();
+      if (!W) return;
+      const vh = Math.min(window.innerHeight * 0.75, 960);
+      zoomAt(Math.max(1, Math.min(64, Math.floor(Math.min(wrap.clientWidth / W, vh / H)))));
+      wrap.scrollLeft = wrap.scrollTop = 0;
+    };
+    // Outline of the brush under the pointer, so a 1 px brush at low zoom shows where it lands.
+    nav.hover = (p, n) => {
+      if (!p || !n) { cursor.hidden = true; return; }
+      const z = st.zoom(), off = Math.floor((n - 1) / 2);
+      Object.assign(cursor.style, { left: (p[0] - off) * z + "px", top: (p[1] - off) * z + "px", width: n * z + "px", height: n * z + "px" });
+      cursor.hidden = false;
+    };
+    const mid = () => { const v = [...pts.values()]; return [(v[0][0] + v[1][0]) / 2, (v[0][1] + v[1][1]) / 2, Math.hypot(v[0][0] - v[1][0], v[0][1] - v[1][1]) || 1]; };
+    const stop = (e) => { e.stopImmediatePropagation(); e.preventDefault(); };
+    canvas.addEventListener("pointerdown", (e) => {
+      if (fs.disabled) return;
+      if (e.pointerType === "touch") {
+        pts.set(e.pointerId, [e.clientX, e.clientY]);
+        if (pts.size >= 2) {  // a second finger: undo the stroke the first one began, then pinch and pan
+          st.cancel(); pan = null; cursor.hidden = true;
+          const [x, y, d] = mid();
+          pinch = { x, y, d, z: st.zoom() };
+          stop(e); return;
+        }
+      }
+      if (nav.mode === "pan" || space || e.button === 1) {
+        canvas.setPointerCapture(e.pointerId);
+        pan = { x: e.clientX, y: e.clientY, l: wrap.scrollLeft, t: wrap.scrollTop };
+        canvas.classList.add("panning"); stop(e);
+      } else if (nav.mode === "zoom") {
+        nav.step(e.button === 2 || e.shiftKey || e.altKey ? -1 : 1, e.clientX, e.clientY); stop(e);
+      }
+    }, true);
+    canvas.addEventListener("pointermove", (e) => {
+      if (pts.has(e.pointerId)) pts.set(e.pointerId, [e.clientX, e.clientY]);
+      if (pinch && pts.size >= 2) {
+        const [x, y, d] = mid();
+        zoomAt(pinch.z * d / pinch.d, x, y);
+        wrap.scrollLeft -= x - pinch.x; wrap.scrollTop -= y - pinch.y;
+        pinch.x = x; pinch.y = y; stop(e);
+      } else if (pinch) stop(e);
+      else if (pan) { wrap.scrollLeft = pan.l - (e.clientX - pan.x); wrap.scrollTop = pan.t - (e.clientY - pan.y); stop(e); }
+    }, true);
+    const up = (e) => {
+      pts.delete(e.pointerId);
+      if (pinch) { if (!pts.size) pinch = null; stop(e); }
+      else if (pan) { pan = null; canvas.classList.remove("panning"); stop(e); }
+    };
+    canvas.addEventListener("pointerup", up, true);
+    canvas.addEventListener("pointercancel", up, true);
+    canvas.addEventListener("pointerenter", () => { over = true; });
+    canvas.addEventListener("pointerleave", () => { over = false; cursor.hidden = true; });
+    wrap.addEventListener("wheel", (e) => {
+      if (!(e.ctrlKey || e.metaKey)) return;  // plain wheel scrolls; Ctrl+wheel (and trackpad pinch) zooms at the pointer
+      e.preventDefault();
+      nav.step(e.deltaY < 0 ? 1 : -1, e.clientX, e.clientY);
+    }, { passive: false });
+    const live = () => document.body.contains(canvas) && !fs.disabled;
+    document.addEventListener("keydown", (e) => {
+      if (!live() || typing() || ["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName) && document.activeElement.type !== "radio") return;
+      const k = e.key.toLowerCase(), mod = e.ctrlKey || e.metaKey;
+      let ok = true;
+      if (mod && k === "z") e.shiftKey ? st.redo() : st.undo();
+      else if (mod && k === "y") st.redo();
+      else if (mod || e.altKey) ok = false;
+      else if (k === " " && over) { space = true; canvas.classList.add("pan-ready"); }
+      else if (k === "=" || k === "+") nav.step(1);
+      else if (k === "-") nav.step(-1);
+      else if (k === "0" || k === "f") nav.fit();
+      else if (k === "h" || k === "z") nav.set(k === "h" ? "pan" : "zoom");
+      else ok = st.key(k);
+      if (ok) stop(e);
+    }, true);
+    document.addEventListener("keyup", (e) => { if (e.key === " ") { space = false; canvas.classList.remove("pan-ready"); } });
+    // Hand and zoom sit beside the editor's own tools as radios; nav.set(mode) checks the matching one.
+    nav.radios = (name) => [["pan", "hand", "Pan: drag to move around (H, Space+drag, two fingers)"],
+      ["zoom", "zin", "Zoom: click to zoom in there, Shift or right-click to zoom out (Z, pinch, Ctrl+wheel)"]].map(([id, ic, label]) =>
+      h("label", { class: "px-tool icon-tool", title: label },
+        h("input", { type: "radio", name, value: id, "aria-label": label, onchange: () => { nav.mode = id; canvas.dataset.mode = id; } }), icon(ic)));
+    nav.set = (mode) => {
+      const r = fs.querySelector("input[type=radio][value='" + mode + "']");
+      if (r) { r.checked = true; r.dispatchEvent(new Event("change")); }
+    };
+    nav.draw = () => { nav.mode = "draw"; canvas.dataset.mode = "draw"; };
+    return nav;
+  }
   // ------------------------------------------------------------ pixels: point at exact pixels of one image
   const PX_COLORS = ["#33aaff", "#ff4433", "#33cc66", "#ffaa00", "#aa66ff", "#ff66cc"];
   function pxText(q, px) {
@@ -969,7 +1091,7 @@
     const color = (b) => b.color || PX_COLORS[brushes.indexOf(b) % PX_COLORS.length];
     const marks = new Map();  // "x,y" -> brush id; one brush per pixel
     for (const [b, pts] of Object.entries(a.pixels || {})) for (const [x, y] of pts) marks.set(x + "," + y, b);
-    const undo = [];
+    const undo = [], redo = [];
     let tool = brushes[0] ? brushes[0].id : null, size = 1, W = 0, H = 0, zoom = q.scale || 0, stroke = null, regionsOn = true;
     // Layered mode: the canvas is base with top over it, and reveal/fill brushes show the fixed result per pixel.
     const lay = q.layers && q.layers.base && q.layers.top ? q.layers : null;
@@ -983,6 +1105,20 @@
     const count = h("span", { class: "px-count" });
     const zoomLabel = h("span", { class: "px-zoom" });
     const wrap = h("div", { class: "px-wrap" }, canvas);
+    const restore = (m2) => { marks.clear(); for (const [k, v] of m2) marks.set(k, v); };
+    const hist = (from, to) => { if (!from.length) return; to.push(new Map(marks)); restore(from.pop()); draw(); sync(); };
+    const nav = editorView(fs, wrap, canvas, {
+      zoom: () => zoom, setZoom: (z) => { zoom = z; draw(); }, size: () => [W, H],
+      cancel: () => { if (!stroke) return; restore(stroke.before); stroke = null; rectA = rectB = null; draw(); },
+      undo: () => hist(undo, redo), redo: () => hist(redo, undo),
+      key: (k) => {
+        const m2 = { b: "paint", r: "rect", w: "wand" }[k];
+        if (m2) { modeSel.value = m2; modeSel.dispatchEvent(new Event("change")); nav.draw(); tools.querySelector("input[value='" + tool + "']").checked = true; return true; }
+        if (k === "e") { nav.set("erase"); return true; }
+        if (k === "x") { showMarks = !showMarks; draw(); return !!lay; }
+        return false;
+      },
+    });
     const sync = () => {
       const px = {};
       for (const [k, b] of marks) (px[b] = px[b] || []).push(k.split(",").map(Number));
@@ -1028,12 +1164,7 @@
         ctx.strokeStyle = "#fff"; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
         ctx.strokeRect(x0 * z + 0.5, y0 * z + 0.5, w * z - 1, hh * z - 1); ctx.setLineDash([]);
       }
-      if (q.grid && z >= 6) {
-        ctx.strokeStyle = "rgba(128,128,128,.35)"; ctx.lineWidth = 1; ctx.beginPath();
-        for (let x = 0; x <= W; x++) { ctx.moveTo(x * z + 0.5, 0); ctx.lineTo(x * z + 0.5, H * z); }
-        for (let y = 0; y <= H; y++) { ctx.moveTo(0, y * z + 0.5); ctx.lineTo(W * z, y * z + 0.5); }
-        ctx.stroke();
-      }
+      if (q.grid && z >= 6) pxGrid(ctx, W, H, z);
       if (regionsOn) for (const r of q.regions || []) {
         ctx.strokeStyle = "rgba(255,255,255,.8)"; ctx.setLineDash([4, 3]); ctx.lineWidth = 1;
         ctx.strokeRect(r.x * z + 0.5, r.y * z + 0.5, r.w * z - 1, r.h * z - 1); ctx.setLineDash([]);
@@ -1041,11 +1172,7 @@
       canvas.style.width = W * z + "px"; canvas.style.height = H * z + "px";
       zoomLabel.textContent = z + "x";
     }
-    function at(e) {
-      const r = canvas.getBoundingClientRect();
-      const x = Math.floor((e.clientX - r.left) / r.width * W), y = Math.floor((e.clientY - r.top) / r.height * H);
-      return x >= 0 && y >= 0 && x < W && y < H ? [x, y] : null;
-    }
+    const at = (e) => pxAt(canvas, e, W, H);
     function regionAt(x, y) { return (q.regions || []).find((r) => x >= r.x && y >= r.y && x < r.x + r.w && y < r.y + r.h); }
     function paint(p, erase) {
       if (!p) return;
@@ -1097,6 +1224,7 @@
         const r = regionAt(p[0], p[1]);
         coord.textContent = "x " + p[0] + ", y " + p[1] + (r ? " · " + r.label + " (" + (p[0] - r.x) + ", " + (p[1] - r.y) + ")" : "");
       }
+      nav.hover(e.pointerType === "touch" || nav.mode !== "draw" ? null : p, mode === "paint" ? size : 1);
       if (stroke && mode === "rect") { if (p && rectA) { rectB = p; draw(); } }
       else if (stroke && mode === "paint") paint(p, stroke.erase);
     });
@@ -1104,7 +1232,7 @@
       if (!stroke) return;
       if (mode === "rect" && rectA && rectB) fillRect(rectA, rectB, stroke.erase);
       rectA = rectB = null; draw();
-      undo.push(stroke.before); if (undo.length > 100) undo.shift();
+      undo.push(stroke.before); redo.length = 0; if (undo.length > 100) undo.shift();
       stroke = null; sync();
     };
     canvas.addEventListener("pointerup", end);
@@ -1136,15 +1264,15 @@
     if (src.url && !src.missing) img.src = src.url;
     const tools = h("div", { class: "px-tools", role: "radiogroup", "aria-label": "Brush" });
     const toolBtn = (id, label, col) => h("label", { class: "px-tool" },
-      h("input", { type: "radio", name: "px-tool-" + q.id, value: id, checked: id === tool, onchange: () => { tool = id; } }),
+      h("input", { type: "radio", name: "px-tool-" + q.id, value: id, checked: id === tool, onchange: () => { tool = id; nav.draw(); } }),
       col ? swatch(col) : null, h("span", { text: label }));
     function swatch(col) { const el = h("span", { class: "px-swatch" }); el.style.background = col; return el; }
     for (const b of brushes) tools.append(toolBtn(b.id, b.label, color(b)));
-    tools.append(toolBtn("erase", "Eraser (or right-click)", null));
+    tools.append(toolBtn("erase", "Eraser (E, or right-click)", null), ...nav.radios("px-tool-" + q.id));
     const sizeSel = h("select", { "aria-label": "Brush size", onchange: () => { size = +sizeSel.value; } },
       [1, 2, 3].map((n) => h("option", { value: n, text: n + " px" })));
     const modeSel = h("select", { "aria-label": "Selection tool", onchange: () => { mode = modeSel.value; tolL.hidden = mode !== "wand"; } },
-      [["paint", "Brush"], ["rect", "Rectangle"], ["wand", "Magic wand"]].map(([v, t]) => h("option", { value: v, text: t })));
+      [["paint", "Brush (B)"], ["rect", "Rectangle (R)"], ["wand", "Magic wand (W)"]].map(([v, t]) => h("option", { value: v, text: t })));
     const tolIn = h("input", { type: "range", min: 0, max: 128, value: tol, "aria-label": "Magic wand tolerance",
       oninput: () => { tol = +tolIn.value; } });
     const tolL = h("label", { hidden: true }, "Tolerance ", tolIn);
@@ -1154,10 +1282,10 @@
     const bar = h("div", { class: "px-bar" },
       h("label", null, "Tool ", modeSel), tolL,
       h("label", null, "Size ", sizeSel),
-      btn("Undo", () => { if (undo.length) { const prev = undo.pop(); marks.clear(); for (const [k, v] of prev) marks.set(k, v); draw(); sync(); } }),
-      btn("Clear", () => { if (!marks.size) return; undo.push(new Map(marks)); marks.clear(); draw(); sync(); }),
-      btn("-", () => { zoom = Math.max(1, zoom - (zoom > 8 ? 2 : 1)); draw(); }, "Zoom out"), zoomLabel,
-      btn("+", () => { zoom = Math.min(64, zoom + (zoom >= 8 ? 2 : 1)); draw(); }, "Zoom in"),
+      btn("Undo", () => hist(undo, redo), "Undo (Ctrl+Z)"), btn("Redo", () => hist(redo, undo), "Redo (Ctrl+Y)"),
+      btn("Clear", () => { if (!marks.size) return; undo.push(new Map(marks)); redo.length = 0; marks.clear(); draw(); sync(); }),
+      btn("-", () => nav.step(-1), "Zoom out"), zoomLabel,
+      btn("+", () => nav.step(1), "Zoom in"), btn("Fit", () => nav.fit(), "Fit the image to the screen (F)"),
       lay ? h("label", null, Object.assign(h("input", { type: "checkbox", checked: true }), { onchange: (e) => { showMarks = e.target.checked; draw(); } }), " Show marks") : null,
       lay ? h("label", null, "View ", viewSel) : null,
       lay ? Object.assign(btn("Hold to compare", () => {}), { onpointerdown: () => { holding = true; draw(); },
@@ -1166,6 +1294,7 @@
     const ex = extraMenu(q, a, EXTRA_IDS, () => {});
     count.textContent = pxText(q, a.pixels) || "No pixels marked";
     fs.append(tools, bar, wrap, h("p", { class: "px-status" }, coord, " · ", count),
+      h("p", { class: "px-hint", text: NAV_HINT }),
       ex.el);
     return fs;
   }
@@ -1179,7 +1308,9 @@
     zout: "M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-5-5M8 11h6", zin: "M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-5-5M8 11h6M11 8v6",
     eye: "M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z",
     clear: "M4 4h16v16H4zM4 12h8V4M12 20v-8h8", save: "M5 3h11l3 3v15H5zM8 3v5h8M8 21v-7h8v7",
-    download: "M12 4v12M7 11l5 5 5-5M5 20h14",
+    download: "M12 4v12M7 11l5 5 5-5M5 20h14", line: "M5 19L19 5", rect: "M4 6h16v12H4z", mirror: "M12 3v18M9 7L4 12l5 5zM15 7l5 5-5 5z",
+    hand: "M8 13V5a1.5 1.5 0 0 1 3 0v6M11 11V4a1.5 1.5 0 0 1 3 0v7M14 11V5a1.5 1.5 0 0 1 3 0v7M17 12V8a1.5 1.5 0 0 1 3 0v6a7 7 0 0 1-7 7h-1a7 7 0 0 1-5.6-2.8L4 15a1.5 1.5 0 0 1 2.4-1.8L8 15",
+    fit: "M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5",
   };
   function icon(name) {
     const NS = "http://www.w3.org/2000/svg", svg = document.createElementNS(NS, "svg"), path = document.createElementNS(NS, "path");
@@ -1191,7 +1322,7 @@
     const m = (q.media || [])[0] || {};
     const attUrl = (p) => BASE + "/m/0/" + p.split("/").map(encodeURIComponent).join("/");
     let W = 0, H = 0, zoom = q.scale || 0, tool = "pencil", size = 1, tol = 24, col = [0, 0, 0, 255];
-    let orig = null, cur = null, stroke = null, holding = false, dirty = false;
+    let orig = null, cur = null, stroke = null, holding = false, dirty = false, mirror = false;
     const undo = [], redo = [], recent = [];
     const work = document.createElement("canvas");
     const canvas = h("canvas", { class: "px-canvas paint-canvas", "aria-label": "Image to edit: " + (m.alt || m.src || "") });
@@ -1231,28 +1362,40 @@
       work.getContext("2d").putImageData(holding ? orig : cur, 0, 0);
       ctx.clearRect(0, 0, W * z, H * z);
       ctx.drawImage(work, 0, 0, W * z, H * z);
-      if (q.grid && z >= 6) {
-        ctx.strokeStyle = "rgba(128,128,128,.35)"; ctx.lineWidth = 1; ctx.beginPath();
-        for (let x = 0; x <= W; x++) { ctx.moveTo(x * z + 0.5, 0); ctx.lineTo(x * z + 0.5, H * z); }
-        for (let y = 0; y <= H; y++) { ctx.moveTo(0, y * z + 0.5); ctx.lineTo(W * z, y * z + 0.5); }
-        ctx.stroke();
-      }
+      if (q.grid && z >= 6) pxGrid(ctx, W, H, z);
       canvas.style.width = W * z + "px"; canvas.style.height = H * z + "px";
       zoomLabel.textContent = z + "x";
     }
-    function at(e) {
-      const r = canvas.getBoundingClientRect();
-      const x = Math.floor((e.clientX - r.left) / r.width * W), y = Math.floor((e.clientY - r.top) / r.height * H);
-      return x >= 0 && y >= 0 && x < W && y < H ? [x, y] : null;
-    }
+    const at = (e) => pxAt(canvas, e, W, H);
+    const wrap = h("div", { class: "px-wrap paint-wrap" }, canvas);
+    const TOOLKEYS = { d: "pencil", e: "erase", i: "pick", g: "fill", r: "replace", l: "line", u: "rect" };
+    const nav = editorView(fs, wrap, canvas, {
+      zoom: () => zoom, setZoom: (z) => { zoom = z; draw(); }, size: () => [W, H],
+      cancel: () => { if (!stroke) return; cur = stroke.before; stroke = null; draw(); },
+      undo: () => step(undo, redo), redo: () => step(redo, undo),
+      key: (k) => {
+        if (TOOLKEYS[k]) { nav.set(TOOLKEYS[k]); return true; }
+        if (k === "m") { mirrorBtn.click(); return true; }
+        if (k === "[" || k === "]") { const o = [...sizeSel.options], i = sizeSel.selectedIndex + (k === "]" ? 1 : -1);
+          if (o[i]) { sizeSel.selectedIndex = i; size = +sizeSel.value; } return true; }
+        return false;
+      },
+    });
     const pix = (x, y) => [...cur.data.subarray((y * W + x) * 4, (y * W + x) * 4 + 4)];
     const near = (i, c0) => { let d = 0; for (let k = 0; k < 4; k++) d = Math.max(d, Math.abs(cur.data[i + k] - c0[k])); return d <= tol; };
     function dab(p, c) {
       const off = Math.floor((size - 1) / 2);
       for (let dy = 0; dy < size; dy++) for (let dx = 0; dx < size; dx++) {
         const x = p[0] - off + dx, y = p[1] - off + dy;
-        if (x >= 0 && y >= 0 && x < W && y < H) cur.data.set(c, (y * W + x) * 4);
+        if (x >= 0 && y >= 0 && x < W && y < H) {
+          cur.data.set(c, (y * W + x) * 4);
+          if (mirror) cur.data.set(c, (y * W + W - 1 - x) * 4);  // left-right symmetry around the centre line
+        }
       }
+    }
+    function box(a0, b0, c) {
+      const [x0, x1] = [Math.min(a0[0], b0[0]), Math.max(a0[0], b0[0])], [y0, y1] = [Math.min(a0[1], b0[1]), Math.max(a0[1], b0[1])];
+      line([x0, y0], [x1, y0], c); line([x1, y0], [x1, y1], c); line([x1, y1], [x0, y1], c); line([x0, y1], [x0, y0], c);
     }
     function line(p0, p1, c) {  // Bresenham, so a fast drag leaves no gaps
       let [x0, y0] = p0; const [x1, y1] = p1, dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0);
@@ -1288,14 +1431,11 @@
       if (tool === "pick" || e.altKey) { setCol(pix(p[0], p[1]), true); return; }
       const c = e.button === 2 || tool === "erase" ? [0, 0, 0, 0] : col;
       const before = snap();
-      if (tool === "fill" || tool === "replace") {
-        fill(p, c, tool === "replace");
-        undo.push(before); redo.length = 0; if (undo.length > 60) undo.shift();
-        edited(); draw(); return;
-      }
       canvas.setPointerCapture(e.pointerId);
-      stroke = { before, last: p, c };
-      dab(p, c); draw();
+      stroke = { before, last: p, start: p, c };
+      if (tool === "fill" || tool === "replace") { fill(p, c, tool === "replace"); stroke.done = true; }
+      else dab(p, c);
+      draw();
     });
     canvas.addEventListener("pointermove", (e) => {
       const p = at(e);
@@ -1303,7 +1443,13 @@
         const v = pix(p[0], p[1]);
         coord.textContent = "x " + p[0] + ", y " + p[1] + " · " + (v[3] ? hex(v) + (v[3] < 255 ? " opacity " + v[3] : "") : "transparent");
       }
-      if (stroke && p) { line(stroke.last, p, stroke.c); stroke.last = p; draw(); }
+      nav.hover(e.pointerType === "touch" || nav.mode !== "draw" || !["pencil", "erase", "line", "rect"].includes(tool) ? null : p, size);
+      if (!stroke || !p || stroke.done) return;
+      if (tool === "line" || tool === "rect") {  // shapes redraw from the stroke's start each move
+        cur = new ImageData(new Uint8ClampedArray(stroke.before.data), W, H);
+        (tool === "line" ? line : box)(stroke.start, p, stroke.c);
+      } else line(stroke.last, p, stroke.c);
+      stroke.last = p; draw();
     });
     const end = () => {
       if (!stroke) return;
@@ -1363,12 +1509,14 @@
       draw();
     })();
     const tools = h("div", { class: "px-tools", role: "radiogroup", "aria-label": "Tool" });
-    for (const [id, label] of [["pencil", "Pencil"], ["erase", "Eraser: makes pixels transparent (or right-click)"],
-      ["pick", "Eyedropper: pick a colour (or Alt+click)"], ["fill", "Fill the touching area"], ["replace", "Replace this colour everywhere"]]) {
+    for (const [id, label] of [["pencil", "Pencil (D)"], ["erase", "Eraser: makes pixels transparent (E, or right-click)"],
+      ["pick", "Eyedropper: pick a colour (I, or Alt+click)"], ["fill", "Fill the touching area (G)"], ["replace", "Replace this colour everywhere (R)"],
+      ["line", "Straight line (L)"], ["rect", "Rectangle outline (U)"]]) {
       tools.append(h("label", { class: "px-tool icon-tool", title: label },
-        h("input", { type: "radio", name: "paint-tool-" + q.id, value: id, checked: id === tool, "aria-label": label, onchange: () => { tool = id; tolL.hidden = !["fill", "replace"].includes(id); } }),
+        h("input", { type: "radio", name: "paint-tool-" + q.id, value: id, checked: id === tool, "aria-label": label, onchange: () => { tool = id; nav.draw(); tolL.hidden = !["fill", "replace"].includes(id); } }),
         icon(id)));
     }
+    tools.append(...nav.radios("paint-tool-" + q.id));
     const tolIn = h("input", { type: "range", min: 0, max: 128, value: tol, "aria-label": "Tolerance", oninput: () => { tol = +tolIn.value; tolV.textContent = tol; } });
     const tolV = h("span", { class: "px-zoom", text: String(tol) });
     const tolL = h("label", { hidden: true, title: "Tolerance: how close a colour must be to count" }, "± ", tolIn, tolV);
@@ -1379,6 +1527,8 @@
       if (text) b.append(h("span", { text }));
       return b;
     };
+    const mirrorBtn = btn("mirror", () => { mirror = !mirror; mirrorBtn.classList.toggle("on", mirror); mirrorBtn.setAttribute("aria-pressed", mirror); }, "Mirror: draw both halves left-right (M)");
+    mirrorBtn.setAttribute("aria-pressed", "false");
     const step = (from, to) => { if (!from.length) return; to.push(snap()); cur = from.pop(); edited(); draw(); };
     const colors = h("div", { class: "px-bar paint-colors" },
       sw, Object.assign(colorIn, { title: "Colour" }), h("label", { title: "Opacity", class: "icon-tool" }, alphaIn),
@@ -1388,15 +1538,16 @@
       Object.assign(sizeSel, { title: "Pencil size" }), tolL,
       btn("undo", () => step(undo, redo), "Undo"), btn("redo", () => step(redo, undo), "Redo"),
       btn("reset", () => { if (!orig) return; undo.push(snap()); redo.length = 0; cur = new ImageData(new Uint8ClampedArray(orig.data), W, H); edited(); draw(); }, "Reset to original"),
-      btn("zout", () => { zoom = Math.max(1, zoom - (zoom > 8 ? 2 : 1)); draw(); }, "Zoom out"), zoomLabel,
-      btn("zin", () => { zoom = Math.min(64, zoom + (zoom >= 8 ? 2 : 1)); draw(); }, "Zoom in"),
+      btn("zout", () => nav.step(-1), "Zoom out (-)"), zoomLabel,
+      btn("zin", () => nav.step(1), "Zoom in (+)"), btn("fit", () => nav.fit(), "Fit the image to the screen (F)"), mirrorBtn,
       Object.assign(btn("eye", () => {}, "Hold to compare with the original"), { onpointerdown: () => { holding = true; draw(); },
         onpointerup: () => { holding = false; draw(); }, onpointerleave: () => { if (holding) { holding = false; draw(); } } }));
     const saveBar = h("div", { class: "px-bar" },
       btn("save", saveEdit, "Save edited image", "primary", "Save"), btn("download", download, "Download PNG"), status);
     const ex = extraMenu(q, a, EXTRA_IDS, () => {});
-    fs.append(tools, colors, bar, h("div", { class: "px-wrap paint-wrap" }, canvas),
-      h("p", { class: "px-status" }, coord, " · Alt+click picks a colour, right-click erases"), saveBar, ex.el);
+    fs.append(tools, colors, bar, wrap,
+      h("p", { class: "px-status" }, coord, " · Alt+click picks a colour, right-click erases"),
+      h("p", { class: "px-hint", text: NAV_HINT }), saveBar, ex.el);
     window.addEventListener("beforeunload", (e) => { if (dirty && document.body.contains(canvas)) e.preventDefault(); });
     return fs;
   }

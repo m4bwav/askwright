@@ -85,8 +85,10 @@ hide one of its candidates; `scripts/contact.py out.png a.png b.png --labels ...
 A `pixels` question has exactly one image in `media` (PNG, GIF, JPEG or WebP; it is the canvas) and `options` as
 brushes: at least one `{id, label, color?}` (`color` is `#rgb` or `#rrggbb`; a palette fills in otherwise). `look_for`
 is still required. The page draws the image with nearest-neighbour zoom; click paints a pixel, drag paints a stroke,
-size 1, 2 or 3, right-click or the Eraser removes, Undo, Clear, zoom - and +, and the hovered coordinate (and region)
-shows under it. Touch works. Not sure and Something else (explained in the note) still apply.
+size 1, 2 or 3, right-click or the Eraser removes, Undo, Redo, Clear, and the hovered coordinate (and region)
+shows under it. Both editors share one view: zoom -, + and Fit, a Zoom tool that zooms in where clicked (Shift or
+right-click out), a Hand tool, Space+drag, Ctrl+wheel at the pointer, and on touch screens pinch and two-finger pan
+(a second finger takes back the stroke the first began). Keys: H, Z, F, + and -, Ctrl+Z and Ctrl+Y. Not sure and Something else (explained in the note) still apply.
 
 | Field | Meaning |
 |---|---|
@@ -120,8 +122,8 @@ y0, x1, y1]}` plus `brushes` (id to label); `--json` adds `points`. `ask.py pixe
 
 `kind: "paint"` shows its one image (`media`, PNG, GIF, JPEG or WebP) in a pixel editor: pencil (sizes 1 to 8),
 eraser to transparent (also right-click), eyedropper (also Alt+click, with recent colours), fill a touching area,
-replace a colour everywhere (both with a tolerance slider), colour and opacity, Transparent, undo, redo, reset,
-zoom, hold to compare with the original, Save edited image and Download PNG. `scale` and `grid` work as for
+replace a colour everywhere (both with a tolerance slider), straight line, rectangle outline, Mirror (draws both
+halves left-right), colour and opacity, Transparent, undo, redo, reset, the shared view above, hold to compare with the original, Save edited image and Download PNG. `scale` and `grid` work as for
 pixels. It takes no options and no guess. Saving uploads the PNG to the set's `attachments/` folder and the answer
 stores `"edited": "attachments/<qid>-<n>.png"`; reopening the question loads the latest saved edit. An edit, or
 "Something else" with a note, answers it. `ask.py read` prints `edited` as an absolute path.

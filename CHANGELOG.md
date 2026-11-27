@@ -6,6 +6,13 @@ Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (ID
 
 ## Unreleased
 
+## 0.50.0
+
+### C-20261126-1 · 2026-11-26 · Pixel and paint editors: zoom where clicked, pan, pinch, phone-sized controls
+- because: user request ("easier to use on mobile, panning tool and a zooming tool that zooms into areas clicked, more features")
+- files: skills/askwright/scripts/page/app.js (editor view shared by pixels and paint), page/app.css (editor), references/schema.md (pixels, paint), scripts/budget.py (install ceiling 540 KB), tests/test_page.py (PaintPageTests)
+- One view layer for both editors: Zoom tool (click zooms in at that spot, Shift or right-click out), Hand tool, Space+drag and middle-drag pan, Ctrl+wheel and trackpad pinch at the pointer, Fit, touch pinch and two-finger pan (the second finger takes back the first finger's stroke), and a brush outline under the pointer. Paint gains straight line, rectangle outline and Mirror; the pixels marker gains Redo. Keyboard: H, Z, F, + and -, Ctrl+Z, Ctrl+Y, plus tool letters. On touch screens controls are 44 px and the tool row stays at the top while the image scrolls. Install grew to about 530 KB, so the red line moved from 520 to 540 KB; the owner decides whether to keep it or trim.
+
 ## 0.49.2
 
 ### C-20261124-2 · 2026-11-24 · Back under the install size budget

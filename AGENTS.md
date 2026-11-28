@@ -31,8 +31,12 @@ repository root: RESEARCH, CHANGELOG, LEARNINGS, TESTS, `evals/evals.json`, MAIN
 - This is a public repository. Nothing in it names a person other than the author credit and cited authors, a
   private project, a machine, an absolute path on someone's machine, or a credential. Real question sets and
   their answers live outside the repository; tests use `tests/fixtures/`.
-- Versions: when a packaged file changes, bump `.claude-plugin/plugin.json` and CHANGELOG.md's release notes, and
-  tag `vX.Y.Z` (only with the owner's go-ahead). The release workflow checks the tag against the manifest.
+- Versions: when a packaged file changes, run `python scripts/bump.py X.Y.Z` (it sets `.claude-plugin/plugin.json`,
+  `VERSION` in `ask.py` and a CHANGELOG.md heading; edit no copy by hand), write the release notes, and tag
+  `vX.Y.Z` after merging. `python scripts/bump.py` with no argument checks the copies agree. The release workflow
+  checks the tag against the manifest.
+- After pushing a pull request, watch its checks (`gh pr checks N --watch`) and fix a red run before ending the
+  session; never leave a pushed PR unwatched.
 - Work on `main` through pull requests; delete merged branches.
 - No AI attribution anywhere: no Co-Authored-By trailers and no "generated with" lines in commits, pull requests
   or files.

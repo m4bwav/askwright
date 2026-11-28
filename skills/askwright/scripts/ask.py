@@ -38,7 +38,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-VERSION = "0.50.0"
+VERSION = "0.50.1"
 DEFAULT_PORT = 47631  # the shared server's port; ASKWRIGHT_PORT moves it (0 picks a free one)
 PAGE = Path(__file__).resolve().parent / "page"
 BUNDLE = re.compile(r"^(those|these|both|all of)\b|\bplus\b", re.I)
@@ -351,7 +351,7 @@ LOG_LINE = re.compile(r"^##\s*\[(\d{4}-\d{2}-\d{2})\]\s*([\w-]+)\s*\|\s*(.+?)\s*
 
 def project_docs(rec):
     """What the project's own folders say: each ai-docs/HANDOFF.md (its opening), the dated ai-docs/log.md
-    entries and the continue or next-session prompt files, newest first. Reads at most 256 KB of each file."""
+    entries (or the ai-docs/log/ event files, one per event) and the continue or next-session prompt files, newest first. Reads at most 256 KB of each file."""
     handoffs, logs, prompts = [], [], set()
     for d in rec["dirs"]:
         docs = Path(d) / "ai-docs"
@@ -369,6 +369,17 @@ def project_docs(rec):
                 lines = h.read().decode("utf-8", errors="replace").splitlines()
         except OSError:
             lines = []
+        try:
+            events = sorted((docs / "log").glob("*.md"))[-400:] if (docs / "log").is_dir() else []
+        except OSError:
+            events = []
+        for f in events:
+            if f.name in ("README.md", "ARCHIVE.md"):
+                continue
+            try:
+                lines += f.read_text(encoding="utf-8", errors="replace").splitlines()
+            except OSError:
+                continue
         for line in lines:
             m = LOG_LINE.match(line)
             if m:
@@ -3570,8 +3581,11 @@ def sweep_evidence(d, data, last_answer):
     keys = {d.name, str(data.get("id") or "")} - {"", "ask", "review"}
     seen = set()
     for b in bases:
-        for name in DOC_NAMES:
-            f = b / name
+        try:
+            events = sorted((b / "ai-docs" / "log").glob("*.md"))[-200:] if (b / "ai-docs" / "log").is_dir() else []
+        except OSError:
+            events = []
+        for f in [b / name for name in DOC_NAMES] + events:
             try:
                 if f in seen or not f.is_file() or f.stat().st_mtime <= t:
                     continue

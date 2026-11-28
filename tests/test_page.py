@@ -1406,11 +1406,12 @@ class PaintPageTests(PageCase):
         c = self.page.locator(".px-canvas")
         c.scroll_into_view_if_needed()
         box = c.bounding_box()
-        return box["x"] + x * 8 + 4, box["y"] + y * 8 + 4
+        z = box["width"] / 64
+        return box["x"] + x * z + z / 2, box["y"] + y * z + z / 2
 
     def rgba(self, x, y):
-        return self.page.evaluate("([x, y]) => [...document.querySelector('.px-canvas').getContext('2d')"
-                                  ".getImageData(x * 8 + 4, y * 8 + 4, 1, 1).data]", [x, y])
+        return self.page.evaluate("([x, y]) => { const c = document.querySelector('.px-canvas'), z = c.width / 64;"
+                                  " return [...c.getContext('2d').getImageData(x * z + z / 2, y * z + z / 2, 1, 1).data]; }", [x, y])
 
     def test_pick_paint_erase_fill_undo_and_save(self):
         p = self.open()
@@ -1445,6 +1446,64 @@ class PaintPageTests(PageCase):
         p.wait_for_function("document.querySelector('.px-canvas').width === 64 * 8")
         p.wait_for_timeout(300)
         self.assertEqual(self.rgba(5, 5)[3], 0)
+        self.assertEqual(self.errors, [])
+
+    def test_zoom_where_clicked_pan_line_mirror_and_keys(self):
+        p = self.open()
+        p.wait_for_function("document.querySelector('.px-canvas').width === 64 * 8")
+        width = lambda: p.evaluate("document.querySelector('.px-canvas').width")
+        for _ in range(4):
+            p.keyboard.press("=")
+        self.assertEqual(width(), 64 * 16)
+        p.check("input[name='paint-tool-touchup'][value='zoom']")
+        p.locator(".px-wrap").scroll_into_view_if_needed()
+        r = p.locator(".px-wrap").bounding_box()
+        x, y = r["x"] + r["width"] * 0.7, r["y"] + r["height"] * 0.6
+        spot = lambda: p.locator(".px-coord").inner_text().split(" #")[0]
+        p.mouse.move(x, y)
+        here = spot()
+        p.mouse.click(x, y)
+        self.assertEqual(width(), 64 * 18)
+        p.mouse.move(x, y + 1)  # the clicked pixel stays under the pointer
+        self.assertEqual(spot(), here)
+        p.mouse.click(x, y, button="right")
+        self.assertEqual(width(), 64 * 16)
+        p.click("button[aria-label^='Fit']")
+        p.keyboard.press("d")  # back to the pencil: zoom clicks never painted
+        self.assertTrue(p.is_checked("input[name='paint-tool-touchup'][value='pencil']"))
+        self.assertEqual(p.evaluate("document.querySelector('.paint-status').textContent"), "No saved edit yet")
+        p.click("button[aria-label^='Transparent']")
+        p.keyboard.press("l")
+        p.mouse.move(*self.px(2, 40)); p.mouse.down(); p.mouse.move(*self.px(10, 40), steps=4); p.mouse.up()
+        self.assertEqual([self.rgba(i, 40)[3] for i in (2, 6, 10)], [0, 0, 0])
+        self.assertNotEqual(self.rgba(11, 40)[3], 0)
+        p.keyboard.press("m"); p.keyboard.press("d")
+        p.mouse.click(*self.px(3, 44))
+        self.assertEqual((self.rgba(3, 44)[3], self.rgba(60, 44)[3]), (0, 0))
+        p.keyboard.press("Control+z"); p.keyboard.press("Control+z")
+        self.assertNotEqual(self.rgba(6, 40)[3], 0)
+        p.keyboard.press("Control+y")
+        self.assertEqual(self.rgba(6, 40)[3], 0)
+        fit = width()
+        p.keyboard.press("=")
+        self.assertGreater(width(), fit)
+        self.assertEqual(self.errors, [])
+
+    def test_pinch_cancels_the_stroke_and_zooms(self):
+        p = self.open()
+        p.wait_for_function("document.querySelector('.px-canvas').width === 64 * 8")
+        before = self.rgba(20, 20)
+        cdp = p.context.new_cdp_session(p)
+        a, b = self.px(20, 20), self.px(30, 30)
+        touch = lambda kind, pts: cdp.send("Input.dispatchTouchEvent", {"type": kind, "touchPoints": [{"x": x, "y": y, "id": i} for i, (x, y) in enumerate(pts)]})
+        touch("touchStart", [a])
+        touch("touchStart", [a, b])
+        touch("touchMove", [(a[0] - 40, a[1] - 40), (b[0] + 40, b[1] + 40)])
+        touch("touchEnd", [])
+        self.assertGreater(p.evaluate("document.querySelector('.px-canvas').width"), 64 * 8)
+        p.click("button[aria-label^='Fit']")
+        self.assertEqual(self.rgba(20, 20), before)  # the first finger's dab was taken back
+        self.assertEqual(p.evaluate("document.querySelector('.paint-status').textContent"), "No saved edit yet")
         self.assertEqual(self.errors, [])
 
 

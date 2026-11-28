@@ -6,6 +6,13 @@ Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (ID
 
 ## Unreleased
 
+## 0.50.1
+
+### C-20261127-1 · 2026-11-27 · Read the per-event ai-docs/log/ folder
+- because: everlast 0.8.0 replaced the single ai-docs/log.md with ai-docs/log/, one file per event, so open PRs no longer conflict on the log.
+- files: skills/askwright/scripts/ask.py (project_docs, answer sweep), CLAUDE.md
+The project page's log timeline and the answer sweep's "changed after the answer" evidence now read the event files in ai-docs/log/ as well as an old log.md.
+
 ## 0.50.0
 
 ### C-20261126-1 · 2026-11-26 · Pixel and paint editors: zoom where clicked, pan, pinch, phone-sized controls
